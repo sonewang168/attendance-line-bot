@@ -113,7 +113,7 @@
         <!-- Semester -->
         <div class="page" id="page-semester">
             <div class="header"><h1 class="page-title">學期設定</h1><p class="page-subtitle">設定學期日期與節次時間</p></div>
-            <div class="card"><div class="card-title">🏫 部別選擇</div><div class="chip-group" id="division-chips"><div class="chip day" data-div="day" onclick="selectDivision('day', true)">☀️ 日間部</div><div class="chip night" data-div="night" onclick="selectDivision('night', true)">🌙 夜間部</div><div class="chip weekend" data-div="weekend" onclick="selectDivision('weekend', true)">📅 進修部</div></div></div>
+            <div class="card"><div class="card-title">🏫 部別選擇</div><div class="chip-group" id="division-chips"><div class="chip day" data-div="day" onclick="selectDivision('day')">☀️ 日間部</div><div class="chip night" data-div="night" onclick="selectDivision('night')">🌙 夜間部</div><div class="chip weekend" data-div="weekend" onclick="selectDivision('weekend')">📅 進修部</div></div></div>
             <div class="card"><div class="card-title">📆 學期期間</div><div class="form-row"><div class="form-group"><label class="form-label">開學日期</label><input type="date" class="form-input" id="semester-start" onchange="calcWeeks()"></div><div class="form-group"><label class="form-label">結業日期</label><input type="date" class="form-input" id="semester-end" onchange="calcWeeks()"></div></div><div class="alert alert-info">ℹ️ 自動計算：<strong id="semester-weeks">0</strong> 週</div></div>
             <div class="card"><div class="card-title">⏰ 節次時間表</div><div id="period-settings"></div></div>
             <button class="btn btn-primary btn-block" onclick="saveSemester()">💾 儲存學期設定</button>
@@ -332,27 +332,70 @@
         }
 
         // === 學期設定 ===
-        function selectDivision(div, forceReset = false) {
-            const prevDiv = sem.div;
+        function selectDivision(div) {
+            console.log('切換部別:', div);
             sem.div = div;
+            sem.periods = JSON.parse(JSON.stringify(PERIODS[div])); // 深拷貝
+            
+            // 更新 UI
             document.querySelectorAll('#division-chips .chip').forEach(c => {
-                c.classList.toggle('active', c.dataset.div === div);
+                c.classList.remove('active');
+                if (c.dataset.div === div) {
+                    c.classList.add(div);
+                    c.classList.add('active');
+                }
             });
-            // 只有切換部別或強制重設時才重設節次
-            if (forceReset || prevDiv !== div || !sem.periods || sem.periods.length === 0) {
-                sem.periods = [...PERIODS[div]];
-            }
+            
             renderPeriods();
+            saveSemesterToStorage();
+            console.log('儲存後 sem:', sem);
+        }
+        
+        function saveSemesterToStorage() {
             localStorage.setItem('semester', JSON.stringify(sem));
         }
+        
+        function loadSemesterFromStorage() {
+            const saved = localStorage.getItem('semester');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    sem.div = parsed.div || 'day';
+                    sem.start = parsed.start || '';
+                    sem.end = parsed.end || '';
+                    sem.periods = parsed.periods && parsed.periods.length > 0 ? parsed.periods : PERIODS[sem.div];
+                } catch (e) {
+                    console.log('讀取設定失敗，使用預設');
+                }
+            }
+        }
+        
+        function initSemesterUI() {
+            // 更新部別 chips
+            document.querySelectorAll('#division-chips .chip').forEach(c => {
+                c.classList.remove('active', 'day', 'night', 'weekend');
+                if (c.dataset.div === sem.div) {
+                    c.classList.add(sem.div);
+                    c.classList.add('active');
+                }
+            });
+            
+            // 更新日期
+            if (sem.start) document.getElementById('semester-start').value = sem.start;
+            if (sem.end) document.getElementById('semester-end').value = sem.end;
+            calcWeeks();
+            
+            // 更新節次表
+            renderPeriods();
+        }
         function renderPeriods() {
-            const ps = sem.periods.length ? sem.periods : PERIODS[sem.div];
+            const ps = sem.periods && sem.periods.length > 0 ? sem.periods : PERIODS[sem.div || 'day'];
             document.getElementById('period-settings').innerHTML = '<table class="period-table"><thead><tr><th>節次</th><th>開始</th><th>結束</th></tr></thead><tbody>' + ps.map((p, i) => '<tr><td>第' + p.n + '節</td><td><input type="time" class="form-input" value="' + p.s + '" onchange="updatePeriod(' + i + ',\'s\',this.value)" style="padding:8px"></td><td><input type="time" class="form-input" value="' + p.e + '" onchange="updatePeriod(' + i + ',\'e\',this.value)" style="padding:8px"></td></tr>').join('') + '</tbody></table>';
             updatePeriodDropdowns();
         }
         function updatePeriod(idx, key, val) {
             sem.periods[idx][key] = val;
-            localStorage.setItem('semester', JSON.stringify(sem));
+            saveSemesterToStorage();
         }
         function calcWeeks() {
             const s = document.getElementById('semester-start').value;
@@ -367,11 +410,11 @@
         }
         function saveSemester() {
             calcWeeks();
-            localStorage.setItem('semester', JSON.stringify(sem));
+            saveSemesterToStorage();
             toast('學期設定已儲存！');
         }
         function updatePeriodDropdowns() {
-            const ps = sem.periods.length ? sem.periods : PERIODS[sem.div];
+            const ps = sem.periods && sem.periods.length > 0 ? sem.periods : PERIODS[sem.div || 'day'];
             const opts = ps.map(p => '<option value="' + p.n + '">第' + p.n + '節 (' + p.s + '-' + p.e + ')</option>').join('');
             document.getElementById('course-period').innerHTML = opts;
             document.getElementById('edit-course-period').innerHTML = opts;
@@ -458,13 +501,14 @@
             document.getElementById('list-view').style.display = view === 'list' ? 'block' : 'none';
         }
         function renderScheduleGrid() {
-            const ps = sem.periods.length ? sem.periods : PERIODS[sem.div];
-            const days = sem.div === 'weekend' ? ['', '六', '日'] : ['', '一', '二', '三', '四', '五'];
+            const div = sem.div || 'day';
+            const ps = sem.periods && sem.periods.length > 0 ? sem.periods : PERIODS[div];
+            const days = div === 'weekend' ? ['', '六', '日'] : ['', '一', '二', '三', '四', '五'];
             let html = days.map(d => '<div class="schedule-header">' + (d || '節次') + '</div>').join('');
             ps.forEach(p => {
                 html += '<div class="schedule-time">' + p.n + '<br><small>' + p.s + '</small></div>';
                 for (let i = 1; i < days.length; i++) {
-                    const dayNum = sem.div === 'weekend' ? (i === 1 ? 6 : 0) : i;
+                    const dayNum = div === 'weekend' ? (i === 1 ? 6 : 0) : i;
                     const c = courses.find(x => x.day == dayNum && x.period == p.n);
                     if (c) {
                         html += '<div class="schedule-cell has-class" onclick="editCourse(\'' + c.id + '\')"><div class="class-tag">' + (c.name || c.subject) + '<br>' + c.classCode + '</div></div>';
@@ -490,7 +534,7 @@
             const lat = document.getElementById('course-lat').value;
             const lon = document.getElementById('course-lon').value;
             if (!name || !classCode) { toast('請填寫課程名稱和班級', 'danger'); return; }
-            const p = sem.periods.find(x => x.n == period) || {};
+            const p = ((sem.periods && sem.periods.length > 0 ? sem.periods : PERIODS[sem.div || "day"])).find(x => x.n == period) || {};
             const r = await api('/api/courses', { method: 'POST', body: JSON.stringify({ subject: name, name, classCode, day, period, time: p.s + '-' + p.e, room, lat: lat ? +lat : 0, lon: lon ? +lon : 0, radius: 50000 }) });
             if (r?.success) { toast('課程已新增！'); closeModal('addCourse'); loadCourses(); document.getElementById('course-name').value = ''; document.getElementById('course-room').value = ''; }
         }
@@ -510,7 +554,7 @@
             const day = parseInt(document.getElementById('edit-course-day').value);
             const period = parseInt(document.getElementById('edit-course-period').value);
             const room = document.getElementById('edit-course-room').value.trim();
-            const p = sem.periods.find(x => x.n == period) || {};
+            const p = ((sem.periods && sem.periods.length > 0 ? sem.periods : PERIODS[sem.div || "day"])).find(x => x.n == period) || {};
             const r = await api('/api/courses/' + currentCourse.id, { method: 'PUT', body: JSON.stringify({ subject, classCode, day, period, time: p.s + '-' + p.e, room }) });
             if (r?.success) { toast('課程已更新！'); closeModal('editCourse'); loadCourses(); }
         }
@@ -591,7 +635,7 @@
                 return;
             }
             document.getElementById('sessions-list').innerHTML = today.map(c => {
-                const p = sem.periods.find(x => x.n == c.period) || { s: '', e: '' };
+                const p = ((sem.periods && sem.periods.length > 0 ? sem.periods : PERIODS[sem.div || "day"])).find(x => x.n == c.period) || { s: '', e: '' };
                 const nowTime = now.getHours() * 60 + now.getMinutes();
                 const endTime = parseInt((p.e || '17:00').split(':')[0]) * 60 + parseInt((p.e || '17:00').split(':')[1] || 0);
                 const completed = nowTime > endTime;
@@ -602,7 +646,7 @@
             const c = courses.find(x => x.id === id);
             if (!c) return;
             const today = new Date().toISOString().split('T')[0];
-            const p = sem.periods.find(x => x.n == c.period) || { s: '08:00', e: '09:00' };
+            const p = ((sem.periods && sem.periods.length > 0 ? sem.periods : PERIODS[sem.div || "day"])).find(x => x.n == c.period) || { s: '08:00', e: '09:00' };
             const r = await api('/api/sessions', { method: 'POST', body: JSON.stringify({ courseId: id, date: today, startTime: p.s, endTime: p.e }) });
             if (r?.success) {
                 showQR(r.qrContent, (c.name || c.subject) + ' - ' + c.classCode, today + ' ' + p.s);
@@ -742,7 +786,7 @@
             const dow = now.getDay();
             const today = courses.filter(c => c.day == dow);
             document.getElementById('today-classes').innerHTML = today.length ? today.map(c => {
-                const p = sem.periods.find(x => x.n == c.period) || { s: '', e: '' };
+                const p = ((sem.periods && sem.periods.length > 0 ? sem.periods : PERIODS[sem.div || "day"])).find(x => x.n == c.period) || { s: '', e: '' };
                 return '<div style="padding:10px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center"><div><b>' + (c.name || c.subject) + '</b> - ' + c.classCode + '<br><small>第' + c.period + '節 ' + p.s + '-' + p.e + '</small></div><button class="btn btn-primary btn-sm" onclick="startSession(\'' + c.id + '\')">📱</button></div>';
             }).join('') : '<div class="empty">今日無課程</div>';
             const alerts = await api('/api/stats/consecutive-absent');
@@ -774,7 +818,7 @@
         // === 頁面載入 ===
         function loadPage(page) {
             if (page === 'dashboard') loadDashboard();
-            if (page === 'semester') { document.getElementById('semester-start').value = sem.start || ''; document.getElementById('semester-end').value = sem.end || ''; calcWeeks(); renderPeriods(); }
+            if (page === 'semester') { initSemesterUI(); }
             if (page === 'schedule') { renderScheduleGrid(); renderCourses(); }
             if (page === 'sessions') loadSessions();
             if (page === 'classes') loadClasses();
@@ -795,21 +839,12 @@
             document.getElementById('api-url').value = API;
             document.getElementById('bot-id').value = BOT;
             
-            // 載入部別設定 - 只更新 UI，不重設 periods
-            const savedDiv = sem.div || 'day';
-            document.querySelectorAll('#division-chips .chip').forEach(c => {
-                c.classList.toggle('active', c.dataset.div === savedDiv);
-            });
+            // 從 localStorage 讀取學期設定
+            loadSemesterFromStorage();
+            console.log('載入的 sem:', sem);
             
-            // 如果沒有保存的 periods，才使用預設
-            if (!sem.periods || sem.periods.length === 0) {
-                sem.periods = [...PERIODS[savedDiv]];
-            }
-            renderPeriods();
-            
-            if (sem.start) document.getElementById('semester-start').value = sem.start;
-            if (sem.end) document.getElementById('semester-end').value = sem.end;
-            calcWeeks();
+            // 初始化學期設定 UI
+            initSemesterUI();
             
             // 自動偵測 API
             if (!API && location.origin.includes('onrender.com')) {
