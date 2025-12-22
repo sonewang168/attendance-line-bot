@@ -766,12 +766,30 @@ app.get('/api/classes', async (req, res) => {
     try {
         const sheet = await getOrCreateSheet('班級列表', ['班級代碼', '班級名稱', '部別', '導師', '人數', '建立時間']);
         const rows = await sheet.getRows();
+        
+        // 取得學生名單來計算人數
+        let studentCounts = {};
+        try {
+            const studentSheet = doc.sheetsByTitle['學生名單'];
+            if (studentSheet) {
+                const students = await studentSheet.getRows();
+                students.forEach(s => {
+                    const classCode = s.get('班級');
+                    if (classCode) {
+                        studentCounts[classCode] = (studentCounts[classCode] || 0) + 1;
+                    }
+                });
+            }
+        } catch (e) {
+            console.log('計算學生人數失敗:', e.message);
+        }
+        
         res.json(rows.map(r => ({
             code: r.get('班級代碼'),
             name: r.get('班級名稱'),
             division: r.get('部別') || 'day',
             teacher: r.get('導師'),
-            count: r.get('人數') || 0
+            count: studentCounts[r.get('班級代碼')] || 0
         })));
     } catch (error) {
         res.status(500).json({ error: error.message });
