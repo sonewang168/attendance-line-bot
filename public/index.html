@@ -117,6 +117,7 @@
             <div class="card"><div class="card-title">📆 學期期間</div><div class="form-row"><div class="form-group"><label class="form-label">開學日期</label><input type="date" class="form-input" id="semester-start" onchange="calcWeeks()"></div><div class="form-group"><label class="form-label">結業日期</label><input type="date" class="form-input" id="semester-end" onchange="calcWeeks()"></div></div><div class="alert alert-info">ℹ️ 自動計算：<strong id="semester-weeks">0</strong> 週</div></div>
             <div class="card"><div class="card-title">⏰ 節次時間表</div><div id="period-settings"></div></div>
             <button class="btn btn-primary btn-block" onclick="saveSemester()">💾 儲存學期設定</button>
+            <button class="btn btn-danger btn-block" style="margin-top:10px" onclick="resetAllSettings()">🗑️ 重設所有設定</button>
         </div>
         <!-- Schedule -->
         <div class="page" id="page-schedule">
@@ -334,21 +335,49 @@
         // === 學期設定 ===
         function selectDivision(div) {
             console.log('切換部別:', div);
-            sem.div = div;
-            sem.periods = JSON.parse(JSON.stringify(PERIODS[div])); // 深拷貝
             
-            // 更新 UI
-            document.querySelectorAll('#division-chips .chip').forEach(c => {
-                c.classList.remove('active');
-                if (c.dataset.div === div) {
-                    c.classList.add(div);
-                    c.classList.add('active');
-                }
+            // 更新變數
+            sem.div = div;
+            sem.periods = JSON.parse(JSON.stringify(PERIODS[div]));
+            
+            // 更新所有 chip 的樣式
+            const chips = document.querySelectorAll('#division-chips .chip');
+            chips.forEach(c => {
+                // 移除所有 active 和顏色 class
+                c.classList.remove('active', 'day', 'night', 'weekend');
             });
             
+            // 為選中的 chip 加上樣式
+            const selectedChip = document.querySelector('#division-chips .chip[data-div="' + div + '"]');
+            if (selectedChip) {
+                selectedChip.classList.add('active');
+                selectedChip.classList.add(div);
+            }
+            
+            // 儲存到 localStorage
+            localStorage.setItem('semester', JSON.stringify(sem));
+            console.log('已儲存:', JSON.stringify(sem));
+            
+            // 更新節次顯示
             renderPeriods();
-            saveSemesterToStorage();
-            console.log('儲存後 sem:', sem);
+            
+            // 顯示提示
+            toast('已切換至' + (div === 'day' ? '日間部' : div === 'night' ? '夜間部' : '進修部'));
+        }
+        
+        function resetAllSettings() {
+            if (!confirm('確定要重設所有設定嗎？這會清除學期設定、部別選擇等。')) return;
+            
+            // 清除 localStorage
+            localStorage.removeItem('semester');
+            
+            // 重設變數
+            sem = { div: 'day', start: '', end: '', periods: JSON.parse(JSON.stringify(PERIODS.day)) };
+            
+            // 重新初始化 UI
+            initSemesterUI();
+            
+            toast('設定已重設！');
         }
         
         function saveSemesterToStorage() {
@@ -357,32 +386,38 @@
         
         function loadSemesterFromStorage() {
             const saved = localStorage.getItem('semester');
+            console.log('從 localStorage 讀取:', saved);
             if (saved) {
                 try {
                     const parsed = JSON.parse(saved);
                     sem.div = parsed.div || 'day';
                     sem.start = parsed.start || '';
                     sem.end = parsed.end || '';
-                    sem.periods = parsed.periods && parsed.periods.length > 0 ? parsed.periods : PERIODS[sem.div];
+                    sem.periods = parsed.periods && parsed.periods.length > 0 ? parsed.periods : JSON.parse(JSON.stringify(PERIODS[sem.div]));
+                    console.log('解析成功:', sem);
                 } catch (e) {
-                    console.log('讀取設定失敗，使用預設');
+                    console.log('解析失敗，使用預設');
+                    sem = { div: 'day', start: '', end: '', periods: JSON.parse(JSON.stringify(PERIODS.day)) };
                 }
             }
         }
         
         function initSemesterUI() {
+            console.log('初始化 UI, sem.div =', sem.div);
+            
             // 更新部別 chips
-            document.querySelectorAll('#division-chips .chip').forEach(c => {
+            const chips = document.querySelectorAll('#division-chips .chip');
+            chips.forEach(c => {
                 c.classList.remove('active', 'day', 'night', 'weekend');
                 if (c.dataset.div === sem.div) {
-                    c.classList.add(sem.div);
                     c.classList.add('active');
+                    c.classList.add(sem.div);
                 }
             });
             
             // 更新日期
-            if (sem.start) document.getElementById('semester-start').value = sem.start;
-            if (sem.end) document.getElementById('semester-end').value = sem.end;
+            document.getElementById('semester-start').value = sem.start || '';
+            document.getElementById('semester-end').value = sem.end || '';
             calcWeeks();
             
             // 更新節次表
