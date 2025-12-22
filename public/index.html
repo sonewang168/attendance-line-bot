@@ -292,13 +292,24 @@
 
         // === API ===
         async function api(path, opts = {}) {
-            if (!API) return null;
+            if (!API) {
+                console.log('API 未設定');
+                return null;
+            }
             try {
+                console.log('API 請求:', API + path, opts.method || 'GET');
                 const res = await fetch(API + path, { ...opts, headers: { 'Content-Type': 'application/json' } });
-                if (!res.ok) throw new Error();
+                const data = await res.json();
+                console.log('API 回應:', res.status, data);
+                
+                if (!res.ok) {
+                    console.error('API 錯誤:', res.status, data);
+                    return data;
+                }
                 document.getElementById('status-dot').classList.add('connected');
-                return await res.json();
-            } catch {
+                return data;
+            } catch (e) {
+                console.error('API 例外:', e);
                 document.getElementById('status-dot').classList.remove('connected');
                 return null;
             }
@@ -495,13 +506,27 @@
             const name = document.getElementById('edit-class-name').value.trim();
             const division = document.getElementById('edit-class-division').value;
             const teacher = document.getElementById('edit-class-teacher').value.trim();
+            console.log('儲存班級:', currentClass.code, { name, division, teacher });
             const r = await api('/api/classes/' + currentClass.code, { method: 'PUT', body: JSON.stringify({ name, division, teacher }) });
-            if (r?.success) { toast('班級已更新！'); closeModal('editClass'); loadClasses(); }
+            console.log('API 回應:', r);
+            if (r?.success) { 
+                toast('班級已更新！'); 
+                closeModal('editClass'); 
+                loadClasses(); 
+            } else {
+                toast(r?.message || '更新失敗', 'danger');
+            }
         }
         async function deleteClass() {
             if (!confirm('確定刪除班級 ' + currentClass.code + '？')) return;
-            await api('/api/classes/' + currentClass.code, { method: 'DELETE' });
-            toast('班級已刪除！'); closeModal('editClass'); loadClasses();
+            const r = await api('/api/classes/' + currentClass.code, { method: 'DELETE' });
+            if (r?.success) {
+                toast('班級已刪除！'); 
+                closeModal('editClass'); 
+                loadClasses();
+            } else {
+                toast('刪除失敗', 'danger');
+            }
         }
         function updateClassDropdowns() {
             const opts = '<option value="">選擇班級</option>' + classes.map(c => '<option value="' + c.code + '">' + c.code + ' - ' + c.name + '</option>').join('');
@@ -590,13 +615,27 @@
             const period = parseInt(document.getElementById('edit-course-period').value);
             const room = document.getElementById('edit-course-room').value.trim();
             const p = ((sem.periods && sem.periods.length > 0 ? sem.periods : PERIODS[sem.div || "day"])).find(x => x.n == period) || {};
+            console.log('儲存課程:', currentCourse.id, { subject, classCode, day, period, room });
             const r = await api('/api/courses/' + currentCourse.id, { method: 'PUT', body: JSON.stringify({ subject, classCode, day, period, time: p.s + '-' + p.e, room }) });
-            if (r?.success) { toast('課程已更新！'); closeModal('editCourse'); loadCourses(); }
+            console.log('API 回應:', r);
+            if (r?.success) { 
+                toast('課程已更新！'); 
+                closeModal('editCourse'); 
+                loadCourses(); 
+            } else {
+                toast(r?.message || '更新失敗', 'danger');
+            }
         }
         async function deleteCourse() {
             if (!confirm('確定刪除此課程？')) return;
-            await api('/api/courses/' + currentCourse.id, { method: 'DELETE' });
-            toast('課程已刪除！'); closeModal('editCourse'); loadCourses();
+            const r = await api('/api/courses/' + currentCourse.id, { method: 'DELETE' });
+            if (r?.success) {
+                toast('課程已刪除！'); 
+                closeModal('editCourse'); 
+                loadCourses();
+            } else {
+                toast('刪除失敗', 'danger');
+            }
         }
         function getLocation() {
             if (!navigator.geolocation) { toast('瀏覽器不支援定位', 'danger'); return; }
@@ -679,25 +718,51 @@
         }
         async function startSession(id) {
             const c = courses.find(x => x.id === id);
-            if (!c) return;
+            if (!c) {
+                toast('找不到課程', 'danger');
+                return;
+            }
             const today = new Date().toISOString().split('T')[0];
             const p = ((sem.periods && sem.periods.length > 0 ? sem.periods : PERIODS[sem.div || "day"])).find(x => x.n == c.period) || { s: '08:00', e: '09:00' };
+            console.log('建立簽到:', { courseId: id, date: today, startTime: p.s, endTime: p.e });
+            
             const r = await api('/api/sessions', { method: 'POST', body: JSON.stringify({ courseId: id, date: today, startTime: p.s, endTime: p.e }) });
-            if (r?.success) {
+            console.log('API 回應:', r);
+            
+            if (r?.success && r.qrContent) {
                 showQR(r.qrContent, (c.name || c.subject) + ' - ' + c.classCode, today + ' ' + p.s);
                 toast('簽到已建立！');
+            } else {
+                toast(r?.error || '建立簽到失敗', 'danger');
             }
         }
         async function endSession(id) {
             if (!confirm('確定結束？未簽到學生將被標記為缺席。')) return;
             const r = await api('/api/sessions/' + id + '/complete', { method: 'POST' });
-            if (r?.success) { toast('已結束，' + r.marked + ' 人缺席'); loadSessions(); }
+            if (r?.success) { toast('已結束，' + (r.marked || 0) + ' 人缺席'); loadSessions(); }
+            else { toast('結束失敗', 'danger'); }
         }
         function showQR(content, name, time) {
+            console.log('顯示 QR Code:', { content, name, time, BOT });
             document.getElementById('qr-name').textContent = name;
             document.getElementById('qr-time').textContent = time;
-            QRCode.toCanvas(document.getElementById('qr-canvas'), 'https://line.me/R/oaMessage/' + BOT + '/?' + encodeURIComponent(content), { width: 200 });
-            openModal('qr');
+            
+            try {
+                const qrUrl = 'https://line.me/R/oaMessage/' + BOT + '/?' + encodeURIComponent(content);
+                console.log('QR URL:', qrUrl);
+                QRCode.toCanvas(document.getElementById('qr-canvas'), qrUrl, { width: 200 }, function(error) {
+                    if (error) {
+                        console.error('QR Code 產生錯誤:', error);
+                        toast('QR Code 產生失敗', 'danger');
+                    } else {
+                        console.log('QR Code 產生成功');
+                        openModal('qr');
+                    }
+                });
+            } catch (e) {
+                console.error('QR Code 錯誤:', e);
+                toast('QR Code 產生失敗: ' + e.message, 'danger');
+            }
         }
         function downloadQR() {
             const canvas = document.getElementById('qr-canvas');
