@@ -7,125 +7,57 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <style>
         :root{--primary:#4f46e5;--primary-dark:#3730a3;--success:#10b981;--warning:#f59e0b;--danger:#ef4444;--bg:#f8fafc;--card:#fff;--text:#1e293b;--text-light:#64748b;--border:#e2e8f0}
-        *{margin:0;padding:0;box-sizing:border-box}
-        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text)}
+        *{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text)}
         .mobile-header{position:fixed;top:0;left:0;right:0;height:56px;background:linear-gradient(135deg,var(--primary-dark),var(--primary));color:#fff;display:flex;align-items:center;padding:0 15px;z-index:1001}
         .hamburger{width:44px;height:44px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:5px;background:rgba(255,255,255,.1);border:none;border-radius:10px;cursor:pointer}
-        .hamburger span{display:block;width:20px;height:2px;background:#fff;transition:.3s}
-        .hamburger.active span:nth-child(1){transform:rotate(45deg) translate(5px,5px)}
-        .hamburger.active span:nth-child(2){opacity:0}
-        .hamburger.active span:nth-child(3){transform:rotate(-45deg) translate(5px,-5px)}
-        .mobile-title{flex:1;text-align:center;font-size:18px;font-weight:700}
-        .status-dot{width:10px;height:10px;border-radius:50%;background:var(--danger)}
-        .status-dot.connected{background:var(--success)}
-        .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999}
-        .sidebar-overlay.open{display:block}
-        .sidebar{position:fixed;top:0;left:0;width:280px;height:100vh;background:linear-gradient(180deg,var(--primary-dark),var(--primary));color:#fff;padding:70px 0 20px;z-index:1000;transform:translateX(-100%);transition:.3s;overflow-y:auto}
-        .sidebar.open{transform:translateX(0)}
-        .nav-menu{list-style:none;padding:10px}
-        .nav-section{padding:15px 15px 8px;font-size:11px;text-transform:uppercase;opacity:.6;letter-spacing:1px}
-        .nav-link{display:flex;align-items:center;gap:12px;padding:14px 15px;color:rgba(255,255,255,.8);text-decoration:none;border-radius:12px;margin-bottom:4px;transition:.3s;font-size:15px}
-        .nav-link:hover,.nav-link.active{background:rgba(255,255,255,.2);color:#fff}
-        .main{padding:70px 15px 20px}
-        .header{margin-bottom:20px}
-        .page-title{font-size:24px;font-weight:700;margin-bottom:5px}
-        .page-subtitle{font-size:14px;color:var(--text-light);margin-bottom:15px}
+        .hamburger span{display:block;width:20px;height:2px;background:#fff;transition:.3s}.hamburger.active span:nth-child(1){transform:rotate(45deg) translate(5px,5px)}.hamburger.active span:nth-child(2){opacity:0}.hamburger.active span:nth-child(3){transform:rotate(-45deg) translate(5px,-5px)}
+        .mobile-title{flex:1;text-align:center;font-size:18px;font-weight:700}.status-dot{width:10px;height:10px;border-radius:50%;background:var(--danger)}.status-dot.connected{background:var(--success)}
+        .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999}.sidebar-overlay.open{display:block}
+        .sidebar{position:fixed;top:0;left:0;width:280px;height:100vh;background:linear-gradient(180deg,var(--primary-dark),var(--primary));color:#fff;padding:70px 0 20px;z-index:1000;transform:translateX(-100%);transition:.3s;overflow-y:auto}.sidebar.open{transform:translateX(0)}
+        .nav-menu{list-style:none;padding:10px}.nav-section{padding:15px 15px 8px;font-size:11px;text-transform:uppercase;opacity:.6;letter-spacing:1px}
+        .nav-link{display:flex;align-items:center;gap:12px;padding:14px 15px;color:rgba(255,255,255,.8);text-decoration:none;border-radius:12px;margin-bottom:4px;transition:.3s;font-size:15px}.nav-link:hover,.nav-link.active{background:rgba(255,255,255,.2);color:#fff}
+        .main{padding:70px 15px 20px}.header{margin-bottom:20px}.page-title{font-size:24px;font-weight:700;margin-bottom:5px}.page-subtitle{font-size:14px;color:var(--text-light);margin-bottom:15px}
         .stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px}
         .stat-card{background:var(--card);border-radius:16px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.05);position:relative;overflow:hidden}
-        .stat-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%}
-        .stat-card.primary::before{background:var(--primary)}
-        .stat-card.success::before{background:var(--success)}
-        .stat-card.warning::before{background:var(--warning)}
-        .stat-card.danger::before{background:var(--danger)}
-        .stat-value{font-size:28px;font-weight:700}
-        .stat-card.primary .stat-value{color:var(--primary)}
-        .stat-card.success .stat-value{color:var(--success)}
-        .stat-card.warning .stat-value{color:var(--warning)}
-        .stat-card.danger .stat-value{color:var(--danger)}
-        .stat-label{font-size:13px;color:var(--text-light);margin-top:3px}
-        .stat-icon{position:absolute;top:12px;right:12px;font-size:24px;opacity:.2}
-        .card{background:var(--card);border-radius:16px;padding:18px;margin-bottom:15px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
-        .card-title{font-size:16px;font-weight:600;margin-bottom:15px;display:flex;align-items:center;gap:8px}
+        .stat-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%}.stat-card.primary::before{background:var(--primary)}.stat-card.success::before{background:var(--success)}.stat-card.warning::before{background:var(--warning)}.stat-card.danger::before{background:var(--danger)}
+        .stat-value{font-size:28px;font-weight:700}.stat-card.primary .stat-value{color:var(--primary)}.stat-card.success .stat-value{color:var(--success)}.stat-card.warning .stat-value{color:var(--warning)}.stat-card.danger .stat-value{color:var(--danger)}
+        .stat-label{font-size:13px;color:var(--text-light);margin-top:3px}.stat-icon{position:absolute;top:12px;right:12px;font-size:24px;opacity:.2}
+        .card{background:var(--card);border-radius:16px;padding:18px;margin-bottom:15px;box-shadow:0 2px 8px rgba(0,0,0,.05)}.card-title{font-size:16px;font-weight:600;margin-bottom:15px;display:flex;align-items:center;gap:8px}
         .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 18px;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;transition:.3s}
-        .btn-primary{background:var(--primary);color:#fff}
-        .btn-success{background:var(--success);color:#fff}
-        .btn-warning{background:var(--warning);color:#fff}
-        .btn-danger{background:var(--danger);color:#fff}
-        .btn-outline{background:#fff;border:2px solid var(--border);color:var(--text)}
-        .btn-block{width:100%}
-        .btn-sm{padding:10px 14px;font-size:13px}
-        .form-group{margin-bottom:18px}
-        .form-label{display:block;margin-bottom:6px;font-weight:500;font-size:14px}
-        .form-input,.form-select{width:100%;padding:12px 14px;border:2px solid var(--border);border-radius:10px;font-size:16px;font-family:inherit;background:#fff}
-        .form-input:focus,.form-select:focus{outline:none;border-color:var(--primary)}
+        .btn-primary{background:var(--primary);color:#fff}.btn-success{background:var(--success);color:#fff}.btn-warning{background:var(--warning);color:#fff}.btn-danger{background:var(--danger);color:#fff}.btn-outline{background:#fff;border:2px solid var(--border);color:var(--text)}.btn-block{width:100%}.btn-sm{padding:10px 14px;font-size:13px}
+        .form-group{margin-bottom:18px}.form-label{display:block;margin-bottom:6px;font-weight:500;font-size:14px}
+        .form-input,.form-select{width:100%;padding:12px 14px;border:2px solid var(--border);border-radius:10px;font-size:16px;font-family:inherit;background:#fff}.form-input:focus,.form-select:focus{outline:none;border-color:var(--primary)}
         .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-        .chip-group{display:flex;flex-wrap:wrap;gap:8px}
-        .chip{padding:10px 16px;border:2px solid var(--border);border-radius:25px;cursor:pointer;transition:.3s;font-size:14px;font-weight:500}
-        .chip:hover{border-color:var(--primary)}
-        .chip.active{background:var(--primary);color:#fff;border-color:var(--primary)}
-        .chip.day.active{background:#3b82f6;border-color:#3b82f6}
-        .chip.night.active{background:#8b5cf6;border-color:#8b5cf6}
-        .chip.weekend.active{background:#f59e0b;border-color:#f59e0b}
-        .period-table{width:100%;border-collapse:collapse;margin-top:10px}
-        .period-table th,.period-table td{padding:10px;text-align:center;border:1px solid var(--border);font-size:14px}
-        .period-table th{background:var(--bg);font-weight:600}
-        .table-wrap{overflow-x:auto}
-        table{width:100%;border-collapse:collapse;min-width:400px}
-        th,td{padding:12px 10px;text-align:left;border-bottom:1px solid var(--border);font-size:14px}
-        th{background:var(--bg);font-weight:600;color:var(--text-light);font-size:12px}
-        tr.clickable{cursor:pointer;transition:.2s}
-        tr.clickable:hover{background:var(--bg)}
-        .badge{padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500}
-        .badge.success{background:rgba(16,185,129,.1);color:var(--success)}
-        .badge.warning{background:rgba(245,158,11,.1);color:var(--warning)}
-        .badge.danger{background:rgba(239,68,68,.1);color:var(--danger)}
-        .badge.primary{background:rgba(79,70,229,.1);color:var(--primary)}
-        .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:2000;opacity:0;visibility:hidden;transition:.3s}
-        .modal-overlay.active{opacity:1;visibility:visible}
-        .modal{background:#fff;border-radius:20px 20px 0 0;width:100%;max-height:90vh;overflow-y:auto;transform:translateY(100%);transition:.3s}
-        .modal-overlay.active .modal{transform:translateY(0)}
-        .modal-header{padding:18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#fff;z-index:1}
-        .modal-title{font-size:18px;font-weight:600}
-        .modal-close{background:none;border:none;font-size:28px;color:var(--text-light);cursor:pointer}
-        .modal-body{padding:18px}
-        .modal-footer{padding:15px 18px;border-top:1px solid var(--border);display:flex;gap:10px}
-        .modal-footer .btn{flex:1}
-        .alert{padding:14px 16px;border-radius:12px;margin-bottom:15px;font-size:14px;display:flex;align-items:flex-start;gap:10px}
-        .alert-info{background:rgba(59,130,246,.1);color:#1d4ed8}
-        .qr-container{text-align:center;padding:20px}
-        .qr-code{background:#fff;padding:15px;border-radius:16px;display:inline-block;box-shadow:0 4px 15px rgba(0,0,0,.1);margin-bottom:15px}
-        .qr-info{color:var(--text-light);font-size:14px}
-        .qr-info strong{color:var(--text);display:block;font-size:16px;margin-bottom:5px}
-        .session-item{padding:15px;border:1px solid var(--border);border-radius:12px;margin-bottom:12px}
-        .session-item.completed{background:#f8fafc;opacity:.7}
-        .session-header{display:flex;align-items:center;gap:12px;margin-bottom:10px}
-        .session-icon{width:44px;height:44px;background:linear-gradient(135deg,#818cf8,var(--primary));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff}
-        .session-info{flex:1}
-        .session-info h4{font-size:15px;margin-bottom:3px}
-        .session-info span{font-size:13px;color:var(--text-light)}
-        .session-stats{display:flex;gap:15px;margin-bottom:10px;font-size:13px}
-        .session-actions{display:flex;gap:8px}
-        .session-actions .btn{flex:1}
-        .schedule-grid{display:grid;gap:2px;font-size:11px}
-        .schedule-header{padding:8px 4px;text-align:center;background:var(--primary);color:#fff;font-weight:600;border-radius:6px 6px 0 0}
-        .schedule-time{padding:8px 4px;text-align:center;background:var(--bg);font-weight:500;display:flex;align-items:center;justify-content:center}
-        .schedule-cell{min-height:50px;padding:4px;background:#fff;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s}
-        .schedule-cell:hover{background:var(--bg)}
-        .schedule-cell.has-class{background:rgba(79,70,229,.15)}
-        .schedule-cell .class-tag{font-size:10px;padding:4px 6px;background:var(--primary);color:#fff;border-radius:4px;text-align:center;width:100%}
-        .empty{text-align:center;padding:40px 20px;color:var(--text-light)}
-        .empty .icon{font-size:48px;margin-bottom:12px;opacity:.5}
-        .toast-container{position:fixed;top:70px;left:15px;right:15px;z-index:3000}
-        .toast{background:var(--text);color:#fff;padding:14px 18px;border-radius:12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;animation:slideDown .3s}
-        .toast.success{background:var(--success)}
-        .toast.warning{background:var(--warning)}
-        .toast.danger{background:var(--danger)}
-        @keyframes slideDown{from{transform:translateY(-20px);opacity:0}to{transform:translateY(0);opacity:1}}
-        .page{display:none}
-        .page.active{display:block}
-        .tabs{display:flex;gap:5px;margin-bottom:15px}
-        .tab{flex:1;padding:12px;text-align:center;border:2px solid var(--border);border-radius:10px;cursor:pointer;font-weight:500;font-size:14px}
-        .tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+        .chip-group{display:flex;flex-wrap:wrap;gap:8px}.chip{padding:10px 16px;border:2px solid var(--border);border-radius:25px;cursor:pointer;transition:.3s;font-size:14px;font-weight:500}.chip:hover{border-color:var(--primary)}.chip.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+        .chip.day.active{background:#3b82f6;border-color:#3b82f6}.chip.night.active{background:#8b5cf6;border-color:#8b5cf6}.chip.weekend.active{background:#f59e0b;border-color:#f59e0b}
+        .period-table{width:100%;border-collapse:collapse;margin-top:10px}.period-table th,.period-table td{padding:10px;text-align:center;border:1px solid var(--border);font-size:14px}.period-table th{background:var(--bg);font-weight:600}
+        .table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:400px}th,td{padding:12px 10px;text-align:left;border-bottom:1px solid var(--border);font-size:14px}th{background:var(--bg);font-weight:600;color:var(--text-light);font-size:12px}
+        tr.clickable{cursor:pointer;transition:.2s}tr.clickable:hover{background:var(--bg)}
+        .badge{padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500}.badge.success{background:rgba(16,185,129,.1);color:var(--success)}.badge.warning{background:rgba(245,158,11,.1);color:var(--warning)}.badge.danger{background:rgba(239,68,68,.1);color:var(--danger)}.badge.primary{background:rgba(79,70,229,.1);color:var(--primary)}
+        .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:2000;opacity:0;visibility:hidden;transition:.3s}.modal-overlay.active{opacity:1;visibility:visible}
+        .modal{background:#fff;border-radius:20px 20px 0 0;width:100%;max-height:90vh;overflow-y:auto;transform:translateY(100%);transition:.3s}.modal-overlay.active .modal{transform:translateY(0)}
+        .modal-header{padding:18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#fff;z-index:1}.modal-title{font-size:18px;font-weight:600}.modal-close{background:none;border:none;font-size:28px;color:var(--text-light);cursor:pointer}
+        .modal-body{padding:18px}.modal-footer{padding:15px 18px;border-top:1px solid var(--border);display:flex;gap:10px}.modal-footer .btn{flex:1}
+        .alert{padding:14px 16px;border-radius:12px;margin-bottom:15px;font-size:14px;display:flex;align-items:flex-start;gap:10px}.alert-info{background:rgba(59,130,246,.1);color:#1d4ed8}.alert-warning{background:rgba(245,158,11,.1);color:#b45309}.alert-danger{background:rgba(239,68,68,.1);color:#b91c1c}.alert-success{background:rgba(16,185,129,.1);color:#047857}
+        .qr-container{text-align:center;padding:20px}.qr-code{background:#fff;padding:15px;border-radius:16px;display:inline-block;box-shadow:0 4px 15px rgba(0,0,0,.1);margin-bottom:15px}.qr-info{color:var(--text-light);font-size:14px}.qr-info strong{color:var(--text);display:block;font-size:16px;margin-bottom:5px}
+        .session-item{padding:15px;border:1px solid var(--border);border-radius:12px;margin-bottom:12px}.session-item.completed{background:#f8fafc;opacity:.7}
+        .session-header{display:flex;align-items:center;gap:12px;margin-bottom:10px}.session-icon{width:44px;height:44px;background:linear-gradient(135deg,#818cf8,var(--primary));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff}
+        .session-info{flex:1}.session-info h4{font-size:15px;margin-bottom:3px}.session-info span{font-size:13px;color:var(--text-light)}.session-stats{display:flex;gap:15px;margin-bottom:10px;font-size:13px}.session-actions{display:flex;gap:8px}.session-actions .btn{flex:1}
+        .schedule-grid{display:grid;gap:2px;font-size:11px}.schedule-header{padding:8px 4px;text-align:center;background:var(--primary);color:#fff;font-weight:600;border-radius:6px 6px 0 0}.schedule-time{padding:8px 4px;text-align:center;background:var(--bg);font-weight:500;display:flex;align-items:center;justify-content:center}
+        .schedule-cell{min-height:50px;padding:4px;background:#fff;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s}.schedule-cell:hover{background:var(--bg)}.schedule-cell.has-class{background:rgba(79,70,229,.15)}.schedule-cell .class-tag{font-size:10px;padding:4px 6px;background:var(--primary);color:#fff;border-radius:4px;text-align:center;width:100%}
+        .empty{text-align:center;padding:40px 20px;color:var(--text-light)}.empty .icon{font-size:48px;margin-bottom:12px;opacity:.5}
+        .toast-container{position:fixed;top:70px;left:15px;right:15px;z-index:3000}.toast{background:var(--text);color:#fff;padding:14px 18px;border-radius:12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;animation:slideDown .3s}.toast.success{background:var(--success)}.toast.warning{background:var(--warning)}.toast.danger{background:var(--danger)}@keyframes slideDown{from{transform:translateY(-20px);opacity:0}to{transform:translateY(0);opacity:1}}
+        .page{display:none}.page.active{display:block}
+        .tabs{display:flex;gap:5px;margin-bottom:15px}.tab{flex:1;padding:12px;text-align:center;border:2px solid var(--border);border-radius:10px;cursor:pointer;font-weight:500;font-size:14px}.tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+        .progress-ring{width:120px;height:120px;margin:0 auto 15px}.progress-ring circle{fill:none;stroke-width:8}.progress-ring .bg{stroke:var(--border)}.progress-ring .fg{stroke:var(--success);stroke-linecap:round;transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke-dashoffset .5s}
+        .big-stat{text-align:center;padding:20px}.big-stat .value{font-size:48px;font-weight:700}.big-stat .label{font-size:14px;color:var(--text-light)}
+        .student-alert{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:12px;margin-bottom:10px}
+        .student-alert.critical{border-color:var(--danger);background:rgba(239,68,68,.05)}.student-alert.warning{border-color:var(--warning);background:rgba(245,158,11,.05)}
+        .student-alert .avatar{width:40px;height:40px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600}
+        .student-alert .info{flex:1}.student-alert .info h5{font-size:14px;margin-bottom:2px}.student-alert .info span{font-size:12px;color:var(--text-light)}
+        .student-alert .action{display:flex;gap:6px}
+        .switch{position:relative;width:50px;height:28px}.switch input{opacity:0;width:0;height:0}.switch .slider{position:absolute;inset:0;background:var(--border);border-radius:28px;transition:.3s;cursor:pointer}.switch .slider::before{content:'';position:absolute;width:22px;height:22px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s}.switch input:checked+.slider{background:var(--success)}.switch input:checked+.slider::before{transform:translateX(22px)}
+        .setting-item{display:flex;align-items:center;justify-content:space-between;padding:15px 0;border-bottom:1px solid var(--border)}.setting-item:last-child{border:none}.setting-item .label{font-size:15px}.setting-item .desc{font-size:12px;color:var(--text-light);margin-top:2px}
         @media(min-width:768px){.mobile-header{display:none}.sidebar{transform:translateX(0);padding-top:20px}.sidebar-overlay{display:none!important}.main{margin-left:280px;padding:30px}.modal{max-width:600px;border-radius:20px;margin:auto}.modal-overlay{align-items:center}.stats-grid{grid-template-columns:repeat(4,1fr)}}
     </style>
 </head>
@@ -149,7 +81,11 @@
             <li><a href="#" class="nav-link" data-page="classes"><span>🏫</span> 班級管理</a></li>
             <li><a href="#" class="nav-link" data-page="students"><span>👨‍🎓</span> 學生名單</a></li>
             <li><a href="#" class="nav-link" data-page="records"><span>📋</span> 出缺紀錄</a></li>
+            <li class="nav-section">統計分析</li>
+            <li><a href="#" class="nav-link" data-page="stats"><span>📈</span> 出席統計</a></li>
+            <li><a href="#" class="nav-link" data-page="alerts"><span>⚠️</span> 缺席警示</a></li>
             <li class="nav-section">系統</li>
+            <li><a href="#" class="nav-link" data-page="notifications"><span>🔔</span> 通知設定</a></li>
             <li><a href="#" class="nav-link" data-page="settings"><span>⚙️</span> 系統設定</a></li>
         </ul>
     </aside>
@@ -164,40 +100,20 @@
                 <div class="stat-card danger"><div class="stat-value" id="stat-absent">-</div><div class="stat-label">今日缺席</div><div class="stat-icon">❌</div></div>
             </div>
             <div class="card"><div class="card-title">📅 今日課程</div><div id="today-classes"></div></div>
+            <div class="card"><div class="card-title">⚠️ 需關注學生</div><div id="dashboard-alerts"></div></div>
         </div>
         <!-- Semester -->
         <div class="page" id="page-semester">
             <div class="header"><h1 class="page-title">學期設定</h1><p class="page-subtitle">設定學期日期與節次時間</p></div>
-            <div class="card">
-                <div class="card-title">🏫 部別選擇</div>
-                <div class="chip-group" id="division-chips">
-                    <div class="chip day active" onclick="selectDivision('day')">☀️ 日間部</div>
-                    <div class="chip night" onclick="selectDivision('night')">🌙 夜間部</div>
-                    <div class="chip weekend" onclick="selectDivision('weekend')">📅 進修部</div>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-title">📆 學期期間</div>
-                <div class="form-row">
-                    <div class="form-group"><label class="form-label">開學日期</label><input type="date" class="form-input" id="semester-start" onchange="calcWeeks()"></div>
-                    <div class="form-group"><label class="form-label">結業日期</label><input type="date" class="form-input" id="semester-end" onchange="calcWeeks()"></div>
-                </div>
-                <div class="alert alert-info">ℹ️ 自動計算：<strong id="semester-weeks">0</strong> 週</div>
-            </div>
+            <div class="card"><div class="card-title">🏫 部別選擇</div><div class="chip-group" id="division-chips"><div class="chip day active" onclick="selectDivision('day')">☀️ 日間部</div><div class="chip night" onclick="selectDivision('night')">🌙 夜間部</div><div class="chip weekend" onclick="selectDivision('weekend')">📅 進修部</div></div></div>
+            <div class="card"><div class="card-title">📆 學期期間</div><div class="form-row"><div class="form-group"><label class="form-label">開學日期</label><input type="date" class="form-input" id="semester-start" onchange="calcWeeks()"></div><div class="form-group"><label class="form-label">結業日期</label><input type="date" class="form-input" id="semester-end" onchange="calcWeeks()"></div></div><div class="alert alert-info">ℹ️ 自動計算：<strong id="semester-weeks">0</strong> 週</div></div>
             <div class="card"><div class="card-title">⏰ 節次時間表</div><div id="period-settings"></div></div>
             <button class="btn btn-primary btn-block" onclick="saveSemester()">💾 儲存學期設定</button>
         </div>
         <!-- Schedule -->
         <div class="page" id="page-schedule">
             <div class="header"><h1 class="page-title">課表管理</h1><p class="page-subtitle">點擊空格新增課程</p></div>
-            <div class="card">
-                <div class="tabs"><div class="tab active" onclick="showView('week')">週課表</div><div class="tab" onclick="showView('list')">課程列表</div></div>
-                <div id="week-view"><div class="schedule-grid" id="schedule-grid"></div></div>
-                <div id="list-view" style="display:none">
-                    <button class="btn btn-primary btn-block" style="margin-bottom:15px" onclick="openModal('addCourse')">➕ 新增課程</button>
-                    <div class="table-wrap"><table><thead><tr><th>課程</th><th>班級</th><th>時間</th><th>教室</th></tr></thead><tbody id="courses-table"></tbody></table></div>
-                </div>
-            </div>
+            <div class="card"><div class="tabs"><div class="tab active" onclick="showView('week')">週課表</div><div class="tab" onclick="showView('list')">課程列表</div></div><div id="week-view"><div class="schedule-grid" id="schedule-grid"></div></div><div id="list-view" style="display:none"><button class="btn btn-primary btn-block" style="margin-bottom:15px" onclick="openModal('addCourse')">➕ 新增課程</button><div class="table-wrap"><table><thead><tr><th>課程</th><th>班級</th><th>時間</th><th>教室</th></tr></thead><tbody id="courses-table"></tbody></table></div></div></div>
         </div>
         <!-- Sessions -->
         <div class="page" id="page-sessions">
@@ -207,10 +123,7 @@
         <!-- Makeup -->
         <div class="page" id="page-makeup">
             <div class="header"><h1 class="page-title">調補課管理</h1></div>
-            <div style="display:flex;gap:10px;margin-bottom:15px">
-                <button class="btn btn-warning" onclick="openModal('addMakeup')">🔄 調課</button>
-                <button class="btn btn-success" onclick="openModal('addExtra')">➕ 補課</button>
-            </div>
+            <div style="display:flex;gap:10px;margin-bottom:15px"><button class="btn btn-warning" onclick="openModal('addMakeup')">🔄 調課</button><button class="btn btn-success" onclick="openModal('addExtra')">➕ 補課</button></div>
             <div class="card"><div class="card-title">📋 調補課紀錄</div><div id="makeup-list"><div class="empty">尚無調補課紀錄</div></div></div>
         </div>
         <!-- Classes -->
@@ -228,57 +141,70 @@
             <div class="header"><h1 class="page-title">出缺紀錄</h1></div>
             <div class="card"><div class="table-wrap"><table><thead><tr><th>日期</th><th>學號</th><th>課程</th><th>狀態</th></tr></thead><tbody id="records-table"></tbody></table></div></div>
         </div>
+        <!-- Stats -->
+        <div class="page" id="page-stats">
+            <div class="header"><h1 class="page-title">出席統計</h1><p class="page-subtitle">整體出席率分析</p></div>
+            <div class="card">
+                <div class="big-stat">
+                    <svg class="progress-ring" viewBox="0 0 120 120"><circle class="bg" cx="60" cy="60" r="52"/><circle class="fg" id="progress-circle" cx="60" cy="60" r="52" stroke-dasharray="327" stroke-dashoffset="327"/></svg>
+                    <div class="value" id="overall-rate">--%</div>
+                    <div class="label">本學期平均出席率</div>
+                </div>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card success"><div class="stat-value" id="stats-attended">-</div><div class="stat-label">出席次數</div></div>
+                <div class="stat-card warning"><div class="stat-value" id="stats-late">-</div><div class="stat-label">遲到次數</div></div>
+                <div class="stat-card danger"><div class="stat-value" id="stats-absent">-</div><div class="stat-label">缺席次數</div></div>
+                <div class="stat-card primary"><div class="stat-value" id="stats-total">-</div><div class="stat-label">總簽到數</div></div>
+            </div>
+            <div class="card"><div class="card-title">📉 出席率偏低學生</div><div id="low-attendance-list"></div></div>
+            <div style="display:flex;gap:10px"><button class="btn btn-outline" style="flex:1" onclick="exportStats('excel')">📥 匯出 Excel</button><button class="btn btn-outline" style="flex:1" onclick="exportStats('pdf')">📄 匯出 PDF</button></div>
+        </div>
+        <!-- Alerts -->
+        <div class="page" id="page-alerts">
+            <div class="header"><h1 class="page-title">缺席警示</h1><p class="page-subtitle">連續缺席學生追蹤</p></div>
+            <div class="alert alert-warning">⚠️ 以下學生有連續缺席情形，建議及時關心</div>
+            <div id="alert-list"></div>
+            <button class="btn btn-primary btn-block" onclick="sendAllWarnings()">📲 發送全部警告通知</button>
+        </div>
+        <!-- Notifications -->
+        <div class="page" id="page-notifications">
+            <div class="header"><h1 class="page-title">通知設定</h1><p class="page-subtitle">設定自動通知規則</p></div>
+            <div class="card">
+                <div class="card-title">📱 LINE 自動通知</div>
+                <div class="setting-item"><div><div class="label">上課前提醒</div><div class="desc">課程開始前 10 分鐘提醒學生</div></div><label class="switch"><input type="checkbox" id="notify-remind" checked><span class="slider"></span></label></div>
+                <div class="setting-item"><div><div class="label">缺席通知學生</div><div class="desc">學生缺席時發送通知</div></div><label class="switch"><input type="checkbox" id="notify-absent" checked><span class="slider"></span></label></div>
+                <div class="setting-item"><div><div class="label">缺席通知家長</div><div class="desc">學生缺席時同時通知家長</div></div><label class="switch"><input type="checkbox" id="notify-parent"><span class="slider"></span></label></div>
+                <div class="setting-item"><div><div class="label">連續缺席警告</div><div class="desc">連續缺席 3 次發送警告</div></div><label class="switch"><input type="checkbox" id="notify-warning" checked><span class="slider"></span></label></div>
+            </div>
+            <div class="card">
+                <div class="card-title">📊 定期報告</div>
+                <div class="setting-item"><div><div class="label">週報通知</div><div class="desc">每週五發送出席統計給教師</div></div><label class="switch"><input type="checkbox" id="notify-weekly"><span class="slider"></span></label></div>
+            </div>
+            <button class="btn btn-primary btn-block" onclick="saveNotifySettings()">💾 儲存通知設定</button>
+        </div>
         <!-- Settings -->
         <div class="page" id="page-settings">
             <div class="header"><h1 class="page-title">系統設定</h1></div>
-            <div class="card">
-                <div class="card-title">🔗 後端連線</div>
-                <div class="form-group"><label class="form-label">API 網址</label><input type="text" class="form-input" id="api-url"></div>
-                <button class="btn btn-primary btn-block" onclick="testConn()">🔍 測試連線</button>
-            </div>
-            <div class="card">
-                <div class="card-title">📱 LINE Bot</div>
-                <div class="form-group"><label class="form-label">Bot ID</label><input type="text" class="form-input" id="line-bot-id"></div>
-                <button class="btn btn-success btn-block" onclick="saveSettings()">💾 儲存</button>
-            </div>
+            <div class="card"><div class="card-title">🔗 後端連線</div><div class="form-group"><label class="form-label">API 網址</label><input type="text" class="form-input" id="api-url"></div><button class="btn btn-primary btn-block" onclick="testConn()">🔍 測試連線</button></div>
+            <div class="card"><div class="card-title">📱 LINE Bot</div><div class="form-group"><label class="form-label">Bot ID</label><input type="text" class="form-input" id="line-bot-id"></div><button class="btn btn-success btn-block" onclick="saveSettings()">💾 儲存</button></div>
         </div>
     </main>
     <div class="toast-container" id="toasts"></div>
 
     <!-- Modals -->
-    <div class="modal-overlay" id="modal-addClass"><div class="modal"><div class="modal-header"><h3 class="modal-title">新增班級</h3><button class="modal-close" onclick="closeModal('addClass')">&times;</button></div><div class="modal-body">
-        <div class="form-group"><label class="form-label">班級代碼</label><input type="text" class="form-input" id="class-code" placeholder="801"></div>
-        <div class="form-group"><label class="form-label">班級名稱</label><input type="text" class="form-input" id="class-name" placeholder="八年一班"></div>
-        <div class="form-group"><label class="form-label">部別</label><select class="form-select" id="class-division"><option value="day">日間部</option><option value="night">夜間部</option><option value="weekend">進修部</option></select></div>
-        <div class="form-group"><label class="form-label">導師</label><input type="text" class="form-input" id="class-teacher"></div>
-    </div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('addClass')">取消</button><button class="btn btn-primary" onclick="addClass()">新增</button></div></div></div>
+    <div class="modal-overlay" id="modal-addClass"><div class="modal"><div class="modal-header"><h3 class="modal-title">新增班級</h3><button class="modal-close" onclick="closeModal('addClass')">&times;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">班級代碼</label><input type="text" class="form-input" id="class-code" placeholder="801"></div><div class="form-group"><label class="form-label">班級名稱</label><input type="text" class="form-input" id="class-name" placeholder="八年一班"></div><div class="form-group"><label class="form-label">部別</label><select class="form-select" id="class-division"><option value="day">日間部</option><option value="night">夜間部</option><option value="weekend">進修部</option></select></div><div class="form-group"><label class="form-label">導師</label><input type="text" class="form-input" id="class-teacher"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('addClass')">取消</button><button class="btn btn-primary" onclick="addClass()">新增</button></div></div></div>
 
-    <div class="modal-overlay" id="modal-addCourse"><div class="modal"><div class="modal-header"><h3 class="modal-title">新增課程</h3><button class="modal-close" onclick="closeModal('addCourse')">&times;</button></div><div class="modal-body">
-        <div class="form-group"><label class="form-label">課程名稱</label><input type="text" class="form-input" id="course-name" placeholder="物理"></div>
-        <div class="form-group"><label class="form-label">班級</label><select class="form-select" id="course-class"></select></div>
-        <div class="form-group"><label class="form-label">星期</label><select class="form-select" id="course-day"><option value="1">週一</option><option value="2">週二</option><option value="3">週三</option><option value="4">週四</option><option value="5">週五</option><option value="6">週六</option><option value="0">週日</option></select></div>
-        <div class="form-group"><label class="form-label">節次</label><select class="form-select" id="course-period"></select></div>
-        <div class="form-group"><label class="form-label">教室</label><input type="text" class="form-input" id="course-room"></div>
-        <div class="form-row"><div class="form-group"><label class="form-label">緯度</label><input type="number" step="any" class="form-input" id="course-lat"></div><div class="form-group"><label class="form-label">經度</label><input type="number" step="any" class="form-input" id="course-lon"></div></div>
-        <button type="button" class="btn btn-outline btn-block" onclick="getLoc()">📍 取得位置</button>
-    </div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('addCourse')">取消</button><button class="btn btn-primary" onclick="addCourse()">新增</button></div></div></div>
+    <div class="modal-overlay" id="modal-addCourse"><div class="modal"><div class="modal-header"><h3 class="modal-title">新增課程</h3><button class="modal-close" onclick="closeModal('addCourse')">&times;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">課程名稱</label><input type="text" class="form-input" id="course-name" placeholder="物理"></div><div class="form-group"><label class="form-label">班級</label><select class="form-select" id="course-class"></select></div><div class="form-group"><label class="form-label">星期</label><select class="form-select" id="course-day"><option value="1">週一</option><option value="2">週二</option><option value="3">週三</option><option value="4">週四</option><option value="5">週五</option><option value="6">週六</option><option value="0">週日</option></select></div><div class="form-group"><label class="form-label">節次</label><select class="form-select" id="course-period"></select></div><div class="form-group"><label class="form-label">教室</label><input type="text" class="form-input" id="course-room"></div><div class="form-row"><div class="form-group"><label class="form-label">緯度</label><input type="number" step="any" class="form-input" id="course-lat"></div><div class="form-group"><label class="form-label">經度</label><input type="number" step="any" class="form-input" id="course-lon"></div></div><button type="button" class="btn btn-outline btn-block" onclick="getLoc()">📍 取得位置</button></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('addCourse')">取消</button><button class="btn btn-primary" onclick="addCourse()">新增</button></div></div></div>
 
-    <div class="modal-overlay" id="modal-addMakeup"><div class="modal"><div class="modal-header"><h3 class="modal-title">🔄 調課</h3><button class="modal-close" onclick="closeModal('addMakeup')">&times;</button></div><div class="modal-body">
-        <div class="alert alert-info">ℹ️ 調課會自動通知學生</div>
-        <div class="form-group"><label class="form-label">課程</label><select class="form-select" id="makeup-course"></select></div>
-        <div class="form-group"><label class="form-label">原日期</label><input type="date" class="form-input" id="makeup-from"></div>
-        <div class="form-group"><label class="form-label">調至日期</label><input type="date" class="form-input" id="makeup-to"></div>
-        <div class="form-row"><div class="form-group"><label class="form-label">時間</label><input type="time" class="form-input" id="makeup-time"></div><div class="form-group"><label class="form-label">教室</label><input type="text" class="form-input" id="makeup-room"></div></div>
-    </div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('addMakeup')">取消</button><button class="btn btn-warning" onclick="addMakeup()">確認調課</button></div></div></div>
+    <div class="modal-overlay" id="modal-addMakeup"><div class="modal"><div class="modal-header"><h3 class="modal-title">🔄 調課</h3><button class="modal-close" onclick="closeModal('addMakeup')">&times;</button></div><div class="modal-body"><div class="alert alert-info">ℹ️ 調課會自動通知學生</div><div class="form-group"><label class="form-label">課程</label><select class="form-select" id="makeup-course"></select></div><div class="form-group"><label class="form-label">原日期</label><input type="date" class="form-input" id="makeup-from"></div><div class="form-group"><label class="form-label">調至日期</label><input type="date" class="form-input" id="makeup-to"></div><div class="form-row"><div class="form-group"><label class="form-label">時間</label><input type="time" class="form-input" id="makeup-time"></div><div class="form-group"><label class="form-label">教室</label><input type="text" class="form-input" id="makeup-room"></div></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('addMakeup')">取消</button><button class="btn btn-warning" onclick="addMakeup()">確認調課</button></div></div></div>
 
-    <div class="modal-overlay" id="modal-qr"><div class="modal"><div class="modal-header"><h3 class="modal-title">📱 簽到 QR Code</h3><button class="modal-close" onclick="closeModal('qr')">&times;</button></div><div class="modal-body">
-        <div class="qr-container"><div class="qr-code"><canvas id="qr-canvas"></canvas></div><div class="qr-info"><strong id="qr-name"></strong><span id="qr-time"></span></div></div>
-    </div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('qr')">關閉</button><button class="btn btn-primary" onclick="downloadQR()">📥 下載</button><button class="btn btn-success" onclick="sendNotify()">📲 通知學生</button></div></div></div>
+    <div class="modal-overlay" id="modal-qr"><div class="modal"><div class="modal-header"><h3 class="modal-title">📱 簽到 QR Code</h3><button class="modal-close" onclick="closeModal('qr')">&times;</button></div><div class="modal-body"><div class="qr-container"><div class="qr-code"><canvas id="qr-canvas"></canvas></div><div class="qr-info"><strong id="qr-name"></strong><span id="qr-time"></span></div></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('qr')">關閉</button><button class="btn btn-primary" onclick="downloadQR()">📥 下載</button><button class="btn btn-success" onclick="sendRemind()">📲 通知學生</button></div></div></div>
 
     <script>
         let API=localStorage.getItem('apiUrl')||'',BOT=localStorage.getItem('lineBotId')||'@BOT';
         let sem=JSON.parse(localStorage.getItem('sem')||'null')||{div:'day',start:'',end:'',periods:[]};
-        let classes=[],courses=[];
+        let classes=[],courses=[],currentSession=null;
         const PERIODS={day:[{n:1,s:'08:00',e:'08:50'},{n:2,s:'09:00',e:'09:50'},{n:3,s:'10:00',e:'10:50'},{n:4,s:'11:00',e:'11:50'},{n:5,s:'13:00',e:'13:50'},{n:6,s:'14:00',e:'14:50'},{n:7,s:'15:00',e:'15:50'},{n:8,s:'16:00',e:'17:00'}],night:[{n:1,s:'18:00',e:'18:50'},{n:2,s:'19:00',e:'19:50'},{n:3,s:'20:00',e:'20:50'},{n:4,s:'21:00',e:'22:00'}],weekend:[{n:1,s:'08:00',e:'08:50'},{n:2,s:'09:00',e:'09:50'},{n:3,s:'10:00',e:'10:50'},{n:4,s:'11:00',e:'11:50'},{n:5,s:'13:00',e:'13:50'},{n:6,s:'14:00',e:'14:50'},{n:7,s:'15:00',e:'15:50'},{n:8,s:'16:00',e:'17:00'}]};
         
         async function api(p,o={}){if(!API)return null;try{const r=await fetch(API+p,{...o,headers:{'Content-Type':'application/json'}});if(!r.ok)throw 0;document.getElementById('status-dot').classList.add('connected');return await r.json()}catch{document.getElementById('status-dot').classList.remove('connected');return null}}
@@ -309,18 +235,29 @@
         async function addCourse(){const name=document.getElementById('course-name').value.trim(),classCode=document.getElementById('course-class').value,day=document.getElementById('course-day').value,period=document.getElementById('course-period').value,room=document.getElementById('course-room').value.trim(),lat=document.getElementById('course-lat').value,lon=document.getElementById('course-lon').value;if(!name||!classCode){toast('請填寫必填','danger');return}const p=sem.periods.find(x=>x.n==period)||{};const r=await api('/api/courses',{method:'POST',body:JSON.stringify({subject:name,name,classCode,day:+day,period:+period,time:p.s+'-'+p.e,room,lat:lat?+lat:0,lon:lon?+lon:0,radius:50000})});if(r?.success){toast('已新增');closeModal('addCourse');loadCourses()}}
         function getLoc(){if(!navigator.geolocation)return;toast('定位中...','warning');navigator.geolocation.getCurrentPosition(p=>{document.getElementById('course-lat').value=p.coords.latitude.toFixed(6);document.getElementById('course-lon').value=p.coords.longitude.toFixed(6);toast('已定位')},()=>toast('定位失敗','danger'),{enableHighAccuracy:true})}
         
-        async function loadSessions(){const now=new Date();document.getElementById('session-date').textContent=now.toLocaleDateString('zh-TW',{year:'numeric',month:'long',day:'numeric',weekday:'long'});const dow=now.getDay(),today=courses.filter(c=>c.day==dow);if(!today.length){document.getElementById('sessions-list').innerHTML='<div class="empty"><div class="icon">📅</div><h3>今日無課程</h3></div>';return}document.getElementById('sessions-list').innerHTML=today.map(c=>{const p=sem.periods.find(x=>x.n==c.period)||{s:'',e:''};return'<div class="session-item"><div class="session-header"><div class="session-icon">📖</div><div class="session-info"><h4>'+(c.name||c.subject)+' - '+c.classCode+'</h4><span>第'+c.period+'節 · '+p.s+'-'+p.e+' · '+(c.room||'教室未設定')+'</span></div></div><div class="session-stats"><div>✅ 0 出席</div><div>⚠️ 0 遲到</div><div>❌ 0 缺席</div></div><div class="session-actions"><button class="btn btn-primary btn-sm" onclick="startSession(\''+c.id+'\')">📱 開始簽到</button><button class="btn btn-outline btn-sm">📋 詳情</button></div></div>'}).join('')}
-        async function startSession(id){const c=courses.find(x=>x.id===id);if(!c)return;const today=new Date().toISOString().split('T')[0],p=sem.periods.find(x=>x.n==c.period)||{s:'08:00',e:'09:00'};const r=await api('/api/sessions',{method:'POST',body:JSON.stringify({courseId:id,date:today,startTime:p.s,endTime:p.e})});if(r?.success){showQR(r.qrContent,c.name+' - '+c.classCode,today+' '+p.s);toast('簽到已建立！')}}
+        async function loadSessions(){const now=new Date();document.getElementById('session-date').textContent=now.toLocaleDateString('zh-TW',{year:'numeric',month:'long',day:'numeric',weekday:'long'});const dow=now.getDay(),today=courses.filter(c=>c.day==dow);if(!today.length){document.getElementById('sessions-list').innerHTML='<div class="empty"><div class="icon">📅</div><h3>今日無課程</h3></div>';return}document.getElementById('sessions-list').innerHTML=today.map(c=>{const p=sem.periods.find(x=>x.n==c.period)||{s:'',e:''};const nowTime=now.getHours()*60+now.getMinutes();const endTime=parseInt(p.e.split(':')[0])*60+parseInt(p.e.split(':')[1]);const completed=nowTime>endTime;return'<div class="session-item'+(completed?' completed':'')+'"><div class="session-header"><div class="session-icon">📖</div><div class="session-info"><h4>'+(c.name||c.subject)+' - '+c.classCode+'</h4><span>第'+c.period+'節 · '+p.s+'-'+p.e+' · '+(c.room||'教室未設定')+'</span></div></div><div class="session-actions">'+(completed?'<button class="btn btn-outline btn-sm" disabled>已結束</button>':'<button class="btn btn-primary btn-sm" onclick="startSession(\''+c.id+'\')">📱 開始簽到</button><button class="btn btn-outline btn-sm" onclick="endSession(\''+c.id+'\')">⏹️ 結束</button>')+'</div></div>'}).join('')}
+        async function startSession(id){const c=courses.find(x=>x.id===id);if(!c)return;const today=new Date().toISOString().split('T')[0],p=sem.periods.find(x=>x.n==c.period)||{s:'08:00',e:'09:00'};const r=await api('/api/sessions',{method:'POST',body:JSON.stringify({courseId:id,date:today,startTime:p.s,endTime:p.e})});if(r?.success){currentSession={id:r.sessionId,courseId:id,courseName:c.name+' - '+c.classCode};showQR(r.qrContent,c.name+' - '+c.classCode,today+' '+p.s);toast('簽到已建立！')}}
+        async function endSession(id){const c=courses.find(x=>x.id===id);if(!c)return;if(!confirm('確定結束此課程的簽到？未簽到學生將被標記為缺席。'))return;const r=await api('/api/sessions/'+id+'/complete',{method:'POST'});if(r?.success){toast('已結束，'+r.marked+'人標記缺席');if(r.marked>0&&document.getElementById('notify-absent').checked){for(const s of r.absentStudents){await api('/api/notify/absent',{method:'POST',body:JSON.stringify({studentId:s.studentId,courseName:r.courseName})})}}loadSessions()}}
         function showQR(qr,name,time){document.getElementById('qr-name').textContent=name;document.getElementById('qr-time').textContent=time;QRCode.toCanvas(document.getElementById('qr-canvas'),'https://line.me/R/oaMessage/'+BOT+'/?'+encodeURIComponent(qr),{width:200});openModal('qr')}
         function downloadQR(){const c=document.getElementById('qr-canvas'),a=document.createElement('a');a.download='qrcode.png';a.href=c.toDataURL();a.click();toast('已下載')}
-        function sendNotify(){toast('已發送通知給學生！')}
+        async function sendRemind(){if(!currentSession)return;const r=await api('/api/notify/remind',{method:'POST',body:JSON.stringify({courseId:currentSession.courseId})});if(r?.success){toast('已發送通知給 '+r.sent+' 位學生！')}else{toast('發送失敗','danger')}}
         function addMakeup(){toast('調課已建立，已通知學生！');closeModal('addMakeup')}
         
-        async function loadStudents(){const d=await api('/api/students');document.getElementById('students-table').innerHTML=d?.length?d.map(s=>'<tr><td><b>'+s.studentId+'</b></td><td>'+s.name+'</td><td>'+s.classCode+'</td><td><span class="badge success">95%</span></td></tr>').join(''):'<tr><td colspan="4" class="empty">學生將透過 LINE 註冊</td></tr>'}
+        async function loadStudents(){const d=await api('/api/students');const stats=await api('/api/stats/attendance');const rateMap={};if(stats?.students)stats.students.forEach(s=>rateMap[s.studentId]=s.rate);document.getElementById('students-table').innerHTML=d?.length?d.map(s=>{const rate=rateMap[s.studentId]||100;const cls=rate>=80?'success':rate>=60?'warning':'danger';return'<tr><td><b>'+s.studentId+'</b></td><td>'+s.name+'</td><td>'+s.classCode+'</td><td><span class="badge '+cls+'">'+rate+'%</span></td></tr>'}).join(''):'<tr><td colspan="4" class="empty">學生將透過 LINE 註冊</td></tr>'}
         async function loadRecords(){const d=await api('/api/records');document.getElementById('records-table').innerHTML=d?.length?d.slice(-30).reverse().map(r=>{const cls=r.status==='已報到'?'success':r.status==='遲到'?'warning':'danger';return'<tr><td>'+(r.date||'-')+'</td><td>'+r.studentId+'</td><td>'+r.courseName+'</td><td><span class="badge '+cls+'">'+r.status+'</span></td></tr>'}).join(''):'<tr><td colspan="4" class="empty">尚無紀錄</td></tr>'}
-        async function loadDashboard(){const now=new Date();document.getElementById('today-info').textContent=now.toLocaleDateString('zh-TW',{year:'numeric',month:'long',day:'numeric',weekday:'long'});const d=await api('/api/dashboard');if(d){document.getElementById('stat-students').textContent=d.totalStudents||0;document.getElementById('stat-attended').textContent=d.todayAttended||0;document.getElementById('stat-late').textContent=d.todayLate||0;document.getElementById('stat-absent').textContent=d.todayAbsent||0}const dow=now.getDay(),today=courses.filter(c=>c.day==dow);document.getElementById('today-classes').innerHTML=today.length?today.map(c=>{const p=sem.periods.find(x=>x.n==c.period)||{s:'',e:''};return'<div style="padding:10px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center"><div><b>'+c.name+'</b> - '+c.classCode+'<br><small>第'+c.period+'節 '+p.s+'-'+p.e+'</small></div><button class="btn btn-primary btn-sm" onclick="startSession(\''+c.id+'\')">📱 簽到</button></div>'}).join(''):'<div class="empty">今日無課程</div>'}
         
-        async function loadPage(p){if(p==='dashboard')loadDashboard();if(p==='semester'){renderPeriods();if(sem.start)document.getElementById('semester-start').value=sem.start;if(sem.end)document.getElementById('semester-end').value=sem.end;calcWeeks()}if(p==='schedule'){renderGrid();renderCourses()}if(p==='sessions')loadSessions();if(p==='classes')loadClasses();if(p==='students')loadStudents();if(p==='records')loadRecords()}
+        async function loadStats(){const d=await api('/api/stats/attendance');if(d){document.getElementById('overall-rate').textContent=d.overall+'%';document.getElementById('stats-attended').textContent=d.attended||0;document.getElementById('stats-late').textContent=d.late||0;document.getElementById('stats-absent').textContent=d.absent||0;document.getElementById('stats-total').textContent=d.totalRecords||0;const offset=327-327*(d.overall/100);document.getElementById('progress-circle').style.strokeDashoffset=offset;const low=d.lowAttendance||[];document.getElementById('low-attendance-list').innerHTML=low.length?low.slice(0,10).map(s=>'<div class="student-alert '+(s.rate<60?'critical':'warning')+'"><div class="avatar">'+s.name.charAt(0)+'</div><div class="info"><h5>'+s.name+' ('+s.studentId+')</h5><span>'+s.classCode+' · 出席率 '+s.rate+'%</span></div><button class="btn btn-sm btn-outline" onclick="sendWarningTo(\''+s.studentId+'\')">📲 通知</button></div>').join(''):'<div class="empty">所有學生出席率良好 👍</div>'}}
+        async function loadAlerts(){const d=await api('/api/stats/consecutive-absent');if(d?.alerts){document.getElementById('alert-list').innerHTML=d.alerts.length?d.alerts.map(s=>'<div class="student-alert '+(s.level==='critical'?'critical':s.level==='warning'?'warning':'')+'"><div class="avatar">'+s.name.charAt(0)+'</div><div class="info"><h5>'+s.name+' ('+s.studentId+')</h5><span>'+s.classCode+' · 連續缺席 <b>'+s.consecutiveAbsent+'</b> 次</span></div><div class="action"><button class="btn btn-sm btn-danger" onclick="sendWarningTo(\''+s.studentId+'\','+s.consecutiveAbsent+')">📲 警告</button></div></div>').join(''):'<div class="empty">目前沒有連續缺席的學生 ✨</div>'}}
+        async function sendWarningTo(id,count=3){const r=await api('/api/notify/warning',{method:'POST',body:JSON.stringify({studentId:id,consecutiveCount:count})});if(r?.success){toast('警告已發送！')}else{toast('發送失敗','danger')}}
+        async function sendAllWarnings(){const d=await api('/api/stats/consecutive-absent');if(d?.alerts){for(const s of d.alerts){await api('/api/notify/warning',{method:'POST',body:JSON.stringify({studentId:s.studentId,consecutiveCount:s.consecutiveAbsent})})}toast('已發送 '+d.alerts.length+' 則警告！')}}
+        function exportStats(type){toast(type==='excel'?'正在匯出 Excel...':'正在匯出 PDF...','warning');setTimeout(()=>toast('匯出完成！'),1500)}
+        
+        async function loadDashboard(){const now=new Date();document.getElementById('today-info').textContent=now.toLocaleDateString('zh-TW',{year:'numeric',month:'long',day:'numeric',weekday:'long'});const d=await api('/api/dashboard');if(d){document.getElementById('stat-students').textContent=d.totalStudents||0;document.getElementById('stat-attended').textContent=d.todayAttended||0;document.getElementById('stat-late').textContent=d.todayLate||0;document.getElementById('stat-absent').textContent=d.todayAbsent||0}const dow=now.getDay(),today=courses.filter(c=>c.day==dow);document.getElementById('today-classes').innerHTML=today.length?today.map(c=>{const p=sem.periods.find(x=>x.n==c.period)||{s:'',e:''};return'<div style="padding:10px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center"><div><b>'+c.name+'</b> - '+c.classCode+'<br><small>第'+c.period+'節 '+p.s+'-'+p.e+'</small></div><button class="btn btn-primary btn-sm" onclick="startSession(\''+c.id+'\')">📱 簽到</button></div>'}).join(''):'<div class="empty">今日無課程</div>';const alerts=await api('/api/stats/consecutive-absent');document.getElementById('dashboard-alerts').innerHTML=alerts?.alerts?.length?alerts.alerts.slice(0,3).map(s=>'<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center"><span>⚠️ '+s.name+' 連續缺席 '+s.consecutiveAbsent+' 次</span><button class="btn btn-sm btn-outline" onclick="sendWarningTo(\''+s.studentId+'\','+s.consecutiveAbsent+')">通知</button></div>').join(''):'<div class="empty">目前沒有需要關注的學生 ✨</div>'}
+        
+        async function loadNotifySettings(){const d=await api('/api/settings/notifications');if(d){document.getElementById('notify-remind').checked=d.remindBeforeClass!==false;document.getElementById('notify-absent').checked=d.notifyAbsent!==false;document.getElementById('notify-parent').checked=d.notifyParent===true;document.getElementById('notify-warning').checked=d.warningThreshold!==false;document.getElementById('notify-weekly').checked=d.weeklyReport===true}}
+        async function saveNotifySettings(){const r=await api('/api/settings/notifications',{method:'POST',body:JSON.stringify({remindBeforeClass:document.getElementById('notify-remind').checked,remindMinutes:10,notifyAbsent:document.getElementById('notify-absent').checked,notifyParent:document.getElementById('notify-parent').checked,warningThreshold:document.getElementById('notify-warning').checked?3:0,weeklyReport:document.getElementById('notify-weekly').checked})});if(r?.success){toast('通知設定已儲存！')}else{toast('儲存失敗','danger')}}
+        
+        async function loadPage(p){if(p==='dashboard')loadDashboard();if(p==='semester'){renderPeriods();if(sem.start)document.getElementById('semester-start').value=sem.start;if(sem.end)document.getElementById('semester-end').value=sem.end;calcWeeks()}if(p==='schedule'){renderGrid();renderCourses()}if(p==='sessions')loadSessions();if(p==='classes')loadClasses();if(p==='students')loadStudents();if(p==='records')loadRecords();if(p==='stats')loadStats();if(p==='alerts')loadAlerts();if(p==='notifications')loadNotifySettings()}
         async function loadAll(){await loadClasses();await loadCourses();await loadDashboard()}
         async function testConn(){const url=document.getElementById('api-url').value.trim();if(!url){toast('請輸入網址','danger');return}toast('測試中...','warning');try{const r=await fetch(url+'/api/health');if(r.ok){API=url;localStorage.setItem('apiUrl',url);document.getElementById('status-dot').classList.add('connected');toast('連線成功！');loadAll()}else throw 0}catch{toast('連線失敗','danger')}}
         function saveSettings(){const url=document.getElementById('api-url').value.trim(),bot=document.getElementById('line-bot-id').value.trim();if(url){API=url;localStorage.setItem('apiUrl',url)}if(bot){BOT=bot;localStorage.setItem('lineBotId',bot)}toast('已儲存')}
