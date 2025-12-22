@@ -540,8 +540,10 @@
         // === 課程管理 ===
         async function loadCourses() {
             const data = await api('/api/courses');
+            console.log('載入課程:', data);
             if (data) {
                 courses = data;
+                console.log('課程資料:', courses.map(c => ({ id: c.id, name: c.name || c.subject, day: c.day, period: c.period })));
                 renderCourses();
                 renderScheduleGrid();
             }
@@ -703,9 +705,14 @@
             const now = new Date();
             document.getElementById('session-date').textContent = now.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
             const dow = now.getDay();
-            const today = courses.filter(c => c.day == dow);
+            console.log('今天星期:', dow, '課程數:', courses.length);
+            const today = courses.filter(c => {
+                console.log('檢查課程:', c.name || c.subject, '星期:', c.day, '匹配:', c.day == dow);
+                return c.day == dow;
+            });
+            console.log('今日課程:', today);
             if (!today.length) {
-                document.getElementById('sessions-list').innerHTML = '<div class="empty"><div class="icon">📅</div><h3>今日無課程</h3></div>';
+                document.getElementById('sessions-list').innerHTML = '<div class="empty"><div class="icon">📅</div><h3>今日無課程</h3><p style="color:var(--text-light);margin-top:10px">請先在課表管理新增今天（星期' + DAY_NAMES[dow] + '）的課程</p></div>';
                 return;
             }
             document.getElementById('sessions-list').innerHTML = today.map(c => {
@@ -744,25 +751,46 @@
         }
         function showQR(content, name, time) {
             console.log('顯示 QR Code:', { content, name, time, BOT });
+            
+            // 先設定文字和開啟 modal
             document.getElementById('qr-name').textContent = name;
             document.getElementById('qr-time').textContent = time;
+            openModal('qr');
             
-            try {
-                const qrUrl = 'https://line.me/R/oaMessage/' + BOT + '/?' + encodeURIComponent(content);
-                console.log('QR URL:', qrUrl);
-                QRCode.toCanvas(document.getElementById('qr-canvas'), qrUrl, { width: 200 }, function(error) {
-                    if (error) {
-                        console.error('QR Code 產生錯誤:', error);
-                        toast('QR Code 產生失敗', 'danger');
-                    } else {
-                        console.log('QR Code 產生成功');
-                        openModal('qr');
+            // 短暫延遲後生成 QR Code（確保 canvas 已經可見）
+            setTimeout(() => {
+                try {
+                    const canvas = document.getElementById('qr-canvas');
+                    if (!canvas) {
+                        console.error('找不到 canvas 元素');
+                        toast('QR Code 產生失敗：找不到畫布', 'danger');
+                        return;
                     }
-                });
-            } catch (e) {
-                console.error('QR Code 錯誤:', e);
-                toast('QR Code 產生失敗: ' + e.message, 'danger');
-            }
+                    
+                    // 檢查 BOT ID
+                    const botId = BOT || '@516bpeih';
+                    const qrUrl = 'https://line.me/R/oaMessage/' + botId + '/?' + encodeURIComponent(content);
+                    console.log('QR URL:', qrUrl);
+                    
+                    if (typeof QRCode === 'undefined') {
+                        console.error('QRCode 函式庫未載入');
+                        toast('QR Code 函式庫載入失敗', 'danger');
+                        return;
+                    }
+                    
+                    QRCode.toCanvas(canvas, qrUrl, { width: 200 }, function(error) {
+                        if (error) {
+                            console.error('QR Code 產生錯誤:', error);
+                            toast('QR Code 產生失敗: ' + error.message, 'danger');
+                        } else {
+                            console.log('QR Code 產生成功');
+                        }
+                    });
+                } catch (e) {
+                    console.error('QR Code 錯誤:', e);
+                    toast('QR Code 產生失敗: ' + e.message, 'danger');
+                }
+            }, 100);
         }
         function downloadQR() {
             const canvas = document.getElementById('qr-canvas');
