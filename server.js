@@ -1811,6 +1811,165 @@ app.get('/api/export/attendance', async (req, res) => {
     }
 });
 
+// === 學生管理 API ===
+// 新增學生（手動）
+app.post('/api/students', async (req, res) => {
+    try {
+        const { studentId, name, classCode, phone, parentPhone, parentLineId } = req.body;
+        const sheet = await getOrCreateSheet('學生名單', ['學號', '姓名', '班級', 'LINE_ID', '電話', '家長電話', '家長LINE_ID', '註冊時間']);
+        
+        // 檢查學號是否已存在
+        const rows = await sheet.getRows();
+        const exists = rows.find(r => r.get('學號') === studentId);
+        if (exists) {
+            return res.json({ success: false, message: '學號已存在' });
+        }
+        
+        await sheet.addRow({
+            '學號': studentId,
+            '姓名': name,
+            '班級': classCode,
+            'LINE_ID': '',
+            '電話': phone || '',
+            '家長電話': parentPhone || '',
+            '家長LINE_ID': parentLineId || '',
+            '註冊時間': new Date().toLocaleString('zh-TW')
+        });
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 更新學生
+app.put('/api/students/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, classCode, phone, parentPhone } = req.body;
+        const sheet = doc.sheetsByTitle['學生名單'];
+        if (!sheet) return res.json({ success: false });
+        
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('學號') === id);
+        if (!row) return res.json({ success: false, message: '學生不存在' });
+        
+        if (name) row.set('姓名', name);
+        if (classCode) row.set('班級', classCode);
+        if (phone !== undefined) row.set('電話', phone);
+        if (parentPhone !== undefined) row.set('家長電話', parentPhone);
+        await row.save();
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 刪除學生
+app.delete('/api/students/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const sheet = doc.sheetsByTitle['學生名單'];
+        if (!sheet) return res.json({ success: true });
+        
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('學號') === id);
+        if (row) await row.delete();
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// === 班級管理 API 增強 ===
+// 更新班級
+app.put('/api/classes/:code', async (req, res) => {
+    try {
+        const { code } = req.params;
+        const { name, division, teacher } = req.body;
+        const sheet = doc.sheetsByTitle['班級列表'];
+        if (!sheet) return res.json({ success: false });
+        
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('班級代碼') === code);
+        if (!row) return res.json({ success: false, message: '班級不存在' });
+        
+        if (name) row.set('班級名稱', name);
+        if (division) row.set('部別', division);
+        if (teacher) row.set('導師', teacher);
+        await row.save();
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 刪除班級
+app.delete('/api/classes/:code', async (req, res) => {
+    try {
+        const { code } = req.params;
+        const sheet = doc.sheetsByTitle['班級列表'];
+        if (!sheet) return res.json({ success: true });
+        
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('班級代碼') === code);
+        if (row) await row.delete();
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// === 課程管理 API 增強 ===
+// 更新課程
+app.put('/api/courses/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { subject, classCode, day, period, time, room, lat, lon } = req.body;
+        const sheet = doc.sheetsByTitle['課程列表'];
+        if (!sheet) return res.json({ success: false });
+        
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('課程ID') === id);
+        if (!row) return res.json({ success: false, message: '課程不存在' });
+        
+        if (subject) row.set('科目', subject);
+        if (classCode) row.set('班級', classCode);
+        if (day !== undefined) row.set('星期', day);
+        if (period !== undefined) row.set('節次', period);
+        if (time) row.set('上課時間', time);
+        if (room) row.set('教室', room);
+        if (lat !== undefined) row.set('GPS緯度', lat);
+        if (lon !== undefined) row.set('GPS經度', lon);
+        await row.save();
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 刪除課程
+app.delete('/api/courses/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const sheet = doc.sheetsByTitle['課程列表'];
+        if (!sheet) return res.json({ success: true });
+        
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('課程ID') === id);
+        if (row) await row.delete();
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // === 匯出 Excel ===
 app.get('/api/export/excel', async (req, res) => {
     try {
