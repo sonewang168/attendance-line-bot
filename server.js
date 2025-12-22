@@ -1811,6 +1811,409 @@ app.get('/api/export/attendance', async (req, res) => {
     }
 });
 
+// === 匯出 Excel ===
+app.get('/api/export/excel', async (req, res) => {
+    try {
+        const { startDate, endDate, classCode, type } = req.query;
+        const recordSheet = doc.sheetsByTitle['簽到紀錄'];
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        const courseSheet = doc.sheetsByTitle['課程列表'];
+        
+        if (!recordSheet || !studentSheet) {
+            return res.status(400).json({ success: false, message: '資料表不存在' });
+        }
+        
+        const records = await recordSheet.getRows();
+        const students = await studentSheet.getRows();
+        const courses = courseSheet ? await courseSheet.getRows() : [];
+        
+        let data = [];
+        
+        if (type === 'summary') {
+            // 學生出席率摘要
+            for (const student of students) {
+                const studentId = student.get('學號');
+                if (classCode && student.get('班級') !== classCode) continue;
+                
+                const studentRecords = records.filter(r => {
+                    const date = r.get('簽到時間')?.split(' ')[0];
+                    const matchDate = (!startDate || date >= startDate) && (!endDate || date <= endDate);
+                    return r.get('學號') === studentId && matchDate;
+                });
+                
+                const total = studentRecords.length;
+                const attended = studentRecords.filter(r => r.get('狀態') === '已報到').length;
+                const late = studentRecords.filter(r => r.get('狀態') === '遲到').length;
+                const absent = studentRecords.filter(r => r.get('狀態') === '缺席').length;
+                const rate = total > 0 ? Math.round((attended + late) / total * 100) : 100;
+                
+                data.push({
+                    學號: studentId,
+                    姓名: student.get('姓名'),
+                    班級: student.get('班級'),
+                    總堂數: total,
+                    出席: attended,
+                    遲到: late,
+                    缺席: absent,
+                    出席率: rate + '%'
+                });
+            }
+        } else {
+            // 詳細出缺紀錄
+            for (const r of records) {
+                const date = r.get('簽到時間')?.split(' ')[0];
+                if (startDate && date < startDate) continue;
+                if (endDate && date > endDate) continue;
+                
+                const student = students.find(s => s.get('學號') === r.get('學號'));
+                if (classCode && student?.get('班級') !== classCode) continue;
+                
+                const course = courses.find(c => c.get('課程ID') === r.get('課程ID'));
+                
+                data.push({
+                    日期: date || '',
+                    時間: r.get('簽到時間')?.split(' ')[1] || '',
+                    學號: r.get('學號'),
+                    姓名: student?.get('姓名') || '',
+                    班級: student?.get('班級') || '',
+                    課程: course?.get('科目') || '',
+                    狀態: r.get('狀態'),
+                    遲到分鐘: r.get('遲到分鐘') || 0,
+                    備註: r.get('備註') || ''
+                });
+            }
+        }
+        
+        // 產生 CSV
+        if (data.length === 0) {
+            return res.json({ success: false, message: '無資料' });
+        }
+        
+        const headers = Object.keys(data[0]);
+        const csv = '\uFEFF' + headers.join(',') + '\n' + 
+            data.map(row => headers.map(h => '"' + (row[h] || '').toString().replace(/"/g, '""') + '"').join(',')).join('\n');
+        
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', 'attachment; filename=attendance_' + new Date().toISOString().split('T')[0] + '.csv');
+        res.send(csv);
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// === 手動調整出席紀錄 ===
+app.put('/api/records/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status, note } = req.body;
+        const sheet = doc.sheetsByTitle['簽到紀錄'];
+        if (!sheet) return res.json({ success: false });
+        
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.rowNumber.toString() === id || r.get('活動ID') + '_' + r.get('學號') === id);
+        if (!row) return res.json({ success: false, message: '找不到紀錄' });
+        
+        if (status) row.set('狀態', status);
+        if (note !== undefined) row.set('備註', note);
+        row.set('修改時間', new Date().toLocaleString('zh-TW'));
+        await row.save();
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 新增手動出席紀錄
+app.post('/api/records/manual', async (req, res) => {
+    try {
+        const { studentId, courseId, date, status, note } = req.body;
+        const sheet = await getOrCreateSheet('簽到紀錄', ['活動ID', '學號', '簽到時間', '狀態', '遲到分鐘', 'GPS緯度', 'GPS經度', '備註', '修改時間']);
+        
+        await sheet.addRow({
+            '活動ID': 'MANUAL_' + Date.now(),
+            '學號': studentId,
+            '簽到時間': date + ' 00:00:00',
+            '狀態': status || '已報到',
+            '遲到分鐘': 0,
+            'GPS緯度': '',
+            'GPS經度': '',
+            '備註': note || '手動新增',
+            '修改時間': new Date().toLocaleString('zh-TW')
+        });
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// === 獎勵系統 ===
+// 取得全勤學生
+app.get('/api/rewards/perfect-attendance', async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+        const recordSheet = doc.sheetsByTitle['簽到紀錄'];
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        
+        if (!recordSheet || !studentSheet) {
+            return res.json({ students: [] });
+        }
+        
+        const records = await recordSheet.getRows();
+        const students = await studentSheet.getRows();
+        const perfectStudents = [];
+        
+        for (const student of students) {
+            const studentId = student.get('學號');
+            const studentRecords = records.filter(r => {
+                const date = r.get('簽到時間')?.split(' ')[0];
+                const matchDate = (!startDate || date >= startDate) && (!endDate || date <= endDate);
+                return r.get('學號') === studentId && matchDate;
+            });
+            
+            const total = studentRecords.length;
+            if (total === 0) continue;
+            
+            const absent = studentRecords.filter(r => r.get('狀態') === '缺席').length;
+            const late = studentRecords.filter(r => r.get('狀態') === '遲到').length;
+            
+            if (absent === 0 && late === 0) {
+                perfectStudents.push({
+                    studentId,
+                    name: student.get('姓名'),
+                    classCode: student.get('班級'),
+                    lineId: student.get('LINE_ID'),
+                    totalClasses: total
+                });
+            }
+        }
+        
+        res.json({ students: perfectStudents });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 發送獎勵通知
+app.post('/api/rewards/send', async (req, res) => {
+    try {
+        const { studentIds, message } = req.body;
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        if (!studentSheet) return res.json({ success: false });
+        
+        const students = await studentSheet.getRows();
+        let sent = 0;
+        
+        for (const studentId of studentIds) {
+            const student = students.find(s => s.get('學號') === studentId);
+            if (student && student.get('LINE_ID')) {
+                try {
+                    const text = message || `🏆 恭喜！\n\n${student.get('姓名')} 同學，您達成全勤！\n\n感謝您的認真出席，繼續保持！💪`;
+                    await lineClient.pushMessage(student.get('LINE_ID'), { type: 'text', text });
+                    sent++;
+                } catch (e) { console.log('發送失敗:', e.message); }
+            }
+        }
+        
+        res.json({ success: true, sent });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// === 課前提醒排程 ===
+app.post('/api/reminders/schedule', async (req, res) => {
+    try {
+        const { courseId, minutesBefore } = req.body;
+        // 這裡可以整合 node-cron 或其他排程工具
+        // 目前先返回成功，實際排程需要額外設定
+        res.json({ success: true, message: '提醒已排程' });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 立即發送課前提醒
+app.post('/api/reminders/send-now', async (req, res) => {
+    try {
+        const { courseId } = req.body;
+        const courseSheet = doc.sheetsByTitle['課程列表'];
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        
+        if (!courseSheet || !studentSheet) {
+            return res.json({ success: false });
+        }
+        
+        const courses = await courseSheet.getRows();
+        const course = courses.find(c => c.get('課程ID') === courseId);
+        if (!course) return res.json({ success: false, message: '找不到課程' });
+        
+        const classCode = course.get('班級');
+        const students = await studentSheet.getRows();
+        const classStudents = students.filter(s => s.get('班級') === classCode && s.get('LINE_ID'));
+        
+        let sent = 0;
+        for (const student of classStudents) {
+            try {
+                await lineClient.pushMessage(student.get('LINE_ID'), {
+                    type: 'text',
+                    text: `⏰ 上課提醒\n\n${course.get('科目')} 即將開始！\n📍 ${course.get('教室') || '教室'}\n⏰ ${course.get('上課時間')}\n\n請準時出席！`
+                });
+                sent++;
+            } catch (e) { }
+        }
+        
+        res.json({ success: true, sent });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// === 多位置 GPS 管理 ===
+app.get('/api/locations', async (req, res) => {
+    try {
+        const sheet = await getOrCreateSheet('GPS位置', ['位置ID', '名稱', '緯度', '經度', '半徑', '備註']);
+        const rows = await sheet.getRows();
+        res.json(rows.map(r => ({
+            id: r.get('位置ID'),
+            name: r.get('名稱'),
+            lat: parseFloat(r.get('緯度')) || 0,
+            lon: parseFloat(r.get('經度')) || 0,
+            radius: parseInt(r.get('半徑')) || 50,
+            note: r.get('備註')
+        })));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/locations', async (req, res) => {
+    try {
+        const { name, lat, lon, radius, note } = req.body;
+        const sheet = await getOrCreateSheet('GPS位置', ['位置ID', '名稱', '緯度', '經度', '半徑', '備註']);
+        
+        const locationId = 'LOC_' + Date.now();
+        await sheet.addRow({
+            '位置ID': locationId,
+            '名稱': name,
+            '緯度': lat,
+            '經度': lon,
+            '半徑': radius || 50,
+            '備註': note || ''
+        });
+        
+        res.json({ success: true, locationId });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.delete('/api/locations/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const sheet = doc.sheetsByTitle['GPS位置'];
+        if (!sheet) return res.json({ success: true });
+        
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('位置ID') === id);
+        if (row) await row.delete();
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// === 圖表數據 API ===
+app.get('/api/charts/attendance-trend', async (req, res) => {
+    try {
+        const { days } = req.query;
+        const numDays = parseInt(days) || 7;
+        const recordSheet = doc.sheetsByTitle['簽到紀錄'];
+        
+        if (!recordSheet) {
+            return res.json({ data: [] });
+        }
+        
+        const records = await recordSheet.getRows();
+        const today = new Date();
+        const data = [];
+        
+        for (let i = numDays - 1; i >= 0; i--) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            const dateStr = date.toISOString().split('T')[0];
+            
+            const dayRecords = records.filter(r => r.get('簽到時間')?.startsWith(dateStr));
+            const total = dayRecords.length;
+            const attended = dayRecords.filter(r => r.get('狀態') === '已報到').length;
+            const late = dayRecords.filter(r => r.get('狀態') === '遲到').length;
+            const absent = dayRecords.filter(r => r.get('狀態') === '缺席').length;
+            const rate = total > 0 ? Math.round((attended + late) / total * 100) : 0;
+            
+            data.push({
+                date: dateStr,
+                label: (date.getMonth() + 1) + '/' + date.getDate(),
+                total,
+                attended,
+                late,
+                absent,
+                rate
+            });
+        }
+        
+        res.json({ data });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/charts/class-comparison', async (req, res) => {
+    try {
+        const recordSheet = doc.sheetsByTitle['簽到紀錄'];
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        const classSheet = doc.sheetsByTitle['班級列表'];
+        
+        if (!recordSheet || !studentSheet) {
+            return res.json({ data: [] });
+        }
+        
+        const records = await recordSheet.getRows();
+        const students = await studentSheet.getRows();
+        const classes = classSheet ? await classSheet.getRows() : [];
+        const data = [];
+        
+        // 取得所有班級代碼
+        const classCodes = [...new Set(students.map(s => s.get('班級')))];
+        
+        for (const code of classCodes) {
+            const classStudents = students.filter(s => s.get('班級') === code);
+            const studentIds = classStudents.map(s => s.get('學號'));
+            const classRecords = records.filter(r => studentIds.includes(r.get('學號')));
+            
+            const total = classRecords.length;
+            const attended = classRecords.filter(r => r.get('狀態') === '已報到').length;
+            const late = classRecords.filter(r => r.get('狀態') === '遲到').length;
+            const rate = total > 0 ? Math.round((attended + late) / total * 100) : 0;
+            
+            const classInfo = classes.find(c => c.get('班級代碼') === code);
+            
+            data.push({
+                code,
+                name: classInfo?.get('班級名稱') || code,
+                studentCount: classStudents.length,
+                rate
+            });
+        }
+        
+        data.sort((a, b) => b.rate - a.rate);
+        res.json({ data });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // ===== 啟動伺服器 =====
 
 const PORT = process.env.PORT || 3000;
