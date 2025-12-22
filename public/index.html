@@ -5,31 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>📚 學生簽到系統</title>
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #4f46e5;
-            --primary-light: #818cf8;
-            --primary-dark: #3730a3;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --bg: #f8fafc;
-            --card: #ffffff;
-            --text: #1e293b;
-            --text-light: #64748b;
-            --border: #e2e8f0;
+            --primary: #4f46e5; --primary-dark: #3730a3; --success: #10b981;
+            --warning: #f59e0b; --danger: #ef4444; --bg: #f8fafc;
+            --card: #ffffff; --text: #1e293b; --text-light: #64748b; --border: #e2e8f0;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Noto Sans TC', sans-serif; background: var(--bg); color: var(--text); }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
 
-        /* Mobile Header */
         .mobile-header {
             position: fixed; top: 0; left: 0; right: 0; height: 56px;
             background: linear-gradient(135deg, var(--primary-dark), var(--primary));
-            color: white; display: flex; align-items: center; padding: 0 15px;
-            z-index: 1001; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            color: white; display: flex; align-items: center; padding: 0 15px; z-index: 1001;
         }
         .hamburger {
             width: 44px; height: 44px; display: flex; flex-direction: column;
@@ -41,13 +29,10 @@
         .hamburger.active span:nth-child(2) { opacity: 0; }
         .hamburger.active span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
         .mobile-title { flex: 1; text-align: center; font-size: 18px; font-weight: 700; }
-        .mobile-time { font-size: 12px; opacity: 0.8; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--danger); }
+        .status-dot.connected { background: var(--success); }
 
-        /* Sidebar */
-        .sidebar-overlay {
-            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.5); z-index: 999;
-        }
+        .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 999; }
         .sidebar-overlay.open { display: block; }
         .sidebar {
             position: fixed; top: 0; left: 0; width: 280px; height: 100vh;
@@ -63,17 +48,11 @@
             margin-bottom: 5px; transition: 0.3s; font-size: 16px;
         }
         .nav-link:hover, .nav-link.active { background: rgba(255,255,255,0.2); color: white; }
-        .nav-icon { font-size: 22px; }
 
-        /* Main */
         .main { padding: 70px 15px 20px; }
-
-        /* Header */
         .header { margin-bottom: 20px; }
         .page-title { font-size: 24px; font-weight: 700; margin-bottom: 15px; }
-        .header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
-        /* Stats */
         .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
         .stat-card {
             background: var(--card); border-radius: 16px; padding: 18px;
@@ -92,24 +71,20 @@
         .stat-label { font-size: 13px; color: var(--text-light); margin-top: 3px; }
         .stat-icon { position: absolute; top: 12px; right: 12px; font-size: 24px; opacity: 0.2; }
 
-        /* Card */
         .card { background: var(--card); border-radius: 16px; padding: 18px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .card-title { font-size: 16px; font-weight: 600; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
 
-        /* Button */
         .btn {
             display: inline-flex; align-items: center; justify-content: center; gap: 6px;
             padding: 12px 18px; border: none; border-radius: 10px; font-size: 14px;
             font-weight: 500; cursor: pointer; transition: 0.3s; text-decoration: none;
         }
         .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { background: var(--primary-dark); }
         .btn-success { background: var(--success); color: white; }
         .btn-outline { background: white; border: 2px solid var(--border); color: var(--text); }
         .btn-block { width: 100%; }
         .btn-sm { padding: 10px 14px; font-size: 13px; }
 
-        /* Form */
         .form-group { margin-bottom: 18px; }
         .form-label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 14px; }
         .form-input {
@@ -119,9 +94,8 @@
         .form-input:focus { outline: none; border-color: var(--primary); }
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
-        /* Table */
-        .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        table { width: 100%; border-collapse: collapse; min-width: 500px; }
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 400px; }
         th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid var(--border); font-size: 14px; }
         th { background: var(--bg); font-weight: 600; color: var(--text-light); font-size: 12px; }
         .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
@@ -129,11 +103,10 @@
         .badge.warning { background: rgba(245,158,11,0.1); color: var(--warning); }
         .badge.danger { background: rgba(239,68,68,0.1); color: var(--danger); }
 
-        /* Modal */
         .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); display: flex; align-items: flex-end;
-            justify-content: center; z-index: 2000; opacity: 0; visibility: hidden; transition: 0.3s;
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+            display: flex; align-items: flex-end; justify-content: center;
+            z-index: 2000; opacity: 0; visibility: hidden; transition: 0.3s;
         }
         .modal-overlay.active { opacity: 1; visibility: visible; }
         .modal {
@@ -152,20 +125,15 @@
         .modal-footer { padding: 15px 18px; border-top: 1px solid var(--border); display: flex; gap: 10px; }
         .modal-footer .btn { flex: 1; }
 
-        /* QR Code */
         .qr-container { text-align: center; padding: 20px; }
         .qr-code { background: white; padding: 15px; border-radius: 16px; display: inline-block; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 15px; }
         .qr-info { color: var(--text-light); font-size: 14px; }
         .qr-info strong { color: var(--text); display: block; font-size: 16px; margin-bottom: 5px; }
 
-        /* Session Item */
-        .session-item {
-            padding: 15px; border: 1px solid var(--border); border-radius: 12px;
-            margin-bottom: 12px;
-        }
+        .session-item { padding: 15px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; }
         .session-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
         .session-icon {
-            width: 44px; height: 44px; background: linear-gradient(135deg, var(--primary-light), var(--primary));
+            width: 44px; height: 44px; background: linear-gradient(135deg, #818cf8, var(--primary));
             border-radius: 12px; display: flex; align-items: center; justify-content: center;
             font-size: 20px; color: white;
         }
@@ -174,19 +142,15 @@
         .session-actions { display: flex; gap: 8px; }
         .session-actions .btn { flex: 1; }
 
-        /* Empty */
         .empty { text-align: center; padding: 40px 20px; color: var(--text-light); }
         .empty .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
-        .empty h3 { font-size: 16px; color: var(--text); margin-bottom: 5px; }
 
-        /* GPS Preview */
         .gps-preview {
             height: 70px; background: var(--bg); border-radius: 10px;
             display: flex; align-items: center; justify-content: center;
             color: var(--text-light); margin-top: 10px; font-size: 14px;
         }
 
-        /* Toast */
         .toast-container { position: fixed; top: 70px; left: 15px; right: 15px; z-index: 3000; }
         .toast {
             background: var(--text); color: white; padding: 14px 18px; border-radius: 12px;
@@ -198,31 +162,17 @@
         .toast.danger { background: var(--danger); }
         @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-        /* Chart */
-        .chart-container { height: 200px; }
-
-        /* Page */
         .page { display: none; }
         .page.active { display: block; }
 
-        /* Toggle */
-        .toggle-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
-        .toggle {
-            width: 50px; height: 28px; background: var(--border); border-radius: 14px;
-            position: relative; cursor: pointer; transition: 0.3s;
-        }
-        .toggle.active { background: var(--success); }
-        .toggle::after {
-            content: ''; position: absolute; top: 3px; left: 3px;
-            width: 22px; height: 22px; background: white; border-radius: 50%; transition: 0.3s;
-        }
-        .toggle.active::after { left: 25px; }
-
-        /* Icon Button */
         .icon-btn {
             width: 38px; height: 38px; border: 1px solid var(--border); border-radius: 10px;
             background: white; display: flex; align-items: center; justify-content: center; cursor: pointer;
         }
+
+        .api-status { display: flex; align-items: center; gap: 8px; padding: 12px; background: var(--bg); border-radius: 10px; margin-bottom: 15px; }
+        .api-status.connected { background: rgba(16,185,129,0.1); }
+        .api-status.disconnected { background: rgba(239,68,68,0.1); }
 
         @media (min-width: 768px) {
             .mobile-header { display: none; }
@@ -235,97 +185,106 @@
     </style>
 </head>
 <body>
-    <!-- Mobile Header -->
     <header class="mobile-header">
         <button class="hamburger" id="hamburger" onclick="toggleSidebar()">
             <span></span><span></span><span></span>
         </button>
         <div class="mobile-title">📚 簽到系統</div>
-        <div class="mobile-time" id="mobile-time"></div>
+        <div class="status-dot" id="status-dot" title="API 連線狀態"></div>
     </header>
 
-    <!-- Sidebar -->
     <div class="sidebar-overlay" id="overlay" onclick="toggleSidebar()"></div>
     <aside class="sidebar" id="sidebar">
         <ul class="nav-menu">
-            <li><a href="#" class="nav-link active" data-page="dashboard"><span class="nav-icon">📊</span>儀表板</a></li>
-            <li><a href="#" class="nav-link" data-page="classes"><span class="nav-icon">🏫</span>班級管理</a></li>
-            <li><a href="#" class="nav-link" data-page="courses"><span class="nav-icon">📖</span>課程管理</a></li>
-            <li><a href="#" class="nav-link" data-page="sessions"><span class="nav-icon">📝</span>簽到活動</a></li>
-            <li><a href="#" class="nav-link" data-page="students"><span class="nav-icon">👨‍🎓</span>學生名單</a></li>
-            <li><a href="#" class="nav-link" data-page="records"><span class="nav-icon">📋</span>簽到紀錄</a></li>
-            <li><a href="#" class="nav-link" data-page="settings"><span class="nav-icon">⚙️</span>系統設定</a></li>
+            <li><a href="#" class="nav-link active" data-page="dashboard"><span>📊</span> 儀表板</a></li>
+            <li><a href="#" class="nav-link" data-page="classes"><span>🏫</span> 班級管理</a></li>
+            <li><a href="#" class="nav-link" data-page="courses"><span>📖</span> 課程管理</a></li>
+            <li><a href="#" class="nav-link" data-page="sessions"><span>📝</span> 簽到活動</a></li>
+            <li><a href="#" class="nav-link" data-page="students"><span>👨‍🎓</span> 學生名單</a></li>
+            <li><a href="#" class="nav-link" data-page="records"><span>📋</span> 簽到紀錄</a></li>
+            <li><a href="#" class="nav-link" data-page="settings"><span>⚙️</span> 系統設定</a></li>
         </ul>
     </aside>
 
-    <!-- Main -->
     <main class="main">
         <!-- Dashboard -->
         <div class="page active" id="page-dashboard">
-            <div class="header">
-                <h1 class="page-title">儀表板</h1>
-            </div>
+            <div class="header"><h1 class="page-title">儀表板</h1></div>
             <div class="stats-grid">
-                <div class="stat-card primary"><div class="stat-value" id="stat-students">0</div><div class="stat-label">註冊學生</div><div class="stat-icon">👨‍🎓</div></div>
-                <div class="stat-card success"><div class="stat-value" id="stat-attended">0</div><div class="stat-label">今日出席</div><div class="stat-icon">✅</div></div>
-                <div class="stat-card warning"><div class="stat-value" id="stat-late">0</div><div class="stat-label">今日遲到</div><div class="stat-icon">⚠️</div></div>
-                <div class="stat-card danger"><div class="stat-value" id="stat-absent">0</div><div class="stat-label">今日缺席</div><div class="stat-icon">❌</div></div>
+                <div class="stat-card primary"><div class="stat-value" id="stat-students">-</div><div class="stat-label">註冊學生</div><div class="stat-icon">👨‍🎓</div></div>
+                <div class="stat-card success"><div class="stat-value" id="stat-attended">-</div><div class="stat-label">今日出席</div><div class="stat-icon">✅</div></div>
+                <div class="stat-card warning"><div class="stat-value" id="stat-late">-</div><div class="stat-label">今日遲到</div><div class="stat-icon">⚠️</div></div>
+                <div class="stat-card danger"><div class="stat-value" id="stat-absent">-</div><div class="stat-label">今日缺席</div><div class="stat-icon">❌</div></div>
             </div>
-            <div class="card"><div class="card-title">📈 本週統計</div><div class="chart-container"><canvas id="chart"></canvas></div></div>
         </div>
 
         <!-- Classes -->
         <div class="page" id="page-classes">
             <div class="header">
                 <h1 class="page-title">班級管理</h1>
-                <div class="header-actions"><button class="btn btn-primary btn-block" onclick="openModal('addClass')">➕ 新增班級</button></div>
+                <button class="btn btn-primary btn-block" onclick="openModal('addClass')">➕ 新增班級</button>
             </div>
-            <div class="card"><div class="table-wrap"><table><thead><tr><th>代碼</th><th>名稱</th><th>導師</th><th></th></tr></thead><tbody id="classes-table"><tr><td colspan="4" class="empty">尚無班級</td></tr></tbody></table></div></div>
+            <div class="card"><div class="table-wrap"><table><thead><tr><th>代碼</th><th>名稱</th><th>導師</th><th></th></tr></thead><tbody id="classes-table"></tbody></table></div></div>
         </div>
 
         <!-- Courses -->
         <div class="page" id="page-courses">
             <div class="header">
                 <h1 class="page-title">課程管理</h1>
-                <div class="header-actions"><button class="btn btn-primary btn-block" onclick="openModal('addCourse')">➕ 新增課程</button></div>
+                <button class="btn btn-primary btn-block" onclick="openModal('addCourse')">➕ 新增課程</button>
             </div>
-            <div class="card"><div class="table-wrap"><table><thead><tr><th>科目</th><th>班級</th><th>時間</th><th></th></tr></thead><tbody id="courses-table"><tr><td colspan="4" class="empty">尚無課程</td></tr></tbody></table></div></div>
+            <div class="card"><div class="table-wrap"><table><thead><tr><th>科目</th><th>班級</th><th>時間</th><th></th></tr></thead><tbody id="courses-table"></tbody></table></div></div>
         </div>
 
         <!-- Sessions -->
         <div class="page" id="page-sessions">
             <div class="header">
                 <h1 class="page-title">簽到活動</h1>
-                <div class="header-actions"><button class="btn btn-primary btn-block" onclick="openModal('createSession')">➕ 建立簽到</button></div>
+                <button class="btn btn-primary btn-block" onclick="openModal('createSession')">➕ 建立簽到</button>
             </div>
-            <div class="card"><div class="card-title">📅 今日活動</div><div id="sessions-list"><div class="empty"><div class="icon">📝</div><h3>尚無活動</h3></div></div></div>
+            <div class="card"><div class="card-title">📅 今日活動</div><div id="sessions-list"></div></div>
         </div>
 
         <!-- Students -->
         <div class="page" id="page-students">
             <div class="header"><h1 class="page-title">學生名單</h1></div>
-            <div class="card"><div class="table-wrap"><table><thead><tr><th>學號</th><th>姓名</th><th>班級</th><th>出席率</th></tr></thead><tbody id="students-table"><tr><td colspan="4" class="empty">學生將透過 LINE 註冊</td></tr></tbody></table></div></div>
+            <div class="card"><div class="table-wrap"><table><thead><tr><th>學號</th><th>姓名</th><th>班級</th><th>LINE</th></tr></thead><tbody id="students-table"></tbody></table></div></div>
         </div>
 
         <!-- Records -->
         <div class="page" id="page-records">
             <div class="header"><h1 class="page-title">簽到紀錄</h1></div>
-            <div class="card"><div class="table-wrap"><table><thead><tr><th>時間</th><th>學號</th><th>課程</th><th>狀態</th></tr></thead><tbody id="records-table"><tr><td colspan="4" class="empty">尚無紀錄</td></tr></tbody></table></div></div>
+            <div class="card"><div class="table-wrap"><table><thead><tr><th>日期</th><th>學號</th><th>課程</th><th>狀態</th></tr></thead><tbody id="records-table"></tbody></table></div></div>
         </div>
 
         <!-- Settings -->
         <div class="page" id="page-settings">
             <div class="header"><h1 class="page-title">系統設定</h1></div>
+            
             <div class="card">
-                <div class="card-title">📍 簽到設定</div>
-                <div class="form-group"><label class="form-label">簽到範圍（公尺）</label><input type="number" class="form-input" id="set-radius" value="50"></div>
-                <div class="form-group"><label class="form-label">遲到標準（分鐘）</label><input type="number" class="form-input" id="set-late" value="10"></div>
-                <button class="btn btn-primary btn-block" onclick="saveSettings()">💾 儲存</button>
+                <div class="card-title">🔗 後端 API 連線</div>
+                <div class="api-status" id="api-status">
+                    <div class="status-dot" id="api-dot"></div>
+                    <span id="api-status-text">檢查中...</span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">後端 API 網址</label>
+                    <input type="text" class="form-input" id="api-url" placeholder="https://your-app.onrender.com">
+                </div>
+                <button class="btn btn-primary btn-block" onclick="testConnection()">🔍 測試連線</button>
+            </div>
+
+            <div class="card">
+                <div class="card-title">📱 LINE Bot 設定</div>
+                <div class="form-group">
+                    <label class="form-label">LINE Bot ID（@開頭）</label>
+                    <input type="text" class="form-input" id="line-bot-id" placeholder="@your_bot_id">
+                </div>
+                <button class="btn btn-success btn-block" onclick="saveSettings()">💾 儲存設定</button>
             </div>
         </div>
     </main>
 
-    <!-- Toast -->
     <div class="toast-container" id="toasts"></div>
 
     <!-- Add Class Modal -->
@@ -333,9 +292,9 @@
         <div class="modal">
             <div class="modal-header"><h3 class="modal-title">新增班級</h3><button class="modal-close" onclick="closeModal('addClass')">&times;</button></div>
             <div class="modal-body">
-                <div class="form-group"><label class="form-label">班級代碼</label><input type="text" class="form-input" id="class-code" placeholder="801"></div>
-                <div class="form-group"><label class="form-label">班級名稱</label><input type="text" class="form-input" id="class-name" placeholder="八年一班"></div>
-                <div class="form-group"><label class="form-label">導師</label><input type="text" class="form-input" id="class-teacher" placeholder=""></div>
+                <div class="form-group"><label class="form-label">班級代碼 *</label><input type="text" class="form-input" id="class-code" placeholder="801"></div>
+                <div class="form-group"><label class="form-label">班級名稱 *</label><input type="text" class="form-input" id="class-name" placeholder="八年一班"></div>
+                <div class="form-group"><label class="form-label">導師</label><input type="text" class="form-input" id="class-teacher"></div>
             </div>
             <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('addClass')">取消</button><button class="btn btn-primary" onclick="addClass()">新增</button></div>
         </div>
@@ -346,15 +305,15 @@
         <div class="modal">
             <div class="modal-header"><h3 class="modal-title">新增課程</h3><button class="modal-close" onclick="closeModal('addCourse')">&times;</button></div>
             <div class="modal-body">
-                <div class="form-group"><label class="form-label">科目</label><input type="text" class="form-input" id="course-subject" placeholder="物理"></div>
-                <div class="form-group"><label class="form-label">班級</label><select class="form-input" id="course-class"><option value="">選擇</option></select></div>
+                <div class="form-group"><label class="form-label">科目 *</label><input type="text" class="form-input" id="course-subject" placeholder="物理"></div>
+                <div class="form-group"><label class="form-label">班級 *</label><select class="form-input" id="course-class"><option value="">選擇</option></select></div>
                 <div class="form-group"><label class="form-label">時間</label><input type="text" class="form-input" id="course-time" placeholder="週一 08:00"></div>
                 <div class="form-group"><label class="form-label">教室</label><input type="text" class="form-input" id="course-room" placeholder="物理實驗室"></div>
                 <div class="form-row">
-                    <div class="form-group"><label class="form-label">緯度</label><input type="number" step="any" class="form-input" id="course-lat"></div>
-                    <div class="form-group"><label class="form-label">經度</label><input type="number" step="any" class="form-input" id="course-lon"></div>
+                    <div class="form-group"><label class="form-label">緯度 *</label><input type="number" step="any" class="form-input" id="course-lat"></div>
+                    <div class="form-group"><label class="form-label">經度 *</label><input type="number" step="any" class="form-input" id="course-lon"></div>
                 </div>
-                <button type="button" class="btn btn-outline btn-block" onclick="getLocation()">📍 取得位置</button>
+                <button type="button" class="btn btn-outline btn-block" onclick="getLocation()">📍 取得目前位置</button>
                 <div class="gps-preview" id="gps-preview">尚未定位</div>
             </div>
             <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('addCourse')">取消</button><button class="btn btn-primary" onclick="addCourse()">新增</button></div>
@@ -364,13 +323,13 @@
     <!-- Create Session Modal -->
     <div class="modal-overlay" id="modal-createSession">
         <div class="modal">
-            <div class="modal-header"><h3 class="modal-title">建立簽到</h3><button class="modal-close" onclick="closeModal('createSession')">&times;</button></div>
+            <div class="modal-header"><h3 class="modal-title">建立簽到活動</h3><button class="modal-close" onclick="closeModal('createSession')">&times;</button></div>
             <div class="modal-body">
-                <div class="form-group"><label class="form-label">課程</label><select class="form-input" id="session-course"><option value="">選擇</option></select></div>
-                <div class="form-group"><label class="form-label">日期</label><input type="date" class="form-input" id="session-date"></div>
+                <div class="form-group"><label class="form-label">課程 *</label><select class="form-input" id="session-course"><option value="">選擇</option></select></div>
+                <div class="form-group"><label class="form-label">日期 *</label><input type="date" class="form-input" id="session-date"></div>
                 <div class="form-row">
-                    <div class="form-group"><label class="form-label">開始</label><input type="time" class="form-input" id="session-start"></div>
-                    <div class="form-group"><label class="form-label">結束</label><input type="time" class="form-input" id="session-end"></div>
+                    <div class="form-group"><label class="form-label">開始 *</label><input type="time" class="form-input" id="session-start"></div>
+                    <div class="form-group"><label class="form-label">結束 *</label><input type="time" class="form-input" id="session-end"></div>
                 </div>
             </div>
             <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('createSession')">取消</button><button class="btn btn-primary" onclick="createSession()">產生 QR</button></div>
@@ -380,7 +339,7 @@
     <!-- QR Modal -->
     <div class="modal-overlay" id="modal-qr">
         <div class="modal">
-            <div class="modal-header"><h3 class="modal-title">📱 QR Code</h3><button class="modal-close" onclick="closeModal('qr')">&times;</button></div>
+            <div class="modal-header"><h3 class="modal-title">📱 簽到 QR Code</h3><button class="modal-close" onclick="closeModal('qr')">&times;</button></div>
             <div class="modal-body">
                 <div class="qr-container">
                     <div class="qr-code"><canvas id="qr-canvas"></canvas></div>
@@ -392,10 +351,41 @@
     </div>
 
     <script>
-        let data = { classes: [], courses: [], sessions: [], students: [], records: [] };
-        
-        function load() { const s = localStorage.getItem('att'); if(s) data = JSON.parse(s); }
-        function save() { localStorage.setItem('att', JSON.stringify(data)); }
+        let API_URL = localStorage.getItem('apiUrl') || '';
+        let LINE_BOT_ID = localStorage.getItem('lineBotId') || '@YOUR_BOT';
+        let classes = [], courses = [], sessions = [];
+
+        async function api(path, opt = {}) {
+            if (!API_URL) { toast('請先設定 API 網址', 'danger'); showPage('settings'); return null; }
+            try {
+                const res = await fetch(API_URL + path, { ...opt, headers: { 'Content-Type': 'application/json' } });
+                if (!res.ok) throw new Error();
+                updateStatus(true);
+                return await res.json();
+            } catch (e) { updateStatus(false); return null; }
+        }
+
+        function updateStatus(ok) {
+            document.getElementById('status-dot').classList.toggle('connected', ok);
+            document.getElementById('api-dot')?.classList.toggle('connected', ok);
+            const s = document.getElementById('api-status');
+            const t = document.getElementById('api-status-text');
+            if (s) { s.classList.toggle('connected', ok); s.classList.toggle('disconnected', !ok); }
+            if (t) t.textContent = ok ? '✅ 已連線' : '❌ 未連線';
+        }
+
+        async function testConnection() {
+            const url = document.getElementById('api-url').value.trim();
+            if (!url) { toast('請輸入網址', 'danger'); return; }
+            toast('測試中...', 'warning');
+            try {
+                const res = await fetch(url + '/api/health');
+                if (res.ok) {
+                    API_URL = url; localStorage.setItem('apiUrl', url);
+                    updateStatus(true); toast('連線成功！'); loadAll();
+                } else throw new Error();
+            } catch { updateStatus(false); toast('連線失敗', 'danger'); }
+        }
 
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('open');
@@ -403,222 +393,224 @@
             document.getElementById('hamburger').classList.toggle('active');
         }
 
-        document.querySelectorAll('.nav-link').forEach(link => {
-            link.addEventListener('click', e => {
-                e.preventDefault();
-                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-                link.classList.add('active');
-                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-                document.getElementById('page-' + link.dataset.page).classList.add('active');
-                if(window.innerWidth < 768) toggleSidebar();
-                refresh(link.dataset.page);
-            });
-        });
-
-        function refresh(page) {
-            if(page === 'dashboard') renderDashboard();
-            if(page === 'classes') renderClasses();
-            if(page === 'courses') renderCourses();
-            if(page === 'sessions') renderSessions();
-            if(page === 'students') renderStudents();
-            if(page === 'records') renderRecords();
+        function showPage(p) {
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.toggle('active', l.dataset.page === p));
+            document.querySelectorAll('.page').forEach(x => x.classList.toggle('active', x.id === 'page-' + p));
         }
 
-        function openModal(id) { document.getElementById('modal-'+id).classList.add('active'); }
-        function closeModal(id) { document.getElementById('modal-'+id).classList.remove('active'); }
+        document.querySelectorAll('.nav-link').forEach(l => l.addEventListener('click', e => {
+            e.preventDefault();
+            showPage(l.dataset.page);
+            if (window.innerWidth < 768) toggleSidebar();
+            loadPage(l.dataset.page);
+        }));
 
-        function toast(msg, type='success') {
+        function openModal(id) { document.getElementById('modal-' + id).classList.add('active'); }
+        function closeModal(id) { document.getElementById('modal-' + id).classList.remove('active'); }
+
+        function toast(msg, type = 'success') {
             const t = document.createElement('div');
             t.className = 'toast ' + type;
-            t.innerHTML = (type==='success'?'✅':type==='warning'?'⚠️':'❌') + ' ' + msg;
+            t.textContent = (type === 'success' ? '✅ ' : type === 'warning' ? '⏳ ' : '❌ ') + msg;
             document.getElementById('toasts').appendChild(t);
             setTimeout(() => t.remove(), 3000);
         }
 
-        function addClass() {
-            const code = document.getElementById('class-code').value.trim();
-            const name = document.getElementById('class-name').value.trim();
-            const teacher = document.getElementById('class-teacher').value.trim();
-            if(!code || !name) { toast('請填寫必填欄位','danger'); return; }
-            data.classes.push({ code, name, teacher });
-            save(); closeModal('addClass'); renderClasses(); updateDropdowns(); toast('班級已新增');
-            document.getElementById('class-code').value = '';
-            document.getElementById('class-name').value = '';
-            document.getElementById('class-teacher').value = '';
+        async function loadAll() {
+            await loadDashboard();
+            await loadClasses();
+            await loadCourses();
+        }
+
+        async function loadPage(p) {
+            if (p === 'dashboard') loadDashboard();
+            if (p === 'classes') loadClasses();
+            if (p === 'courses') loadCourses();
+            if (p === 'sessions') loadSessions();
+            if (p === 'students') loadStudents();
+            if (p === 'records') loadRecords();
+        }
+
+        async function loadDashboard() {
+            const d = await api('/api/dashboard');
+            if (d) {
+                document.getElementById('stat-students').textContent = d.totalStudents || 0;
+                document.getElementById('stat-attended').textContent = d.todayAttended || 0;
+                document.getElementById('stat-late').textContent = d.todayLate || 0;
+                document.getElementById('stat-absent').textContent = d.todayAbsent || 0;
+            }
+        }
+
+        async function loadClasses() {
+            const d = await api('/api/classes');
+            if (d) { classes = d; renderClasses(); updateClassDD(); }
         }
 
         function renderClasses() {
             const tb = document.getElementById('classes-table');
-            if(!data.classes.length) { tb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-light)">尚無班級</td></tr>'; return; }
-            tb.innerHTML = data.classes.map((c,i) => `<tr><td><b>${c.code}</b></td><td>${c.name}</td><td>${c.teacher||'-'}</td><td><button class="icon-btn" onclick="delClass(${i})">🗑️</button></td></tr>`).join('');
+            tb.innerHTML = classes.length ? classes.map(c => `<tr><td><b>${c.code}</b></td><td>${c.name}</td><td>${c.teacher || '-'}</td><td><button class="icon-btn" onclick="delClass('${c.code}')">🗑️</button></td></tr>`).join('') : '<tr><td colspan="4" class="empty">尚無班級</td></tr>';
         }
 
-        function delClass(i) { if(confirm('刪除？')) { data.classes.splice(i,1); save(); renderClasses(); updateDropdowns(); toast('已刪除'); } }
+        async function addClass() {
+            const code = document.getElementById('class-code').value.trim();
+            const name = document.getElementById('class-name').value.trim();
+            const teacher = document.getElementById('class-teacher').value.trim();
+            if (!code || !name) { toast('請填寫必填', 'danger'); return; }
+            const r = await api('/api/classes', { method: 'POST', body: JSON.stringify({ code, name, teacher }) });
+            if (r?.success) { toast('已新增'); closeModal('addClass'); loadClasses(); }
+        }
 
-        function addCourse() {
+        async function delClass(code) {
+            if (!confirm('刪除？')) return;
+            await api('/api/classes/' + code, { method: 'DELETE' });
+            toast('已刪除'); loadClasses();
+        }
+
+        function updateClassDD() {
+            document.getElementById('course-class').innerHTML = '<option value="">選擇</option>' + classes.map(c => `<option value="${c.code}">${c.name}</option>`).join('');
+        }
+
+        async function loadCourses() {
+            const d = await api('/api/courses');
+            if (d) { courses = d; renderCourses(); updateCourseDD(); }
+        }
+
+        function renderCourses() {
+            const tb = document.getElementById('courses-table');
+            tb.innerHTML = courses.length ? courses.map(c => `<tr><td><b>${c.subject}</b></td><td>${c.classCode}</td><td>${c.time || '-'}</td><td><button class="icon-btn" onclick="delCourse('${c.id}')">🗑️</button></td></tr>`).join('') : '<tr><td colspan="4" class="empty">尚無課程</td></tr>';
+        }
+
+        async function addCourse() {
             const subject = document.getElementById('course-subject').value.trim();
             const classCode = document.getElementById('course-class').value;
             const time = document.getElementById('course-time').value.trim();
             const room = document.getElementById('course-room').value.trim();
             const lat = document.getElementById('course-lat').value;
             const lon = document.getElementById('course-lon').value;
-            if(!subject || !classCode || !lat || !lon) { toast('請填寫必填欄位','danger'); return; }
-            data.courses.push({ id: 'C'+Date.now(), subject, classCode, time, room, lat: +lat, lon: +lon, radius: 50000 });
-            save(); closeModal('addCourse'); renderCourses(); updateDropdowns(); toast('課程已新增');
+            if (!subject || !classCode || !lat || !lon) { toast('請填寫必填', 'danger'); return; }
+            const r = await api('/api/courses', { method: 'POST', body: JSON.stringify({ subject, classCode, time, room, lat: +lat, lon: +lon, radius: 50000 }) });
+            if (r?.success) { toast('已新增'); closeModal('addCourse'); loadCourses(); }
         }
 
-        function renderCourses() {
-            const tb = document.getElementById('courses-table');
-            if(!data.courses.length) { tb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-light)">尚無課程</td></tr>'; return; }
-            tb.innerHTML = data.courses.map((c,i) => `<tr><td><b>${c.subject}</b></td><td>${c.classCode}</td><td>${c.time||'-'}</td><td><button class="icon-btn" onclick="delCourse(${i})">🗑️</button></td></tr>`).join('');
+        async function delCourse(id) {
+            if (!confirm('刪除？')) return;
+            await api('/api/courses/' + id, { method: 'DELETE' });
+            toast('已刪除'); loadCourses();
         }
 
-        function delCourse(i) { if(confirm('刪除？')) { data.courses.splice(i,1); save(); renderCourses(); updateDropdowns(); toast('已刪除'); } }
+        function updateCourseDD() {
+            document.getElementById('session-course').innerHTML = '<option value="">選擇</option>' + courses.map(c => `<option value="${c.id}">${c.subject} - ${c.classCode}</option>`).join('');
+        }
 
         function getLocation() {
-            if(navigator.geolocation) {
-                toast('定位中...','warning');
-                navigator.geolocation.getCurrentPosition(p => {
-                    document.getElementById('course-lat').value = p.coords.latitude.toFixed(6);
-                    document.getElementById('course-lon').value = p.coords.longitude.toFixed(6);
-                    document.getElementById('gps-preview').textContent = '📍 ' + p.coords.latitude.toFixed(6) + ', ' + p.coords.longitude.toFixed(6);
-                    toast('已取得位置');
-                }, e => toast('定位失敗','danger'), { enableHighAccuracy: true });
-            }
+            if (!navigator.geolocation) return;
+            toast('定位中...', 'warning');
+            navigator.geolocation.getCurrentPosition(p => {
+                document.getElementById('course-lat').value = p.coords.latitude.toFixed(6);
+                document.getElementById('course-lon').value = p.coords.longitude.toFixed(6);
+                document.getElementById('gps-preview').textContent = '📍 ' + p.coords.latitude.toFixed(6) + ', ' + p.coords.longitude.toFixed(6);
+                toast('已定位');
+            }, () => toast('定位失敗', 'danger'), { enableHighAccuracy: true });
         }
 
-        function createSession() {
-            const courseId = document.getElementById('session-course').value;
-            const date = document.getElementById('session-date').value;
-            const start = document.getElementById('session-start').value;
-            const end = document.getElementById('session-end').value;
-            if(!courseId || !date || !start || !end) { toast('請填寫所有欄位','danger'); return; }
-            const course = data.courses.find(c => c.id === courseId);
-            const id = 'S' + Date.now();
-            const qr = '簽到:' + courseId + '|' + id;
-            data.sessions.push({ id, courseId, name: course.subject, classCode: course.classCode, date, start, end, qr, status: '進行中' });
-            save(); closeModal('createSession'); renderSessions(); showQR(id); toast('活動已建立');
+        async function loadSessions() {
+            const d = await api('/api/sessions');
+            if (d) { sessions = d; renderSessions(); }
         }
 
         function renderSessions() {
             const list = document.getElementById('sessions-list');
             const today = new Date().toISOString().split('T')[0];
-            const todayS = data.sessions.filter(s => s.date === today);
-            if(!todayS.length) { list.innerHTML = '<div class="empty"><div class="icon">📝</div><h3>今日無活動</h3></div>'; return; }
-            list.innerHTML = todayS.map(s => `
+            const ts = sessions.filter(s => s.date === today);
+            list.innerHTML = ts.length ? ts.map(s => `
                 <div class="session-item">
                     <div class="session-header">
                         <div class="session-icon">📖</div>
-                        <div class="session-info"><h4>${s.name} - ${s.classCode}</h4><span>🕐 ${s.start} ~ ${s.end}</span></div>
+                        <div class="session-info"><h4>${s.courseName} - ${s.classCode}</h4><span>🕐 ${s.startTime} ~ ${s.endTime}</span></div>
                     </div>
                     <div class="session-actions">
-                        <button class="btn btn-primary btn-sm" onclick="showQR('${s.id}')">📱 QR Code</button>
+                        <button class="btn btn-primary btn-sm" onclick="showQR('${s.id}')">📱 QR</button>
                         <button class="btn btn-outline btn-sm" onclick="endSession('${s.id}')">結束</button>
                     </div>
                 </div>
-            `).join('');
+            `).join('') : '<div class="empty"><div class="icon">📝</div><h3>今日無活動</h3></div>';
+        }
+
+        async function createSession() {
+            const courseId = document.getElementById('session-course').value;
+            const date = document.getElementById('session-date').value;
+            const startTime = document.getElementById('session-start').value;
+            const endTime = document.getElementById('session-end').value;
+            if (!courseId || !date || !startTime || !endTime) { toast('請填寫所有欄位', 'danger'); return; }
+            const r = await api('/api/sessions', { method: 'POST', body: JSON.stringify({ courseId, date, startTime, endTime }) });
+            if (r?.success) {
+                toast('已建立'); closeModal('createSession'); loadSessions();
+                const c = courses.find(x => x.id === courseId);
+                showQRDirect(r.qrContent, (c?.subject || '') + ' - ' + (c?.classCode || ''), date + ' ' + startTime);
+            }
         }
 
         function showQR(id) {
-            const s = data.sessions.find(x => x.id === id);
-            if(!s) return;
-            document.getElementById('qr-name').textContent = s.name + ' - ' + s.classCode;
-            document.getElementById('qr-time').textContent = s.date + ' ' + s.start + ' ~ ' + s.end;
-            QRCode.toCanvas(document.getElementById('qr-canvas'), 'https://line.me/R/oaMessage/@YOUR_BOT/?'+encodeURIComponent(s.qr), { width: 200 });
+            const s = sessions.find(x => x.id === id);
+            if (s) showQRDirect(s.qrContent, s.courseName + ' - ' + s.classCode, s.date + ' ' + s.startTime);
+        }
+
+        function showQRDirect(qr, name, time) {
+            document.getElementById('qr-name').textContent = name;
+            document.getElementById('qr-time').textContent = time;
+            QRCode.toCanvas(document.getElementById('qr-canvas'), 'https://line.me/R/oaMessage/' + LINE_BOT_ID + '/?' + encodeURIComponent(qr), { width: 200 });
             openModal('qr');
         }
 
         function downloadQR() {
-            const canvas = document.getElementById('qr-canvas');
-            const link = document.createElement('a');
-            link.download = 'qrcode.png';
-            link.href = canvas.toDataURL();
-            link.click();
+            const c = document.getElementById('qr-canvas');
+            const a = document.createElement('a');
+            a.download = 'qrcode.png';
+            a.href = c.toDataURL();
+            a.click();
             toast('已下載');
         }
 
-        function endSession(id) {
-            if(confirm('結束活動？')) {
-                const s = data.sessions.find(x => x.id === id);
-                if(s) s.status = '已結束';
-                save(); renderSessions(); toast('活動已結束');
-            }
+        async function endSession(id) {
+            if (!confirm('結束？')) return;
+            await api('/api/sessions/' + id + '/end', { method: 'PUT' });
+            toast('已結束'); loadSessions();
         }
 
-        function renderStudents() {
+        async function loadStudents() {
+            const d = await api('/api/students');
             const tb = document.getElementById('students-table');
-            if(!data.students.length) { tb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-light)">學生將透過 LINE 註冊</td></tr>'; return; }
-            tb.innerHTML = data.students.map(s => `<tr><td>${s.id}</td><td>${s.name}</td><td>${s.class}</td><td>${s.rate||'0%'}</td></tr>`).join('');
+            tb.innerHTML = d?.length ? d.map(s => `<tr><td><b>${s.studentId}</b></td><td>${s.name}</td><td>${s.classCode}</td><td>${s.lineName || '-'}</td></tr>`).join('') : '<tr><td colspan="4" class="empty">學生將透過 LINE 註冊</td></tr>';
         }
 
-        function renderRecords() {
+        async function loadRecords() {
+            const d = await api('/api/records');
             const tb = document.getElementById('records-table');
-            if(!data.records.length) { tb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-light)">尚無紀錄</td></tr>'; return; }
-            tb.innerHTML = data.records.slice(-20).reverse().map(r => {
-                const cls = r.status==='已報到'?'success':r.status==='遲到'?'warning':'danger';
-                return `<tr><td>${r.time||'-'}</td><td>${r.studentId}</td><td>${r.course}</td><td><span class="badge ${cls}">${r.status}</span></td></tr>`;
-            }).join('');
-        }
-
-        let chart;
-        function renderDashboard() {
-            document.getElementById('stat-students').textContent = data.students.length;
-            const today = new Date().toISOString().split('T')[0];
-            const tr = data.records.filter(r => r.date === today);
-            document.getElementById('stat-attended').textContent = tr.filter(r => r.status === '已報到').length;
-            document.getElementById('stat-late').textContent = tr.filter(r => r.status === '遲到').length;
-            document.getElementById('stat-absent').textContent = tr.filter(r => r.status === '缺席').length;
-            
-            const labels = [], d1 = [], d2 = [], d3 = [];
-            for(let i = 6; i >= 0; i--) {
-                const d = new Date(); d.setDate(d.getDate() - i);
-                const ds = d.toISOString().split('T')[0];
-                labels.push(d.toLocaleDateString('zh-TW', { weekday: 'short' }));
-                const dr = data.records.filter(r => r.date === ds);
-                d1.push(dr.filter(r => r.status === '已報到').length);
-                d2.push(dr.filter(r => r.status === '遲到').length);
-                d3.push(dr.filter(r => r.status === '缺席').length);
-            }
-            if(chart) chart.destroy();
-            chart = new Chart(document.getElementById('chart'), {
-                type: 'bar',
-                data: { labels, datasets: [
-                    { label: '出席', data: d1, backgroundColor: '#10b981' },
-                    { label: '遲到', data: d2, backgroundColor: '#f59e0b' },
-                    { label: '缺席', data: d3, backgroundColor: '#ef4444' }
-                ]},
-                options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true }}}
-            });
-        }
-
-        function updateDropdowns() {
-            const cls = data.classes.map(c => `<option value="${c.code}">${c.name}</option>`).join('');
-            document.getElementById('course-class').innerHTML = '<option value="">選擇</option>' + cls;
-            const crs = data.courses.map(c => `<option value="${c.id}">${c.subject} - ${c.classCode}</option>`).join('');
-            document.getElementById('session-course').innerHTML = '<option value="">選擇</option>' + crs;
+            tb.innerHTML = d?.length ? d.slice(-30).reverse().map(r => {
+                const cls = r.status === '已報到' ? 'success' : r.status === '遲到' ? 'warning' : 'danger';
+                return `<tr><td>${r.date || '-'}</td><td>${r.studentId}</td><td>${r.courseName}</td><td><span class="badge ${cls}">${r.status}</span></td></tr>`;
+            }).join('') : '<tr><td colspan="4" class="empty">尚無紀錄</td></tr>';
         }
 
         function saveSettings() {
-            toast('設定已儲存');
-        }
-
-        function updateTime() {
-            const now = new Date();
-            document.getElementById('mobile-time').textContent = now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+            const url = document.getElementById('api-url').value.trim();
+            const bot = document.getElementById('line-bot-id').value.trim();
+            if (url) { API_URL = url; localStorage.setItem('apiUrl', url); }
+            if (bot) { LINE_BOT_ID = bot; localStorage.setItem('lineBotId', bot); }
+            toast('已儲存');
         }
 
         function init() {
-            load();
-            if(!data.classes.length) {
-                data.classes = [{ code: '801', name: '八年一班', teacher: 'Sone Wang' }];
-                data.courses = [{ id: 'C1', subject: '物理', classCode: '801', time: '週一 08:00', room: '實驗室', lat: 22.6273, lon: 120.3014, radius: 50000 }];
-                save();
-            }
-            updateDropdowns();
-            renderDashboard();
-            updateTime();
-            setInterval(updateTime, 1000);
+            document.getElementById('api-url').value = API_URL;
+            document.getElementById('line-bot-id').value = LINE_BOT_ID;
             document.getElementById('session-date').value = new Date().toISOString().split('T')[0];
+            if (!API_URL && location.origin.includes('onrender.com')) {
+                API_URL = location.origin;
+                localStorage.setItem('apiUrl', API_URL);
+                document.getElementById('api-url').value = API_URL;
+            }
+            if (API_URL) testConnection();
+            else updateStatus(false);
         }
 
         init();
