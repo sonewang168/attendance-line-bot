@@ -764,11 +764,12 @@ app.use((req, res, next) => {
 // === 班級 API ===
 app.get('/api/classes', async (req, res) => {
     try {
-        const sheet = await getOrCreateSheet('班級列表', ['班級代碼', '班級名稱', '導師', '人數', '建立時間']);
+        const sheet = await getOrCreateSheet('班級列表', ['班級代碼', '班級名稱', '部別', '導師', '人數', '建立時間']);
         const rows = await sheet.getRows();
         res.json(rows.map(r => ({
             code: r.get('班級代碼'),
             name: r.get('班級名稱'),
+            division: r.get('部別') || 'day',
             teacher: r.get('導師'),
             count: r.get('人數') || 0
         })));
@@ -779,11 +780,12 @@ app.get('/api/classes', async (req, res) => {
 
 app.post('/api/classes', async (req, res) => {
     try {
-        const { code, name, teacher } = req.body;
-        const sheet = await getOrCreateSheet('班級列表', ['班級代碼', '班級名稱', '導師', '人數', '建立時間']);
+        const { code, name, division, teacher } = req.body;
+        const sheet = await getOrCreateSheet('班級列表', ['班級代碼', '班級名稱', '部別', '導師', '人數', '建立時間']);
         await sheet.addRow({
             '班級代碼': code,
             '班級名稱': name,
+            '部別': division || 'day',
             '導師': teacher || '',
             '人數': 0,
             '建立時間': new Date().toLocaleString('zh-TW')
@@ -853,15 +855,18 @@ app.get('/api/classes/:code/students', async (req, res) => {
 app.get('/api/courses', async (req, res) => {
     try {
         const sheet = await getOrCreateSheet('課程列表', [
-            '課程ID', '科目', '班級', '教師', '上課時間', '教室',
+            '課程ID', '科目', '班級', '教師', '星期', '節次', '上課時間', '教室',
             '教室緯度', '教室經度', '簽到範圍', '遲到標準', '狀態', '建立時間'
         ]);
         const rows = await sheet.getRows();
         res.json(rows.map(r => ({
             id: r.get('課程ID'),
             subject: r.get('科目'),
+            name: r.get('科目'),
             classCode: r.get('班級'),
             teacher: r.get('教師'),
+            day: parseInt(r.get('星期')) || 1,
+            period: parseInt(r.get('節次')) || 1,
             time: r.get('上課時間'),
             room: r.get('教室'),
             lat: parseFloat(r.get('教室緯度')) || 0,
@@ -877,21 +882,23 @@ app.get('/api/courses', async (req, res) => {
 
 app.post('/api/courses', async (req, res) => {
     try {
-        const { subject, classCode, teacher, time, room, lat, lon, radius, lateMinutes } = req.body;
+        const { subject, name, classCode, teacher, day, period, time, room, lat, lon, radius, lateMinutes } = req.body;
         const sheet = await getOrCreateSheet('課程列表', [
-            '課程ID', '科目', '班級', '教師', '上課時間', '教室',
+            '課程ID', '科目', '班級', '教師', '星期', '節次', '上課時間', '教室',
             '教室緯度', '教室經度', '簽到範圍', '遲到標準', '狀態', '建立時間'
         ]);
         const courseId = 'C' + Date.now();
         await sheet.addRow({
             '課程ID': courseId,
-            '科目': subject,
+            '科目': subject || name,
             '班級': classCode,
             '教師': teacher || '',
+            '星期': day || 1,
+            '節次': period || 1,
             '上課時間': time || '',
             '教室': room || '',
-            '教室緯度': lat,
-            '教室經度': lon,
+            '教室緯度': lat || 0,
+            '教室經度': lon || 0,
             '簽到範圍': radius || 50,
             '遲到標準': lateMinutes || 10,
             '狀態': '啟用',
@@ -935,8 +942,8 @@ app.put('/api/courses/:id', async (req, res) => {
         if (period !== undefined) row.set('節次', period);
         if (time) row.set('上課時間', time);
         if (room !== undefined) row.set('教室', room);
-        if (lat !== undefined) row.set('GPS緯度', lat);
-        if (lon !== undefined) row.set('GPS經度', lon);
+        if (lat !== undefined) row.set('教室緯度', lat);
+        if (lon !== undefined) row.set('教室經度', lon);
         await row.save();
         
         res.json({ success: true });
