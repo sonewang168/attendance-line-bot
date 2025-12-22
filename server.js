@@ -797,19 +797,22 @@ app.post('/api/classes', async (req, res) => {
 app.put('/api/classes/:code', async (req, res) => {
     try {
         const { code } = req.params;
-        const { name, teacher } = req.body;
+        const { name, division, teacher } = req.body;
         const sheet = doc.sheetsByTitle['班級列表'];
-        if (!sheet) return res.json({ success: false });
+        if (!sheet) return res.json({ success: false, message: '資料表不存在' });
         const rows = await sheet.getRows();
         const row = rows.find(r => r.get('班級代碼') === code);
-        if (row) {
-            if (name) row.set('班級名稱', name);
-            if (teacher !== undefined) row.set('導師', teacher);
-            await row.save();
-        }
+        if (!row) return res.json({ success: false, message: '班級不存在' });
+        
+        if (name) row.set('班級名稱', name);
+        if (division) row.set('部別', division);
+        if (teacher !== undefined) row.set('導師', teacher);
+        await row.save();
+        
         res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('更新班級錯誤:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -911,6 +914,35 @@ app.delete('/api/courses/:id', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+});
+
+// 更新課程
+app.put('/api/courses/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { subject, classCode, day, period, time, room, lat, lon } = req.body;
+        const sheet = doc.sheetsByTitle['課程列表'];
+        if (!sheet) return res.json({ success: false, message: '資料表不存在' });
+        
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('課程ID') === id);
+        if (!row) return res.json({ success: false, message: '課程不存在' });
+        
+        if (subject) row.set('科目', subject);
+        if (classCode) row.set('班級', classCode);
+        if (day !== undefined) row.set('星期', day);
+        if (period !== undefined) row.set('節次', period);
+        if (time) row.set('上課時間', time);
+        if (room !== undefined) row.set('教室', room);
+        if (lat !== undefined) row.set('GPS緯度', lat);
+        if (lon !== undefined) row.set('GPS經度', lon);
+        await row.save();
+        
+        res.json({ success: true });
+    } catch (error) {
+        console.error('更新課程錯誤:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -1875,93 +1907,6 @@ app.delete('/api/students/:id', async (req, res) => {
         
         const rows = await sheet.getRows();
         const row = rows.find(r => r.get('學號') === id);
-        if (row) await row.delete();
-        
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// === 班級管理 API 增強 ===
-// 更新班級
-app.put('/api/classes/:code', async (req, res) => {
-    try {
-        const { code } = req.params;
-        const { name, division, teacher } = req.body;
-        const sheet = doc.sheetsByTitle['班級列表'];
-        if (!sheet) return res.json({ success: false });
-        
-        const rows = await sheet.getRows();
-        const row = rows.find(r => r.get('班級代碼') === code);
-        if (!row) return res.json({ success: false, message: '班級不存在' });
-        
-        if (name) row.set('班級名稱', name);
-        if (division) row.set('部別', division);
-        if (teacher) row.set('導師', teacher);
-        await row.save();
-        
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// 刪除班級
-app.delete('/api/classes/:code', async (req, res) => {
-    try {
-        const { code } = req.params;
-        const sheet = doc.sheetsByTitle['班級列表'];
-        if (!sheet) return res.json({ success: true });
-        
-        const rows = await sheet.getRows();
-        const row = rows.find(r => r.get('班級代碼') === code);
-        if (row) await row.delete();
-        
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// === 課程管理 API 增強 ===
-// 更新課程
-app.put('/api/courses/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { subject, classCode, day, period, time, room, lat, lon } = req.body;
-        const sheet = doc.sheetsByTitle['課程列表'];
-        if (!sheet) return res.json({ success: false });
-        
-        const rows = await sheet.getRows();
-        const row = rows.find(r => r.get('課程ID') === id);
-        if (!row) return res.json({ success: false, message: '課程不存在' });
-        
-        if (subject) row.set('科目', subject);
-        if (classCode) row.set('班級', classCode);
-        if (day !== undefined) row.set('星期', day);
-        if (period !== undefined) row.set('節次', period);
-        if (time) row.set('上課時間', time);
-        if (room) row.set('教室', room);
-        if (lat !== undefined) row.set('GPS緯度', lat);
-        if (lon !== undefined) row.set('GPS經度', lon);
-        await row.save();
-        
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// 刪除課程
-app.delete('/api/courses/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const sheet = doc.sheetsByTitle['課程列表'];
-        if (!sheet) return res.json({ success: true });
-        
-        const rows = await sheet.getRows();
-        const row = rows.find(r => r.get('課程ID') === id);
         if (row) await row.delete();
         
         res.json({ success: true });
