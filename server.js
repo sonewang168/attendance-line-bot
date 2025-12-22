@@ -1111,6 +1111,373 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
+// === 統計 API ===
+app.get('/api/stats/attendance', async (req, res) => {
+    try {
+        const recordSheet = doc.sheetsByTitle['簽到紀錄'];
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        if (!recordSheet || !studentSheet) {
+            return res.json({ overall: 0, students: [] });
+        }
+        
+        const records = await recordSheet.getRows();
+        const students = await studentSheet.getRows();
+        
+        // 計算整體出席率
+        const total = records.length;
+        const attended = records.filter(r => r.get('狀態') === '已報到').length;
+        const late = records.filter(r => r.get('狀態') === '遲到').length;
+        const absent = records.filter(r => r.get('狀態') === '缺席').length;
+        const overall = total > 0 ? Math.round((attended + late) / total * 100) : 0;
+        
+        // 計算每位學生的出席率
+        const studentStats = [];
+        for (const student of students) {
+            const studentId = student.get('學號');
+            const studentRecords = records.filter(r => r.get('學號') === studentId);
+            const sTotal = studentRecords.length;
+            const sAttended = studentRecords.filter(r => r.get('狀態') === '已報到').length;
+            const sLate = studentRecords.filter(r => r.get('狀態') === '遲到').length;
+            const sAbsent = studentRecords.filter(r => r.get('狀態') === '缺席').length;
+            const rate = sTotal > 0 ? Math.round((sAttended + sLate) / sTotal * 100) : 100;
+            
+            studentStats.push({
+                studentId,
+                name: student.get('姓名'),
+                classCode: student.get('班級'),
+                total: sTotal,
+                attended: sAttended,
+                late: sLate,
+                absent: sAbsent,
+                rate
+            });
+        }
+        
+        // 排序：出席率低的在前
+        studentStats.sort((a, b) => a.rate - b.rate);
+        
+        res.json({
+            overall,
+            totalRecords: total,
+            attended,
+            late,
+            absent,
+            students: studentStats,
+            lowAttendance: studentStats.filter(s => s.rate < 80),
+            warnings: studentStats.filter(s => s.rate < 60)
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 取得學生連續缺席狀況
+app.get('/api/stats/consecutive-absent', async (req, res) => {
+    try {
+        const recordSheet = doc.sheetsByTitle['簽到紀錄'];
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        if (!recordSheet || !studentSheet) {
+            return res.json({ alerts: [] });
+        }
+        
+        const records = await recordSheet.getRows();
+        const students = await studentSheet.getRows();
+        const alerts = [];
+        
+        for (const student of students) {
+            const studentId = student.get('學號');
+            const studentRecords = records
+                .filter(r => r.get('學號') === studentId)
+                .sort((a, b) => new Date(b.get('簽到時間')) - new Date(a.get('簽到時間')));
+            
+            // 計算連續缺席次數
+            let consecutive = 0;
+            for (const r of studentRecords) {
+                if (r.get('狀態') === '缺席') {
+                    consecutive++;
+                } else {
+                    break;
+                }
+            }
+            
+            if (consecutive >= 2) {
+                alerts.push({
+                    studentId,
+                    name: student.get('姓名'),
+                    classCode: student.get('班級'),
+                    lineId: student.get('LINE_ID'),
+                    consecutiveAbsent: consecutive,
+                    level: consecutive >= 5 ? 'critical' : consecutive >= 3 ? 'warning' : 'notice'
+                });
+            }
+        }
+        
+        alerts.sort((a, b) => b.consecutiveAbsent - a.consecutiveAbsent);
+        res.json({ alerts });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// === 通知 API ===
+// 發送上課提醒
+app.post('/api/notify/remind', async (req, res) => {
+    try {
+        const { courseId, message } = req.body;
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        const courseSheet = doc.sheetsByTitle['課程列表'];
+        
+        if (!studentSheet || !courseSheet) {
+            return res.json({ success: false, message: '找不到資料表' });
+        }
+        
+        const courses = await courseSheet.getRows();
+        const course = courses.find(c => c.get('課程ID') === courseId);
+        if (!course) {
+            return res.json({ success: false, message: '找不到課程' });
+        }
+        
+        const classCode = course.get('班級');
+        const students = await studentSheet.getRows();
+        const classStudents = students.filter(s => s.get('班級') === classCode && s.get('LINE_ID'));
+        
+        // 發送 LINE 通知
+        const notifications = [];
+        for (const student of classStudents) {
+            const lineId = student.get('LINE_ID');
+            if (lineId) {
+                try {
+                    await lineClient.pushMessage(lineId, {
+                        type: 'text',
+                        text: message || `📢 上課提醒\n\n${course.get('科目')} 即將開始！\n⏰ ${course.get('上課時間')}\n📍 ${course.get('教室')}\n\n請準時出席！`
+                    });
+                    notifications.push({ studentId: student.get('學號'), status: 'sent' });
+                } catch (e) {
+                    notifications.push({ studentId: student.get('學號'), status: 'failed', error: e.message });
+                }
+            }
+        }
+        
+        res.json({ success: true, sent: notifications.filter(n => n.status === 'sent').length, total: classStudents.length, details: notifications });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 發送缺席通知
+app.post('/api/notify/absent', async (req, res) => {
+    try {
+        const { studentId, sessionId, courseName } = req.body;
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        
+        if (!studentSheet) {
+            return res.json({ success: false, message: '找不到學生資料' });
+        }
+        
+        const students = await studentSheet.getRows();
+        const student = students.find(s => s.get('學號') === studentId);
+        
+        if (!student || !student.get('LINE_ID')) {
+            return res.json({ success: false, message: '學生未綁定 LINE' });
+        }
+        
+        await lineClient.pushMessage(student.get('LINE_ID'), {
+            type: 'text',
+            text: `⚠️ 缺席通知\n\n${student.get('姓名')} 同學，您在「${courseName}」課程中被記錄為缺席。\n\n如有疑問請聯繫老師。`
+        });
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 發送連續缺席警告
+app.post('/api/notify/warning', async (req, res) => {
+    try {
+        const { studentId, consecutiveCount } = req.body;
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        
+        if (!studentSheet) {
+            return res.json({ success: false });
+        }
+        
+        const students = await studentSheet.getRows();
+        const student = students.find(s => s.get('學號') === studentId);
+        
+        if (!student || !student.get('LINE_ID')) {
+            return res.json({ success: false, message: '學生未綁定 LINE' });
+        }
+        
+        const level = consecutiveCount >= 5 ? '🚨 嚴重警告' : consecutiveCount >= 3 ? '⚠️ 警告' : '📢 提醒';
+        
+        await lineClient.pushMessage(student.get('LINE_ID'), {
+            type: 'text',
+            text: `${level}\n\n${student.get('姓名')} 同學，您已連續 ${consecutiveCount} 次缺席！\n\n請盡快與老師聯繫說明情況。持續缺席可能影響您的學業成績。`
+        });
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 批次發送通知
+app.post('/api/notify/batch', async (req, res) => {
+    try {
+        const { type, targets, message } = req.body;
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        
+        if (!studentSheet) {
+            return res.json({ success: false });
+        }
+        
+        const students = await studentSheet.getRows();
+        let sent = 0, failed = 0;
+        
+        for (const studentId of targets) {
+            const student = students.find(s => s.get('學號') === studentId);
+            if (student && student.get('LINE_ID')) {
+                try {
+                    await lineClient.pushMessage(student.get('LINE_ID'), {
+                        type: 'text',
+                        text: message
+                    });
+                    sent++;
+                } catch {
+                    failed++;
+                }
+            } else {
+                failed++;
+            }
+        }
+        
+        res.json({ success: true, sent, failed });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 取得通知設定
+app.get('/api/settings/notifications', async (req, res) => {
+    try {
+        const sheet = await getOrCreateSheet('系統設定', ['設定項目', '設定值']);
+        const rows = await sheet.getRows();
+        const settings = {};
+        rows.forEach(r => {
+            settings[r.get('設定項目')] = r.get('設定值');
+        });
+        res.json({
+            remindBeforeClass: settings['上課提醒'] === 'true',
+            remindMinutes: parseInt(settings['提醒分鐘']) || 10,
+            notifyAbsent: settings['缺席通知'] === 'true',
+            notifyParent: settings['通知家長'] === 'true',
+            warningThreshold: parseInt(settings['警告門檻']) || 3,
+            weeklyReport: settings['週報'] === 'true'
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 儲存通知設定
+app.post('/api/settings/notifications', async (req, res) => {
+    try {
+        const { remindBeforeClass, remindMinutes, notifyAbsent, notifyParent, warningThreshold, weeklyReport } = req.body;
+        const sheet = await getOrCreateSheet('系統設定', ['設定項目', '設定值']);
+        
+        // 清空舊設定
+        const rows = await sheet.getRows();
+        for (const row of rows) {
+            await row.delete();
+        }
+        
+        // 寫入新設定
+        await sheet.addRows([
+            { '設定項目': '上課提醒', '設定值': remindBeforeClass ? 'true' : 'false' },
+            { '設定項目': '提醒分鐘', '設定值': remindMinutes || 10 },
+            { '設定項目': '缺席通知', '設定值': notifyAbsent ? 'true' : 'false' },
+            { '設定項目': '通知家長', '設定值': notifyParent ? 'true' : 'false' },
+            { '設定項目': '警告門檻', '設定值': warningThreshold || 3 },
+            { '設定項目': '週報', '設定值': weeklyReport ? 'true' : 'false' }
+        ]);
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 上課結束自動處理
+app.post('/api/sessions/:id/complete', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const sessionSheet = doc.sheetsByTitle['簽到活動'];
+        const recordSheet = doc.sheetsByTitle['簽到紀錄'];
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        const courseSheet = doc.sheetsByTitle['課程列表'];
+        
+        if (!sessionSheet) return res.json({ success: false });
+        
+        // 更新活動狀態
+        const sessions = await sessionSheet.getRows();
+        const session = sessions.find(s => s.get('活動ID') === id);
+        if (!session) return res.json({ success: false, message: '找不到活動' });
+        
+        session.set('狀態', '已結束');
+        await session.save();
+        
+        // 找出未簽到的學生，標記為缺席
+        const courseId = session.get('課程ID');
+        const courses = await courseSheet.getRows();
+        const course = courses.find(c => c.get('課程ID') === courseId);
+        if (!course) return res.json({ success: true, marked: 0 });
+        
+        const classCode = course.get('班級');
+        const students = await studentSheet.getRows();
+        const classStudents = students.filter(s => s.get('班級') === classCode);
+        
+        const records = await recordSheet.getRows();
+        const sessionRecords = records.filter(r => r.get('活動ID') === id);
+        const checkedInIds = sessionRecords.map(r => r.get('學號'));
+        
+        let marked = 0;
+        const absentStudents = [];
+        
+        for (const student of classStudents) {
+            const studentId = student.get('學號');
+            if (!checkedInIds.includes(studentId)) {
+                // 標記缺席
+                await recordSheet.addRow({
+                    '活動ID': id,
+                    '學號': studentId,
+                    '簽到時間': new Date().toLocaleString('zh-TW'),
+                    '狀態': '缺席',
+                    '遲到分鐘': 0,
+                    'GPS緯度': '',
+                    'GPS經度': '',
+                    '備註': '系統自動標記'
+                });
+                marked++;
+                absentStudents.push({
+                    studentId,
+                    name: student.get('姓名'),
+                    lineId: student.get('LINE_ID')
+                });
+            }
+        }
+        
+        res.json({ 
+            success: true, 
+            marked, 
+            absentStudents,
+            courseName: course.get('科目')
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // ===== 啟動伺服器 =====
 
 const PORT = process.env.PORT || 3000;
