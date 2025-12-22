@@ -794,6 +794,25 @@ app.post('/api/classes', async (req, res) => {
     }
 });
 
+app.put('/api/classes/:code', async (req, res) => {
+    try {
+        const { code } = req.params;
+        const { name, teacher } = req.body;
+        const sheet = doc.sheetsByTitle['班級列表'];
+        if (!sheet) return res.json({ success: false });
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('班級代碼') === code);
+        if (row) {
+            if (name) row.set('班級名稱', name);
+            if (teacher !== undefined) row.set('導師', teacher);
+            await row.save();
+        }
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.delete('/api/classes/:code', async (req, res) => {
     try {
         const { code } = req.params;
@@ -803,6 +822,25 @@ app.delete('/api/classes/:code', async (req, res) => {
         const row = rows.find(r => r.get('班級代碼') === code);
         if (row) await row.delete();
         res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 取得單一班級的學生
+app.get('/api/classes/:code/students', async (req, res) => {
+    try {
+        const { code } = req.params;
+        const sheet = doc.sheetsByTitle['學生名單'];
+        if (!sheet) return res.json([]);
+        const rows = await sheet.getRows();
+        const students = rows.filter(r => r.get('班級') === code);
+        res.json(students.map(s => ({
+            studentId: s.get('學號'),
+            name: s.get('姓名'),
+            lineName: s.get('LINE名稱'),
+            registeredAt: s.get('註冊時間')
+        })));
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
