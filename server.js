@@ -1478,6 +1478,339 @@ app.post('/api/sessions/:id/complete', async (req, res) => {
     }
 });
 
+// === 請假系統 API ===
+// 取得請假列表
+app.get('/api/leaves', async (req, res) => {
+    try {
+        const sheet = await getOrCreateSheet('請假紀錄', ['請假ID', '學號', '姓名', '班級', '日期', '節次', '請假類型', '原因', '狀態', '申請時間', '審核時間', '審核備註']);
+        const rows = await sheet.getRows();
+        res.json(rows.map(r => ({
+            id: r.get('請假ID'),
+            studentId: r.get('學號'),
+            name: r.get('姓名'),
+            classCode: r.get('班級'),
+            date: r.get('日期'),
+            periods: r.get('節次'),
+            type: r.get('請假類型'),
+            reason: r.get('原因'),
+            status: r.get('狀態'),
+            appliedAt: r.get('申請時間'),
+            reviewedAt: r.get('審核時間'),
+            reviewNote: r.get('審核備註')
+        })));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 學生申請請假
+app.post('/api/leaves', async (req, res) => {
+    try {
+        const { studentId, date, periods, type, reason } = req.body;
+        const sheet = await getOrCreateSheet('請假紀錄', ['請假ID', '學號', '姓名', '班級', '日期', '節次', '請假類型', '原因', '狀態', '申請時間', '審核時間', '審核備註']);
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        
+        if (!studentSheet) return res.json({ success: false, message: '找不到學生資料' });
+        
+        const students = await studentSheet.getRows();
+        const student = students.find(s => s.get('學號') === studentId);
+        if (!student) return res.json({ success: false, message: '學生不存在' });
+        
+        const leaveId = 'L' + Date.now();
+        await sheet.addRow({
+            '請假ID': leaveId,
+            '學號': studentId,
+            '姓名': student.get('姓名'),
+            '班級': student.get('班級'),
+            '日期': date,
+            '節次': periods,
+            '請假類型': type || '事假',
+            '原因': reason || '',
+            '狀態': '待審核',
+            '申請時間': new Date().toLocaleString('zh-TW'),
+            '審核時間': '',
+            '審核備註': ''
+        });
+        
+        res.json({ success: true, leaveId });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 審核請假
+app.put('/api/leaves/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status, note } = req.body;
+        const sheet = doc.sheetsByTitle['請假紀錄'];
+        if (!sheet) return res.json({ success: false });
+        
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('請假ID') === id);
+        if (!row) return res.json({ success: false, message: '找不到請假單' });
+        
+        row.set('狀態', status);
+        row.set('審核時間', new Date().toLocaleString('zh-TW'));
+        row.set('審核備註', note || '');
+        await row.save();
+        
+        // 發送通知給學生
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        if (studentSheet) {
+            const students = await studentSheet.getRows();
+            const student = students.find(s => s.get('學號') === row.get('學號'));
+            if (student && student.get('LINE_ID')) {
+                const statusText = status === '已核准' ? '✅ 已核准' : '❌ 已駁回';
+                try {
+                    await lineClient.pushMessage(student.get('LINE_ID'), {
+                        type: 'text',
+                        text: `📋 請假審核結果\n\n${statusText}\n日期：${row.get('日期')}\n節次：${row.get('節次')}\n${note ? '備註：' + note : ''}`
+                    });
+                } catch (e) { console.log('LINE 通知失敗:', e.message); }
+            }
+        }
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 刪除請假
+app.delete('/api/leaves/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const sheet = doc.sheetsByTitle['請假紀錄'];
+        if (!sheet) return res.json({ success: true });
+        
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('請假ID') === id);
+        if (row) await row.delete();
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// === 家長管理 API ===
+// 綁定家長 LINE
+app.post('/api/students/:id/parent', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { parentLineId, parentName } = req.body;
+        const sheet = doc.sheetsByTitle['學生名單'];
+        if (!sheet) return res.json({ success: false });
+        
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('學號') === id);
+        if (!row) return res.json({ success: false, message: '學生不存在' });
+        
+        row.set('家長LINE_ID', parentLineId);
+        row.set('家長姓名', parentName || '');
+        await row.save();
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 發送通知給家長
+app.post('/api/notify/parent', async (req, res) => {
+    try {
+        const { studentId, message, type } = req.body;
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        if (!studentSheet) return res.json({ success: false });
+        
+        const students = await studentSheet.getRows();
+        const student = students.find(s => s.get('學號') === studentId);
+        
+        if (!student || !student.get('家長LINE_ID')) {
+            return res.json({ success: false, message: '家長未綁定 LINE' });
+        }
+        
+        let text = message;
+        if (!text) {
+            if (type === 'absent') {
+                text = `📢 家長您好\n\n您的孩子 ${student.get('姓名')} 今日有缺席紀錄，請關心了解。\n\n如有疑問請與學校聯繫。`;
+            } else if (type === 'warning') {
+                text = `⚠️ 重要通知\n\n您的孩子 ${student.get('姓名')} 近期出席狀況異常，已連續多次缺席。\n\n請儘速與學校聯繫了解情況。`;
+            }
+        }
+        
+        await lineClient.pushMessage(student.get('家長LINE_ID'), { type: 'text', text });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 批次通知家長
+app.post('/api/notify/parents-batch', async (req, res) => {
+    try {
+        const { studentIds, message, type } = req.body;
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        if (!studentSheet) return res.json({ success: false });
+        
+        const students = await studentSheet.getRows();
+        let sent = 0, failed = 0;
+        
+        for (const studentId of studentIds) {
+            const student = students.find(s => s.get('學號') === studentId);
+            if (student && student.get('家長LINE_ID')) {
+                try {
+                    let text = message || `📢 家長您好\n\n您的孩子 ${student.get('姓名')} 的出席狀況需要您關注。\n\n詳情請與學校聯繫。`;
+                    await lineClient.pushMessage(student.get('家長LINE_ID'), { type: 'text', text });
+                    sent++;
+                } catch { failed++; }
+            } else { failed++; }
+        }
+        
+        res.json({ success: true, sent, failed });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// === 週報 API ===
+// 產生週報
+app.get('/api/reports/weekly', async (req, res) => {
+    try {
+        const { weekStart, weekEnd } = req.query;
+        const recordSheet = doc.sheetsByTitle['簽到紀錄'];
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        const classSheet = doc.sheetsByTitle['班級列表'];
+        
+        if (!recordSheet || !studentSheet) {
+            return res.json({ success: false, message: '資料表不存在' });
+        }
+        
+        const records = await recordSheet.getRows();
+        const students = await studentSheet.getRows();
+        const classes = classSheet ? await classSheet.getRows() : [];
+        
+        // 過濾本週紀錄
+        const weekRecords = records.filter(r => {
+            const date = r.get('簽到時間')?.split(' ')[0];
+            return date >= weekStart && date <= weekEnd;
+        });
+        
+        const total = weekRecords.length;
+        const attended = weekRecords.filter(r => r.get('狀態') === '已報到').length;
+        const late = weekRecords.filter(r => r.get('狀態') === '遲到').length;
+        const absent = weekRecords.filter(r => r.get('狀態') === '缺席').length;
+        const rate = total > 0 ? Math.round((attended + late) / total * 100) : 0;
+        
+        // 各班統計
+        const classSummary = [];
+        for (const cls of classes) {
+            const code = cls.get('班級代碼');
+            const classStudents = students.filter(s => s.get('班級') === code).map(s => s.get('學號'));
+            const classRecords = weekRecords.filter(r => classStudents.includes(r.get('學號')));
+            const cTotal = classRecords.length;
+            const cAttended = classRecords.filter(r => r.get('狀態') === '已報到').length;
+            const cLate = classRecords.filter(r => r.get('狀態') === '遲到').length;
+            const cAbsent = classRecords.filter(r => r.get('狀態') === '缺席').length;
+            
+            classSummary.push({
+                code, name: cls.get('班級名稱'),
+                total: cTotal, attended: cAttended, late: cLate, absent: cAbsent,
+                rate: cTotal > 0 ? Math.round((cAttended + cLate) / cTotal * 100) : 100
+            });
+        }
+        
+        // 問題學生
+        const problemStudents = [];
+        for (const student of students) {
+            const studentId = student.get('學號');
+            const studentRecords = weekRecords.filter(r => r.get('學號') === studentId);
+            const sAbsent = studentRecords.filter(r => r.get('狀態') === '缺席').length;
+            const sLate = studentRecords.filter(r => r.get('狀態') === '遲到').length;
+            
+            if (sAbsent >= 2 || sLate >= 3) {
+                problemStudents.push({ studentId, name: student.get('姓名'), classCode: student.get('班級'), absent: sAbsent, late: sLate });
+            }
+        }
+        
+        res.json({ success: true, weekStart, weekEnd, summary: { total, attended, late, absent, rate }, classSummary, problemStudents });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 發送週報通知
+app.post('/api/reports/weekly/send', async (req, res) => {
+    try {
+        const { report, teacherLineId } = req.body;
+        
+        let text = `📊 週報 (${report.weekStart} ~ ${report.weekEnd})\n\n`;
+        text += `📈 整體統計\n`;
+        text += `• 出席率：${report.summary.rate}%\n`;
+        text += `• 出席：${report.summary.attended} 次\n`;
+        text += `• 遲到：${report.summary.late} 次\n`;
+        text += `• 缺席：${report.summary.absent} 次\n\n`;
+        
+        if (report.problemStudents?.length > 0) {
+            text += `⚠️ 需關注學生\n`;
+            for (const s of report.problemStudents.slice(0, 5)) {
+                text += `• ${s.name} (${s.classCode}): 缺席${s.absent}次, 遲到${s.late}次\n`;
+            }
+        } else {
+            text += `✅ 本週無異常狀況\n`;
+        }
+        
+        if (teacherLineId) {
+            await lineClient.pushMessage(teacherLineId, { type: 'text', text });
+        }
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// === 匯出報表 API ===
+app.get('/api/export/attendance', async (req, res) => {
+    try {
+        const { format, startDate, endDate, classCode } = req.query;
+        const recordSheet = doc.sheetsByTitle['簽到紀錄'];
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        
+        if (!recordSheet || !studentSheet) return res.json({ success: false });
+        
+        const records = await recordSheet.getRows();
+        const students = await studentSheet.getRows();
+        
+        let filtered = records;
+        if (startDate) filtered = filtered.filter(r => r.get('簽到時間')?.split(' ')[0] >= startDate);
+        if (endDate) filtered = filtered.filter(r => r.get('簽到時間')?.split(' ')[0] <= endDate);
+        if (classCode) {
+            const classStudentIds = students.filter(s => s.get('班級') === classCode).map(s => s.get('學號'));
+            filtered = filtered.filter(r => classStudentIds.includes(r.get('學號')));
+        }
+        
+        const data = filtered.map(r => {
+            const student = students.find(s => s.get('學號') === r.get('學號'));
+            return {
+                日期: r.get('簽到時間')?.split(' ')[0] || '',
+                時間: r.get('簽到時間')?.split(' ')[1] || '',
+                學號: r.get('學號'),
+                姓名: student?.get('姓名') || '',
+                班級: student?.get('班級') || '',
+                狀態: r.get('狀態'),
+                遲到分鐘: r.get('遲到分鐘') || 0,
+                備註: r.get('備註') || ''
+            };
+        });
+        
+        res.json({ success: true, data, format });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // ===== 啟動伺服器 =====
 
 const PORT = process.env.PORT || 3000;
