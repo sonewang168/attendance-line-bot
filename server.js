@@ -4,6 +4,7 @@
  */
 
 const express = require('express');
+const path = require('path');
 const line = require('@line/bot-sdk');
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
@@ -730,7 +731,12 @@ cron.schedule('*/5 * * * *', checkAbsences);
 // ===== Express 路由 =====
 
 // 靜態檔案（教師管理介面）
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
+
+// 首頁路由
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 app.use('/webhook', line.middleware(lineConfig));
 
@@ -743,20 +749,198 @@ app.post('/webhook', (req, res) => {
         });
 });
 
-// API: 建立簽到活動（供教師介面呼叫）
+// ===== API 端點 =====
 app.use(express.json());
 
-app.post('/api/session/create', async (req, res) => {
+// CORS 設定
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') return res.sendStatus(200);
+    next();
+});
+
+// === 班級 API ===
+app.get('/api/classes', async (req, res) => {
     try {
-        const { courseId, date, startTime, endTime } = req.body;
-        
+        const sheet = await getOrCreateSheet('班級列表', ['班級代碼', '班級名稱', '導師', '人數', '建立時間']);
+        const rows = await sheet.getRows();
+        res.json(rows.map(r => ({
+            code: r.get('班級代碼'),
+            name: r.get('班級名稱'),
+            teacher: r.get('導師'),
+            count: r.get('人數') || 0
+        })));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/classes', async (req, res) => {
+    try {
+        const { code, name, teacher } = req.body;
+        const sheet = await getOrCreateSheet('班級列表', ['班級代碼', '班級名稱', '導師', '人數', '建立時間']);
+        await sheet.addRow({
+            '班級代碼': code,
+            '班級名稱': name,
+            '導師': teacher || '',
+            '人數': 0,
+            '建立時間': new Date().toLocaleString('zh-TW')
+        });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.delete('/api/classes/:code', async (req, res) => {
+    try {
+        const { code } = req.params;
+        const sheet = doc.sheetsByTitle['班級列表'];
+        if (!sheet) return res.json({ success: true });
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('班級代碼') === code);
+        if (row) await row.delete();
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// === 課程 API ===
+app.get('/api/courses', async (req, res) => {
+    try {
+        const sheet = await getOrCreateSheet('課程列表', [
+            '課程ID', '科目', '班級', '教師', '上課時間', '教室',
+            '教室緯度', '教室經度', '簽到範圍', '遲到標準', '狀態', '建立時間'
+        ]);
+        const rows = await sheet.getRows();
+        res.json(rows.map(r => ({
+            id: r.get('課程ID'),
+            subject: r.get('科目'),
+            classCode: r.get('班級'),
+            teacher: r.get('教師'),
+            time: r.get('上課時間'),
+            room: r.get('教室'),
+            lat: parseFloat(r.get('教室緯度')) || 0,
+            lon: parseFloat(r.get('教室經度')) || 0,
+            radius: parseInt(r.get('簽到範圍')) || 50,
+            lateMinutes: parseInt(r.get('遲到標準')) || 10,
+            status: r.get('狀態') || '啟用'
+        })));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/courses', async (req, res) => {
+    try {
+        const { subject, classCode, teacher, time, room, lat, lon, radius, lateMinutes } = req.body;
+        const sheet = await getOrCreateSheet('課程列表', [
+            '課程ID', '科目', '班級', '教師', '上課時間', '教室',
+            '教室緯度', '教室經度', '簽到範圍', '遲到標準', '狀態', '建立時間'
+        ]);
+        const courseId = 'C' + Date.now();
+        await sheet.addRow({
+            '課程ID': courseId,
+            '科目': subject,
+            '班級': classCode,
+            '教師': teacher || '',
+            '上課時間': time || '',
+            '教室': room || '',
+            '教室緯度': lat,
+            '教室經度': lon,
+            '簽到範圍': radius || 50,
+            '遲到標準': lateMinutes || 10,
+            '狀態': '啟用',
+            '建立時間': new Date().toLocaleString('zh-TW')
+        });
+        res.json({ success: true, courseId });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.delete('/api/courses/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const sheet = doc.sheetsByTitle['課程列表'];
+        if (!sheet) return res.json({ success: true });
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('課程ID') === id);
+        if (row) await row.delete();
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// === 學生 API ===
+app.get('/api/students', async (req, res) => {
+    try {
+        const sheet = await getOrCreateSheet('學生名單', [
+            '學號', '姓名', '班級', 'LINE_ID', 'LINE名稱', '註冊時間', '狀態'
+        ]);
+        const rows = await sheet.getRows();
+        res.json(rows.map(r => ({
+            studentId: r.get('學號'),
+            name: r.get('姓名'),
+            classCode: r.get('班級'),
+            lineId: r.get('LINE_ID'),
+            lineName: r.get('LINE名稱'),
+            registeredAt: r.get('註冊時間'),
+            status: r.get('狀態')
+        })));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// === 簽到活動 API ===
+app.get('/api/sessions', async (req, res) => {
+    try {
         const sheet = await getOrCreateSheet('簽到活動', [
             '活動ID', '課程ID', '日期', '開始時間', '結束時間', 'QR碼內容', '狀態'
         ]);
+        const rows = await sheet.getRows();
         
+        // 取得課程資料以顯示名稱
+        const courseSheet = doc.sheetsByTitle['課程列表'];
+        const courses = courseSheet ? await courseSheet.getRows() : [];
+        const courseMap = {};
+        courses.forEach(c => {
+            courseMap[c.get('課程ID')] = { subject: c.get('科目'), classCode: c.get('班級') };
+        });
+        
+        res.json(rows.map(r => {
+            const courseId = r.get('課程ID');
+            const course = courseMap[courseId] || {};
+            return {
+                id: r.get('活動ID'),
+                courseId: courseId,
+                courseName: course.subject || '未知課程',
+                classCode: course.classCode || '',
+                date: r.get('日期'),
+                startTime: r.get('開始時間'),
+                endTime: r.get('結束時間'),
+                qrContent: r.get('QR碼內容'),
+                status: r.get('狀態')
+            };
+        }));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/sessions', async (req, res) => {
+    try {
+        const { courseId, date, startTime, endTime } = req.body;
+        const sheet = await getOrCreateSheet('簽到活動', [
+            '活動ID', '課程ID', '日期', '開始時間', '結束時間', 'QR碼內容', '狀態'
+        ]);
         const sessionId = `S${Date.now()}`;
         const qrContent = `簽到:${courseId}|${sessionId}`;
-        
         await sheet.addRow({
             '活動ID': sessionId,
             '課程ID': courseId,
@@ -766,44 +950,127 @@ app.post('/api/session/create', async (req, res) => {
             'QR碼內容': qrContent,
             '狀態': '進行中'
         });
-        
         res.json({ success: true, sessionId, qrContent });
     } catch (error) {
-        console.error('建立活動錯誤:', error);
-        res.status(500).json({ success: false, error: error.message });
+        res.status(500).json({ error: error.message });
     }
 });
 
-// API: 取得統計資料
-app.get('/api/stats/:courseId', async (req, res) => {
+app.put('/api/sessions/:id/end', async (req, res) => {
     try {
-        const { courseId } = req.params;
-        const recordSheet = doc.sheetsByTitle['簽到紀錄'];
-        const sessionSheet = doc.sheetsByTitle['簽到活動'];
-        
-        if (!recordSheet || !sessionSheet) {
-            return res.json({ records: [] });
+        const { id } = req.params;
+        const sheet = doc.sheetsByTitle['簽到活動'];
+        if (!sheet) return res.json({ success: false });
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('活動ID') === id);
+        if (row) {
+            row.set('狀態', '已結束');
+            await row.save();
         }
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// === 簽到紀錄 API ===
+app.get('/api/records', async (req, res) => {
+    try {
+        const sheet = await getOrCreateSheet('簽到紀錄', [
+            '活動ID', '學號', '簽到時間', '狀態', '遲到分鐘', 'GPS緯度', 'GPS經度', '備註'
+        ]);
+        const rows = await sheet.getRows();
         
-        const sessions = await sessionSheet.getRows();
-        const courseSessions = sessions.filter(s => s.get('課程ID') === courseId);
-        const sessionIds = courseSessions.map(s => s.get('活動ID'));
+        // 取得學生資料
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        const students = studentSheet ? await studentSheet.getRows() : [];
+        const studentMap = {};
+        students.forEach(s => {
+            studentMap[s.get('學號')] = s.get('姓名');
+        });
         
-        const records = await recordSheet.getRows();
-        const courseRecords = records.filter(r => sessionIds.includes(r.get('活動ID')));
+        // 取得活動資料
+        const sessionSheet = doc.sheetsByTitle['簽到活動'];
+        const sessions = sessionSheet ? await sessionSheet.getRows() : [];
+        const sessionMap = {};
+        sessions.forEach(s => {
+            sessionMap[s.get('活動ID')] = { courseId: s.get('課程ID'), date: s.get('日期') };
+        });
         
-        res.json({
-            records: courseRecords.map(r => ({
-                sessionId: r.get('活動ID'),
-                studentId: r.get('學號'),
+        // 取得課程資料
+        const courseSheet = doc.sheetsByTitle['課程列表'];
+        const courses = courseSheet ? await courseSheet.getRows() : [];
+        const courseMap = {};
+        courses.forEach(c => {
+            courseMap[c.get('課程ID')] = c.get('科目');
+        });
+        
+        res.json(rows.map(r => {
+            const sessionId = r.get('活動ID');
+            const session = sessionMap[sessionId] || {};
+            const courseName = courseMap[session.courseId] || '未知';
+            const studentId = r.get('學號');
+            return {
+                sessionId: sessionId,
+                studentId: studentId,
+                studentName: studentMap[studentId] || '未知',
+                courseName: courseName,
+                date: session.date || '',
                 time: r.get('簽到時間'),
                 status: r.get('狀態'),
                 lateMinutes: r.get('遲到分鐘')
-            }))
+            };
+        }));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// === 儀表板統計 API ===
+app.get('/api/dashboard', async (req, res) => {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        
+        // 學生數
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        const students = studentSheet ? await studentSheet.getRows() : [];
+        
+        // 今日紀錄
+        const recordSheet = doc.sheetsByTitle['簽到紀錄'];
+        const records = recordSheet ? await recordSheet.getRows() : [];
+        
+        const sessionSheet = doc.sheetsByTitle['簽到活動'];
+        const sessions = sessionSheet ? await sessionSheet.getRows() : [];
+        const todaySessionIds = sessions.filter(s => s.get('日期') === today).map(s => s.get('活動ID'));
+        
+        const todayRecords = records.filter(r => todaySessionIds.includes(r.get('活動ID')));
+        
+        const attended = todayRecords.filter(r => r.get('狀態') === '已報到').length;
+        const late = todayRecords.filter(r => r.get('狀態') === '遲到').length;
+        const absent = todayRecords.filter(r => r.get('狀態') === '缺席').length;
+        
+        // 最近紀錄
+        const recentRecords = records.slice(-10).reverse().map(r => ({
+            studentId: r.get('學號'),
+            time: r.get('簽到時間'),
+            status: r.get('狀態')
+        }));
+        
+        res.json({
+            totalStudents: students.length,
+            todayAttended: attended,
+            todayLate: late,
+            todayAbsent: absent,
+            recentRecords: recentRecords
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
+});
+
+// === 健康檢查 ===
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
 // ===== 啟動伺服器 =====
