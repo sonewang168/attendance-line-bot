@@ -271,7 +271,7 @@
 
     <div class="modal-overlay" id="modal-reviewLeave"><div class="modal"><div class="modal-header"><h3 class="modal-title">審核請假</h3><button class="modal-close" onclick="closeModal('reviewLeave')">&times;</button></div><div class="modal-body"><div id="leave-detail"></div><div class="form-group"><label class="form-label">備註</label><textarea class="form-textarea" id="review-note"></textarea></div></div><div class="modal-footer"><button class="btn btn-danger" onclick="reviewLeave('已駁回')">❌ 駁回</button><button class="btn btn-success" onclick="reviewLeave('已核准')">✅ 核准</button></div></div></div>
 
-    <div class="modal-overlay" id="modal-qr"><div class="modal"><div class="modal-header"><h3 class="modal-title">📱 簽到 QR Code</h3><button class="modal-close" onclick="closeModal('qr')">&times;</button></div><div class="modal-body"><div class="qr-container"><div class="qr-code" id="qr-container"></div><div class="qr-info"><strong id="qr-name"></strong><span id="qr-time"></span></div></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('qr')">關閉</button><button class="btn btn-primary" onclick="downloadQR()">📥 下載</button></div></div></div>
+    <div class="modal-overlay" id="modal-qr"><div class="modal"><div class="modal-header"><h3 class="modal-title">📱 簽到 QR Code</h3><button class="modal-close" onclick="closeModal('qr')">&times;</button></div><div class="modal-body"><div class="qr-container"><div class="qr-code" id="qr-container"></div><div class="qr-info"><strong id="qr-name"></strong><span id="qr-time"></span></div><div id="qr-link-box" style="margin-top:15px;padding:10px;background:#f0f9ff;border-radius:10px;display:none"><p style="font-size:12px;color:#666;margin-bottom:8px">📤 學生可點此連結自行簽到（含GPS定位）：</p><input type="text" id="qr-link" readonly style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:11px" onclick="this.select()"><button class="btn btn-outline btn-sm" style="margin-top:8px;width:100%" onclick="copyQRLink()">📋 複製連結</button></div></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('qr')">關閉</button><button class="btn btn-success" onclick="sendReminderFromQR()">📢 發送通知</button><button class="btn btn-primary" onclick="downloadQR()">📥 下載</button></div></div></div>
 
     <script>
         // === 全域變數 ===
@@ -721,9 +721,12 @@
                 const nowTime = now.getHours() * 60 + now.getMinutes();
                 const endTime = parseInt((p.e || '17:00').split(':')[0]) * 60 + parseInt((p.e || '17:00').split(':')[1] || 0);
                 const completed = nowTime > endTime;
-                return '<div class="session-item' + (completed ? ' completed' : '') + '"><div class="session-header"><div class="session-icon">📖</div><div class="session-info"><h4>' + (c.name || c.subject) + ' - ' + c.classCode + '</h4><span>第' + c.period + '節 · ' + p.s + '-' + p.e + ' · ' + (c.room || '教室') + '</span></div></div><div class="session-actions">' + (completed ? '<button class="btn btn-outline btn-sm" disabled>已結束</button>' : '<button class="btn btn-primary btn-sm" onclick="startSession(\'' + c.id + '\')">📱 簽到</button><button class="btn btn-outline btn-sm" onclick="endSession(\'' + c.id + '\')">⏹️ 結束</button>') + '</div></div>';
+                return '<div class="session-item' + (completed ? ' completed' : '') + '"><div class="session-header"><div class="session-icon">📖</div><div class="session-info"><h4>' + (c.name || c.subject) + ' - ' + c.classCode + '</h4><span>第' + c.period + '節 · ' + p.s + '-' + p.e + ' · ' + (c.room || '教室') + '</span></div></div><div class="session-actions">' + (completed ? '<button class="btn btn-outline btn-sm" disabled>已結束</button>' : '<button class="btn btn-primary btn-sm" onclick="startSession(\'' + c.id + '\')">📱 簽到</button><button class="btn btn-success btn-sm" onclick="sendReminder(\'' + c.id + '\')">📢 通知</button><button class="btn btn-outline btn-sm" onclick="endSession(\'' + c.id + '\')">⏹️ 結束</button>') + '</div></div>';
             }).join('');
         }
+        let currentSessionId = null;
+        let currentSessionCourseId = null;
+        
         async function startSession(id) {
             const c = courses.find(x => x.id === id);
             if (!c) {
@@ -738,18 +741,66 @@
             console.log('API 回應:', r);
             
             if (r?.success && r.qrContent) {
+                currentSessionId = r.sessionId;
+                currentSessionCourseId = id;
                 showQR(r.qrContent, (c.name || c.subject) + ' - ' + c.classCode, today + ' ' + p.s);
                 toast('簽到已建立！');
             } else {
                 toast(r?.error || '建立簽到失敗', 'danger');
             }
         }
+        
+        async function sendReminder(courseId) {
+            // 先確保有簽到活動
+            if (!currentSessionId || currentSessionCourseId !== courseId) {
+                // 建立新的簽到活動
+                const c = courses.find(x => x.id === courseId);
+                if (!c) { toast('找不到課程', 'danger'); return; }
+                
+                const today = new Date().toISOString().split('T')[0];
+                const p = ((sem.periods && sem.periods.length > 0 ? sem.periods : PERIODS[sem.div || "day"])).find(x => x.n == c.period) || { s: '08:00', e: '09:00' };
+                
+                const r = await api('/api/sessions', { method: 'POST', body: JSON.stringify({ courseId: courseId, date: today, startTime: p.s, endTime: p.e }) });
+                if (r?.success) {
+                    currentSessionId = r.sessionId;
+                    currentSessionCourseId = courseId;
+                } else {
+                    toast('建立簽到失敗', 'danger');
+                    return;
+                }
+            }
+            
+            // 發送上課提醒（附帶簽到連結）
+            toast('正在發送通知...');
+            const r = await api('/api/notify/remind', { 
+                method: 'POST', 
+                body: JSON.stringify({ 
+                    courseId: courseId, 
+                    sessionId: currentSessionId 
+                }) 
+            });
+            
+            if (r?.success) {
+                toast('已發送 ' + r.sent + ' 則通知！');
+            } else {
+                toast(r?.message || '發送失敗', 'danger');
+            }
+        }
+        
         async function endSession(id) {
             if (!confirm('確定結束？未簽到學生將被標記為缺席。')) return;
             const r = await api('/api/sessions/' + id + '/complete', { method: 'POST' });
-            if (r?.success) { toast('已結束，' + (r.marked || 0) + ' 人缺席'); loadSessions(); }
+            if (r?.success) { 
+                toast('已結束，' + (r.marked || 0) + ' 人缺席'); 
+                currentSessionId = null;
+                currentSessionCourseId = null;
+                loadSessions(); 
+            }
             else { toast('結束失敗', 'danger'); }
         }
+        
+        let currentQRUrl = '';
+        
         function showQR(content, name, time) {
             console.log('顯示 QR Code:', { content, name, time, BOT });
             
@@ -761,18 +812,24 @@
             const container = document.getElementById('qr-container');
             container.innerHTML = '';
             
+            // 建立簽到連結
+            const botId = BOT || '@516bpeih';
+            currentQRUrl = 'https://line.me/R/oaMessage/' + botId + '/?' + encodeURIComponent(content);
+            
+            // 顯示簽到連結
+            document.getElementById('qr-link').value = currentQRUrl;
+            document.getElementById('qr-link-box').style.display = 'block';
+            
             // 開啟 modal
             openModal('qr');
             
             // 生成 QR Code
             setTimeout(() => {
                 try {
-                    const botId = BOT || '@516bpeih';
-                    const qrUrl = 'https://line.me/R/oaMessage/' + botId + '/?' + encodeURIComponent(content);
-                    console.log('QR URL:', qrUrl);
+                    console.log('QR URL:', currentQRUrl);
                     
                     new QRCode(container, {
-                        text: qrUrl,
+                        text: currentQRUrl,
                         width: 200,
                         height: 200,
                         colorDark: '#000000',
@@ -785,6 +842,35 @@
                     container.innerHTML = '<p style="color:red;text-align:center">QR Code 產生失敗<br>' + e.message + '</p>';
                 }
             }, 100);
+        }
+        
+        function copyQRLink() {
+            const input = document.getElementById('qr-link');
+            input.select();
+            document.execCommand('copy');
+            toast('連結已複製！');
+        }
+        
+        async function sendReminderFromQR() {
+            if (!currentSessionCourseId || !currentSessionId) {
+                toast('請先建立簽到活動', 'danger');
+                return;
+            }
+            
+            toast('正在發送通知...');
+            const r = await api('/api/notify/remind', { 
+                method: 'POST', 
+                body: JSON.stringify({ 
+                    courseId: currentSessionCourseId, 
+                    sessionId: currentSessionId 
+                }) 
+            });
+            
+            if (r?.success) {
+                toast('已發送 ' + r.sent + ' 則通知！');
+            } else {
+                toast(r?.message || '發送失敗', 'danger');
+            }
         }
         
         function downloadQR() {
