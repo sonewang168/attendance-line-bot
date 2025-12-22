@@ -160,6 +160,25 @@ async function getTodaySession(courseId) {
 }
 
 /**
+ * 檢查是否已簽到
+ */
+async function checkExistingAttendance(sessionId, studentId) {
+    try {
+        const sheet = doc.sheetsByTitle['簽到紀錄'];
+        if (!sheet) return null;
+        
+        const rows = await sheet.getRows();
+        return rows.find(row => 
+            row.get('活動ID') === sessionId && 
+            row.get('學號') === studentId
+        );
+    } catch (e) {
+        console.error('檢查簽到錯誤:', e);
+        return null;
+    }
+}
+
+/**
  * 記錄簽到
  */
 async function recordAttendance(sessionId, studentId, status, lateMinutes = 0, gpsLat = '', gpsLon = '') {
@@ -395,7 +414,7 @@ async function handleRegistrationFlow(event, userId, userName, text, state) {
 }
 
 /**
- * 處理簽到請求
+ * 處理簽到請求（掃描老師手機 QR Code - 直接簽到）
  */
 async function handleCheckinRequest(event, userId, text) {
     const student = await getStudent(userId);
@@ -423,21 +442,42 @@ async function handleCheckinRequest(event, userId, text) {
         return replyText(event, '❌ 此簽到活動已結束或不存在！');
     }
     
-    // 儲存待簽到資訊
-    userStates.set(userId, { 
-        step: 'waitingLocation',
-        courseId,
-        sessionId,
-        courseName: course.get('科目'),
-        classroomLat: parseFloat(course.get('教室緯度')),
-        classroomLon: parseFloat(course.get('教室經度')),
-        checkRadius: parseInt(course.get('簽到範圍(公尺)')) || 50,
-        lateMinutes: parseInt(course.get('遲到標準(分鐘)')) || 10,
-        startTime: session.get('開始時間')
-    });
+    // 檢查是否已簽到
+    const existingRecord = await checkExistingAttendance(sessionId, student.get('學號'));
+    if (existingRecord) {
+        return replyText(event, `✅ 您已經簽到過了！\n\n📚 課程：${course.get('科目')}\n⏰ 簽到時間：${existingRecord.get('簽到時間')}`);
+    }
     
-    // 請求位置
-    return replyLocationRequest(event, course.get('科目'));
+    // 直接簽到（掃描老師手機，不需要 GPS）
+    const startTime = session.get('開始時間');
+    const lateMinutes = parseInt(course.get('遲到標準(分鐘)')) || 10;
+    const now = new Date();
+    const [startHour, startMin] = startTime.split(':').map(Number);
+    const startDate = new Date();
+    startDate.setHours(startHour, startMin, 0, 0);
+    
+    const diffMinutes = Math.floor((now - startDate) / 60000);
+    const status = diffMinutes > lateMinutes ? '遲到' : '已報到';
+    
+    // 記錄簽到
+    const result = await recordAttendance(
+        sessionId,
+        student.get('學號'),
+        status,
+        diffMinutes > lateMinutes ? diffMinutes : 0,
+        '', ''  // 不記錄 GPS（因為是掃老師手機）
+    );
+    
+    if (result.success) {
+        const emoji = status === '已報到' ? '✅' : '⚠️';
+        let msg = `${emoji} 簽到成功！\n\n📚 課程：${course.get('科目')}\n👤 學生：${student.get('姓名')}\n📍 狀態：${status}`;
+        if (status === '遲到') {
+            msg += `\n⏰ 遲到 ${diffMinutes} 分鐘`;
+        }
+        return replyText(event, msg);
+    } else {
+        return replyText(event, `❌ 簽到失敗：${result.message}`);
+    }
 }
 
 /**
@@ -666,14 +706,23 @@ async function checkAbsences() {
         const now = new Date();
         
         for (const session of sessions) {
+            // 只處理「進行中」的活動
             if (session.get('狀態') !== '進行中') continue;
             
             // 檢查是否已結束
-            const [endHour, endMin] = session.get('結束時間').split(':').map(Number);
+            const endTimeStr = session.get('結束時間');
+            if (!endTimeStr) continue;
+            const [endHour, endMin] = endTimeStr.split(':').map(Number);
             const endTime = new Date();
             endTime.setHours(endHour, endMin, 0, 0);
             
             if (now > endTime) {
+                console.log('📝 處理結束的活動:', session.get('活動ID'));
+                
+                // 先更新活動狀態為「處理中」避免重複處理
+                session.set('狀態', '處理中');
+                await session.save();
+                
                 // 標記缺席的學生
                 const courseSheet = doc.sheetsByTitle['課程列表'];
                 const courses = await courseSheet.getRows();
@@ -693,29 +742,33 @@ async function checkAbsences() {
                         );
                         
                         if (!hasRecord) {
-                            // 記錄缺席
-                            await recordAttendance(
+                            // 記錄缺席（只會記錄一次）
+                            const result = await recordAttendance(
                                 session.get('活動ID'),
                                 student.get('學號'),
                                 '缺席'
                             );
                             
-                            // 發送缺席通知
-                            try {
-                                await lineClient.pushMessage(student.get('LINE_ID'), {
-                                    type: 'text',
-                                    text: `❌ 缺席通知\n\n您已被標記為缺席：\n📚 課程：${course.get('科目')}\n📅 日期：${session.get('日期')}\n\n如有疑問請聯繫教師。`
-                                });
-                            } catch (e) {
-                                console.error('發送通知失敗:', e);
+                            // 只有成功記錄才發送通知（確保只發一次）
+                            if (result.success && student.get('LINE_ID')) {
+                                try {
+                                    await lineClient.pushMessage(student.get('LINE_ID'), {
+                                        type: 'text',
+                                        text: `❌ 缺席通知\n\n您已被標記為缺席：\n📚 課程：${course.get('科目')}\n📅 日期：${session.get('日期')}\n\n如有疑問請聯繫教師。`
+                                    });
+                                    console.log('✉️ 已發送缺席通知給', student.get('學號'));
+                                } catch (e) {
+                                    console.error('發送通知失敗:', e.message);
+                                }
                             }
                         }
                     }
                 }
                 
-                // 更新活動狀態
+                // 更新活動狀態為「已結束」
                 session.set('狀態', '已結束');
                 await session.save();
+                console.log('✅ 活動已結束:', session.get('活動ID'));
             }
         }
         
@@ -725,13 +778,8 @@ async function checkAbsences() {
     }
 }
 
-// 每 5 分鐘檢查一次
-cron.schedule('*/5 * * * *', checkAbsences);
-
-// ===== Express 路由 =====
-
-// 靜態檔案（教師管理介面）
-app.use(express.static(path.join(__dirname, 'public')));
+// 每 10 分鐘檢查一次（減少干擾）
+cron.schedule('*/10 * * * *', checkAbsences);
 
 // 首頁路由
 app.get('/', (req, res) => {
@@ -1277,10 +1325,10 @@ app.get('/api/stats/consecutive-absent', async (req, res) => {
 });
 
 // === 通知 API ===
-// 發送上課提醒
+// 發送上課提醒（附帶簽到連結）
 app.post('/api/notify/remind', async (req, res) => {
     try {
-        const { courseId, message } = req.body;
+        const { courseId, sessionId, message } = req.body;
         const studentSheet = doc.sheetsByTitle['學生名單'];
         const courseSheet = doc.sheetsByTitle['課程列表'];
         
@@ -1298,16 +1346,41 @@ app.post('/api/notify/remind', async (req, res) => {
         const students = await studentSheet.getRows();
         const classStudents = students.filter(s => s.get('班級') === classCode && s.get('LINE_ID'));
         
+        // 建立簽到連結
+        const botId = process.env.LINE_BOT_ID || '@516bpeih';
+        const checkinCode = sessionId ? `簽到:${courseId}|${sessionId}` : '';
+        const checkinUrl = checkinCode ? `https://line.me/R/oaMessage/${botId}/?${encodeURIComponent(checkinCode)}` : '';
+        
         // 發送 LINE 通知
         const notifications = [];
         for (const student of classStudents) {
             const lineId = student.get('LINE_ID');
             if (lineId) {
                 try {
-                    await lineClient.pushMessage(lineId, {
-                        type: 'text',
-                        text: message || `📢 上課提醒\n\n${course.get('科目')} 即將開始！\n⏰ ${course.get('上課時間')}\n📍 ${course.get('教室')}\n\n請準時出席！`
-                    });
+                    // 如果有簽到連結，發送帶按鈕的訊息
+                    if (checkinUrl) {
+                        await lineClient.pushMessage(lineId, {
+                            type: 'template',
+                            altText: `📢 上課提醒 - ${course.get('科目')}`,
+                            template: {
+                                type: 'buttons',
+                                title: `📢 ${course.get('科目')} 上課提醒`,
+                                text: `⏰ ${course.get('上課時間')}\n📍 ${course.get('教室') || '教室'}\n\n請點擊下方按鈕簽到`,
+                                actions: [
+                                    {
+                                        type: 'uri',
+                                        label: '📱 點我簽到',
+                                        uri: checkinUrl
+                                    }
+                                ]
+                            }
+                        });
+                    } else {
+                        await lineClient.pushMessage(lineId, {
+                            type: 'text',
+                            text: message || `📢 上課提醒\n\n${course.get('科目')} 即將開始！\n⏰ ${course.get('上課時間')}\n📍 ${course.get('教室')}\n\n請準時出席！`
+                        });
+                    }
                     notifications.push({ studentId: student.get('學號'), status: 'sent' });
                 } catch (e) {
                     notifications.push({ studentId: student.get('學號'), status: 'failed', error: e.message });
