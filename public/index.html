@@ -26,14 +26,14 @@
         .stat-label{font-size:13px;color:var(--text-light);margin-top:3px}.stat-icon{position:absolute;top:12px;right:12px;font-size:24px;opacity:.2}
         .card{background:var(--card);border-radius:16px;padding:18px;margin-bottom:15px;box-shadow:0 2px 8px rgba(0,0,0,.05)}.card-title{font-size:16px;font-weight:600;margin-bottom:15px;display:flex;align-items:center;gap:8px}
         .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 18px;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;transition:.3s}
-        .btn-primary{background:var(--primary);color:#fff}.btn-success{background:var(--success);color:#fff}.btn-warning{background:var(--warning);color:#fff}.btn-danger{background:var(--danger);color:#fff}.btn-outline{background:#fff;border:2px solid var(--border);color:var(--text)}.btn-block{width:100%}.btn-sm{padding:10px 14px;font-size:13px}
+        .btn-primary{background:var(--primary);color:#fff}.btn-success{background:var(--success);color:#fff}.btn-warning{background:var(--warning);color:#fff}.btn-danger{background:var(--danger);color:#fff}.btn-outline{background:#fff;border:2px solid var(--border);color:var(--text)}.btn-block{width:100%}.btn-sm{padding:8px 12px;font-size:13px}
         .form-group{margin-bottom:18px}.form-label{display:block;margin-bottom:6px;font-weight:500;font-size:14px}
         .form-input,.form-select,.form-textarea{width:100%;padding:12px 14px;border:2px solid var(--border);border-radius:10px;font-size:16px;font-family:inherit;background:#fff}.form-input:focus,.form-select:focus,.form-textarea:focus{outline:none;border-color:var(--primary)}.form-textarea{min-height:80px;resize:vertical}
-        .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+        .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
         .chip-group{display:flex;flex-wrap:wrap;gap:8px}.chip{padding:10px 16px;border:2px solid var(--border);border-radius:25px;cursor:pointer;transition:.3s;font-size:14px;font-weight:500}.chip:hover{border-color:var(--primary)}.chip.active{background:var(--primary);color:#fff;border-color:var(--primary)}
         .chip.day.active{background:#3b82f6;border-color:#3b82f6}.chip.night.active{background:#8b5cf6;border-color:#8b5cf6}.chip.weekend.active{background:#f59e0b;border-color:#f59e0b}
         .period-table{width:100%;border-collapse:collapse;margin-top:10px}.period-table th,.period-table td{padding:10px;text-align:center;border:1px solid var(--border);font-size:14px}.period-table th{background:var(--bg);font-weight:600}
-        .table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:400px}th,td{padding:12px 10px;text-align:left;border-bottom:1px solid var(--border);font-size:14px}th{background:var(--bg);font-weight:600;color:var(--text-light);font-size:12px}
+        .table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse}th,td{padding:12px 10px;text-align:left;border-bottom:1px solid var(--border);font-size:14px}th{background:var(--bg);font-weight:600;color:var(--text-light);font-size:12px}
         tr.clickable{cursor:pointer;transition:.2s}tr.clickable:hover{background:var(--bg)}
         .badge{padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500}.badge.success{background:rgba(16,185,129,.1);color:var(--success)}.badge.warning{background:rgba(245,158,11,.1);color:var(--warning)}.badge.danger{background:rgba(239,68,68,.1);color:var(--danger)}.badge.primary{background:rgba(79,70,229,.1);color:var(--primary)}.badge.gray{background:#e2e8f0;color:var(--text-light)}
         .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:2000;opacity:0;visibility:hidden;transition:.3s}.modal-overlay.active{opacity:1;visibility:visible}
@@ -60,17 +60,11 @@
         .switch{position:relative;width:50px;height:28px}.switch input{opacity:0;width:0;height:0}.switch .slider{position:absolute;inset:0;background:var(--border);border-radius:28px;transition:.3s;cursor:pointer}.switch .slider::before{content:'';position:absolute;width:22px;height:22px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s}.switch input:checked+.slider{background:var(--success)}.switch input:checked+.slider::before{transform:translateX(22px)}
         .setting-item{display:flex;align-items:center;justify-content:space-between;padding:15px 0;border-bottom:1px solid var(--border)}.setting-item:last-child{border:none}.setting-item .label{font-size:15px}.setting-item .desc{font-size:12px;color:var(--text-light);margin-top:2px}
         .leave-item{padding:15px;border:1px solid var(--border);border-radius:12px;margin-bottom:10px}.leave-item.pending{border-left:4px solid var(--warning)}.leave-item.approved{border-left:4px solid var(--success)}.leave-item.rejected{border-left:4px solid var(--danger)}
-        .report-card{padding:20px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));border-radius:16px;color:#fff;margin-bottom:15px}
-        .report-header{font-size:18px;font-weight:600;margin-bottom:15px}.report-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:15px}
-        .report-stat{text-align:center}.report-stat .value{font-size:24px;font-weight:700}.report-stat .label{font-size:12px;opacity:.8}
-        .chart-container{position:relative;height:250px;margin:15px 0}
-        .export-option{padding:20px;border:2px solid var(--border);border-radius:16px;margin-bottom:15px;cursor:pointer;transition:.3s}.export-option:hover{border-color:var(--primary)}.export-option.active{border-color:var(--primary);background:rgba(79,70,229,.05)}
-        .export-option h4{font-size:16px;margin-bottom:5px;display:flex;align-items:center;gap:8px}.export-option p{font-size:13px;color:var(--text-light)}
-        .location-item{display:flex;align-items:center;gap:12px;padding:15px;border:1px solid var(--border);border-radius:12px;margin-bottom:10px}
-        .location-icon{width:44px;height:44px;background:var(--success);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff}
-        .location-info{flex:1}.location-info h5{font-size:14px;margin-bottom:2px}.location-info span{font-size:12px;color:var(--text-light)}
-        .reward-card{padding:20px;background:linear-gradient(135deg,#fbbf24,#f59e0b);border-radius:16px;color:#fff;margin-bottom:15px;text-align:center}
-        .reward-card .icon{font-size:48px;margin-bottom:10px}.reward-card h3{font-size:20px;margin-bottom:5px}.reward-card p{opacity:.9}
+        .chart-container{position:relative;height:200px;margin:15px 0}
+        .item-card{padding:15px;border:1px solid var(--border);border-radius:12px;margin-bottom:10px;display:flex;align-items:center;gap:12px}
+        .item-card .icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff}
+        .item-card .info{flex:1}.item-card .info h5{font-size:15px;margin-bottom:2px}.item-card .info span{font-size:13px;color:var(--text-light)}
+        .item-card .actions{display:flex;gap:6px}
         @media(min-width:768px){.mobile-header{display:none}.sidebar{transform:translateX(0);padding-top:20px}.sidebar-overlay{display:none!important}.main{margin-left:280px;padding:30px}.modal{max-width:600px;border-radius:20px;margin:auto}.modal-overlay{align-items:center}.stats-grid{grid-template-columns:repeat(4,1fr)}}
     </style>
 </head>
@@ -89,7 +83,6 @@
             <li><a href="#" class="nav-link" data-page="semester"><span>📅</span> 學期設定</a></li>
             <li><a href="#" class="nav-link" data-page="schedule"><span>🗓️</span> 課表管理</a></li>
             <li><a href="#" class="nav-link" data-page="sessions"><span>📝</span> 今日簽到</a></li>
-            <li><a href="#" class="nav-link" data-page="makeup"><span>🔄</span> 調補課</a></li>
             <li class="nav-section">資料管理</li>
             <li><a href="#" class="nav-link" data-page="classes"><span>🏫</span> 班級管理</a></li>
             <li><a href="#" class="nav-link" data-page="students"><span>👨‍🎓</span> 學生名單</a></li>
@@ -98,13 +91,9 @@
             <li class="nav-section">統計分析</li>
             <li><a href="#" class="nav-link" data-page="stats"><span>📈</span> 出席統計</a></li>
             <li><a href="#" class="nav-link" data-page="alerts"><span>⚠️</span> 缺席警示</a></li>
-            <li><a href="#" class="nav-link" data-page="reports"><span>📊</span> 週報中心</a></li>
-            <li><a href="#" class="nav-link" data-page="export"><span>📥</span> 匯出報表</a></li>
-            <li class="nav-section">進階功能</li>
-            <li><a href="#" class="nav-link" data-page="rewards"><span>🏆</span> 全勤獎勵</a></li>
-            <li><a href="#" class="nav-link" data-page="locations"><span>📍</span> GPS位置</a></li>
             <li class="nav-section">系統</li>
             <li><a href="#" class="nav-link" data-page="notifications"><span>🔔</span> 通知設定</a></li>
+            <li><a href="#" class="nav-link" data-page="linebot"><span>🤖</span> LINE Bot</a></li>
             <li><a href="#" class="nav-link" data-page="settings"><span>⚙️</span> 系統設定</a></li>
         </ul>
     </aside>
@@ -118,43 +107,46 @@
                 <div class="stat-card warning"><div class="stat-value" id="stat-late">-</div><div class="stat-label">今日遲到</div><div class="stat-icon">⚠️</div></div>
                 <div class="stat-card danger"><div class="stat-value" id="stat-absent">-</div><div class="stat-label">今日缺席</div><div class="stat-icon">❌</div></div>
             </div>
-            <div class="card"><div class="card-title">📈 近7日出席趨勢</div><div class="chart-container"><canvas id="trend-chart"></canvas></div></div>
             <div class="card"><div class="card-title">📅 今日課程</div><div id="today-classes"></div></div>
             <div class="card"><div class="card-title">⚠️ 需關注學生</div><div id="dashboard-alerts"></div></div>
         </div>
         <!-- Semester -->
         <div class="page" id="page-semester">
             <div class="header"><h1 class="page-title">學期設定</h1><p class="page-subtitle">設定學期日期與節次時間</p></div>
-            <div class="card"><div class="card-title">🏫 部別選擇</div><div class="chip-group" id="division-chips"><div class="chip day active" onclick="selectDivision('day')">☀️ 日間部</div><div class="chip night" onclick="selectDivision('night')">🌙 夜間部</div><div class="chip weekend" onclick="selectDivision('weekend')">📅 進修部</div></div></div>
+            <div class="card"><div class="card-title">🏫 部別選擇</div><div class="chip-group" id="division-chips"><div class="chip day" data-div="day" onclick="selectDivision('day')">☀️ 日間部</div><div class="chip night" data-div="night" onclick="selectDivision('night')">🌙 夜間部</div><div class="chip weekend" data-div="weekend" onclick="selectDivision('weekend')">📅 進修部</div></div></div>
             <div class="card"><div class="card-title">📆 學期期間</div><div class="form-row"><div class="form-group"><label class="form-label">開學日期</label><input type="date" class="form-input" id="semester-start" onchange="calcWeeks()"></div><div class="form-group"><label class="form-label">結業日期</label><input type="date" class="form-input" id="semester-end" onchange="calcWeeks()"></div></div><div class="alert alert-info">ℹ️ 自動計算：<strong id="semester-weeks">0</strong> 週</div></div>
             <div class="card"><div class="card-title">⏰ 節次時間表</div><div id="period-settings"></div></div>
             <button class="btn btn-primary btn-block" onclick="saveSemester()">💾 儲存學期設定</button>
         </div>
         <!-- Schedule -->
         <div class="page" id="page-schedule">
-            <div class="header"><h1 class="page-title">課表管理</h1><p class="page-subtitle">點擊空格新增課程</p></div>
-            <div class="card"><div class="tabs"><div class="tab active" onclick="showView('week')">週課表</div><div class="tab" onclick="showView('list')">課程列表</div></div><div id="week-view"><div class="schedule-grid" id="schedule-grid"></div></div><div id="list-view" style="display:none"><button class="btn btn-primary btn-block" style="margin-bottom:15px" onclick="openModal('addCourse')">➕ 新增課程</button><div class="table-wrap"><table><thead><tr><th>課程</th><th>班級</th><th>時間</th><th>教室</th></tr></thead><tbody id="courses-table"></tbody></table></div></div></div>
+            <div class="header"><h1 class="page-title">課表管理</h1><p class="page-subtitle">管理課程資料</p></div>
+            <div class="card">
+                <div class="tabs"><div class="tab active" onclick="showView('grid')">週課表</div><div class="tab" onclick="showView('list')">課程列表</div></div>
+                <div id="grid-view"><div class="schedule-grid" id="schedule-grid"></div></div>
+                <div id="list-view" style="display:none">
+                    <button class="btn btn-primary btn-block" style="margin-bottom:15px" onclick="openModal('addCourse')">➕ 新增課程</button>
+                    <div id="courses-list"></div>
+                </div>
+            </div>
         </div>
         <!-- Sessions -->
         <div class="page" id="page-sessions">
             <div class="header"><h1 class="page-title">今日簽到</h1><p class="page-subtitle" id="session-date"></p></div>
             <div id="sessions-list"></div>
         </div>
-        <!-- Makeup -->
-        <div class="page" id="page-makeup">
-            <div class="header"><h1 class="page-title">調補課管理</h1></div>
-            <div style="display:flex;gap:10px;margin-bottom:15px"><button class="btn btn-warning" onclick="openModal('addMakeup')">🔄 調課</button><button class="btn btn-success" onclick="openModal('addExtra')">➕ 補課</button></div>
-            <div class="card"><div id="makeup-list"><div class="empty">尚無調補課紀錄</div></div></div>
-        </div>
         <!-- Classes -->
         <div class="page" id="page-classes">
-            <div class="header"><h1 class="page-title">班級管理</h1><button class="btn btn-primary btn-block" onclick="openModal('addClass')">➕ 新增班級</button></div>
-            <div class="card"><div class="table-wrap"><table><thead><tr><th>代碼</th><th>名稱</th><th>部別</th><th>人數</th></tr></thead><tbody id="classes-table"></tbody></table></div></div>
+            <div class="header"><h1 class="page-title">班級管理</h1></div>
+            <button class="btn btn-primary btn-block" style="margin-bottom:15px" onclick="openModal('addClass')">➕ 新增班級</button>
+            <div id="classes-list"></div>
         </div>
         <!-- Students -->
         <div class="page" id="page-students">
             <div class="header"><h1 class="page-title">學生名單</h1></div>
-            <div class="card"><div class="table-wrap"><table><thead><tr><th>學號</th><th>姓名</th><th>班級</th><th>出席率</th><th>家長</th></tr></thead><tbody id="students-table"></tbody></table></div></div>
+            <button class="btn btn-primary btn-block" style="margin-bottom:15px" onclick="openModal('addStudent')">➕ 新增學生</button>
+            <div class="card"><div class="form-group" style="margin:0"><select class="form-select" id="student-filter" onchange="loadStudents()"><option value="">全部班級</option></select></div></div>
+            <div id="students-list"></div>
         </div>
         <!-- Leaves -->
         <div class="page" id="page-leaves">
@@ -164,8 +156,9 @@
         </div>
         <!-- Records -->
         <div class="page" id="page-records">
-            <div class="header"><h1 class="page-title">出缺紀錄</h1><button class="btn btn-primary" onclick="openModal('addRecord')">➕ 手動新增</button></div>
-            <div class="card"><div class="form-row" style="margin-bottom:15px"><div class="form-group" style="margin:0"><input type="date" class="form-input" id="filter-date" onchange="loadRecords()"></div><div class="form-group" style="margin:0"><select class="form-select" id="filter-class" onchange="loadRecords()"><option value="">全部班級</option></select></div></div><div class="table-wrap"><table><thead><tr><th>日期</th><th>學號</th><th>姓名</th><th>課程</th><th>狀態</th><th>操作</th></tr></thead><tbody id="records-table"></tbody></table></div></div>
+            <div class="header"><h1 class="page-title">出缺紀錄</h1></div>
+            <button class="btn btn-primary btn-block" style="margin-bottom:15px" onclick="openModal('addRecord')">➕ 手動新增</button>
+            <div class="card"><div class="table-wrap"><table><thead><tr><th>日期</th><th>學號</th><th>姓名</th><th>狀態</th></tr></thead><tbody id="records-table"></tbody></table></div></div>
         </div>
         <!-- Stats -->
         <div class="page" id="page-stats">
@@ -174,227 +167,642 @@
                 <div class="big-stat">
                     <svg class="progress-ring" viewBox="0 0 120 120"><circle class="bg" cx="60" cy="60" r="52"/><circle class="fg" id="progress-circle" cx="60" cy="60" r="52" stroke-dasharray="327" stroke-dashoffset="327"/></svg>
                     <div class="value" id="overall-rate">--%</div>
-                    <div class="label">本學期平均出席率</div>
+                    <div class="label">整體出席率</div>
                 </div>
             </div>
             <div class="stats-grid">
-                <div class="stat-card success"><div class="stat-value" id="stats-attended">-</div><div class="stat-label">出席次數</div></div>
-                <div class="stat-card warning"><div class="stat-value" id="stats-late">-</div><div class="stat-label">遲到次數</div></div>
-                <div class="stat-card danger"><div class="stat-value" id="stats-absent">-</div><div class="stat-label">缺席次數</div></div>
-                <div class="stat-card primary"><div class="stat-value" id="stats-total">-</div><div class="stat-label">總簽到數</div></div>
+                <div class="stat-card success"><div class="stat-value" id="stats-attended">-</div><div class="stat-label">出席</div></div>
+                <div class="stat-card warning"><div class="stat-value" id="stats-late">-</div><div class="stat-label">遲到</div></div>
+                <div class="stat-card danger"><div class="stat-value" id="stats-absent">-</div><div class="stat-label">缺席</div></div>
+                <div class="stat-card primary"><div class="stat-value" id="stats-total">-</div><div class="stat-label">總計</div></div>
             </div>
-            <div class="card"><div class="card-title">📊 班級出席率比較</div><div class="chart-container"><canvas id="class-chart"></canvas></div></div>
-            <div class="card"><div class="card-title">📉 出席率偏低學生</div><div id="low-attendance-list"></div></div>
+            <div class="card"><div class="card-title">📉 低出席率學生</div><div id="low-attendance-list"></div></div>
         </div>
         <!-- Alerts -->
         <div class="page" id="page-alerts">
             <div class="header"><h1 class="page-title">缺席警示</h1></div>
-            <div class="alert alert-warning">⚠️ 以下學生有連續缺席情形，建議及時關心</div>
+            <div class="alert alert-warning">⚠️ 以下學生有連續缺席情形</div>
             <div id="alert-list"></div>
-            <div style="display:flex;gap:10px"><button class="btn btn-primary" style="flex:1" onclick="sendAllWarnings()">📲 通知學生</button><button class="btn btn-warning" style="flex:1" onclick="sendAllParentWarnings()">👨‍👩‍👧 通知家長</button></div>
-        </div>
-        <!-- Reports -->
-        <div class="page" id="page-reports">
-            <div class="header"><h1 class="page-title">週報中心</h1></div>
-            <div class="card">
-                <div class="card-title">📆 選擇週期</div>
-                <div class="form-row">
-                    <div class="form-group"><label class="form-label">起始日期</label><input type="date" class="form-input" id="report-start"></div>
-                    <div class="form-group"><label class="form-label">結束日期</label><input type="date" class="form-input" id="report-end"></div>
-                </div>
-                <button class="btn btn-primary btn-block" onclick="generateReport()">📊 產生週報</button>
-            </div>
-            <div id="report-result"></div>
-        </div>
-        <!-- Export -->
-        <div class="page" id="page-export">
-            <div class="header"><h1 class="page-title">匯出報表</h1><p class="page-subtitle">匯出出席資料為 Excel/CSV</p></div>
-            <div class="card">
-                <div class="card-title">📆 日期範圍</div>
-                <div class="form-row">
-                    <div class="form-group"><label class="form-label">起始日期</label><input type="date" class="form-input" id="export-start"></div>
-                    <div class="form-group"><label class="form-label">結束日期</label><input type="date" class="form-input" id="export-end"></div>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-title">🏫 班級篩選</div>
-                <div class="form-group" style="margin:0"><select class="form-select" id="export-class"><option value="">全部班級</option></select></div>
-            </div>
-            <div class="card">
-                <div class="card-title">📋 匯出類型</div>
-                <div class="export-option active" onclick="selectExportType('detail')">
-                    <h4>📜 詳細紀錄</h4>
-                    <p>匯出每筆簽到紀錄，包含日期、時間、狀態等</p>
-                </div>
-                <div class="export-option" onclick="selectExportType('summary')">
-                    <h4>📊 學生摘要</h4>
-                    <p>匯出每位學生的出席統計，包含出席率</p>
-                </div>
-            </div>
-            <button class="btn btn-success btn-block" onclick="exportExcel()">📥 下載 Excel/CSV</button>
-        </div>
-        <!-- Rewards -->
-        <div class="page" id="page-rewards">
-            <div class="header"><h1 class="page-title">全勤獎勵</h1><p class="page-subtitle">表揚全勤學生</p></div>
-            <div class="card">
-                <div class="card-title">📆 統計期間</div>
-                <div class="form-row">
-                    <div class="form-group"><label class="form-label">起始日期</label><input type="date" class="form-input" id="reward-start"></div>
-                    <div class="form-group"><label class="form-label">結束日期</label><input type="date" class="form-input" id="reward-end"></div>
-                </div>
-                <button class="btn btn-primary btn-block" onclick="findPerfectAttendance()">🔍 查詢全勤學生</button>
-            </div>
-            <div id="perfect-list"></div>
-        </div>
-        <!-- Locations -->
-        <div class="page" id="page-locations">
-            <div class="header"><h1 class="page-title">GPS 位置管理</h1><button class="btn btn-primary" onclick="openModal('addLocation')">➕ 新增位置</button></div>
-            <div id="locations-list"></div>
+            <button class="btn btn-primary btn-block" onclick="sendAllWarnings()">📲 發送全部警告</button>
         </div>
         <!-- Notifications -->
         <div class="page" id="page-notifications">
             <div class="header"><h1 class="page-title">通知設定</h1></div>
             <div class="card">
-                <div class="card-title">📱 學生通知</div>
-                <div class="setting-item"><div><div class="label">上課前提醒</div><div class="desc">課程開始前 10 分鐘提醒</div></div><label class="switch"><input type="checkbox" id="notify-remind" checked><span class="slider"></span></label></div>
-                <div class="setting-item"><div><div class="label">缺席通知學生</div><div class="desc">缺席時發送通知</div></div><label class="switch"><input type="checkbox" id="notify-absent" checked><span class="slider"></span></label></div>
-                <div class="setting-item"><div><div class="label">連續缺席警告</div><div class="desc">連續缺席 3 次發送警告</div></div><label class="switch"><input type="checkbox" id="notify-warning" checked><span class="slider"></span></label></div>
+                <div class="card-title">📱 自動通知</div>
+                <div class="setting-item"><div><div class="label">缺席通知學生</div><div class="desc">缺席時發送 LINE 通知</div></div><label class="switch"><input type="checkbox" id="notify-absent" checked><span class="slider"></span></label></div>
+                <div class="setting-item"><div><div class="label">缺席通知家長</div><div class="desc">同時通知家長</div></div><label class="switch"><input type="checkbox" id="notify-parent"><span class="slider"></span></label></div>
+                <div class="setting-item"><div><div class="label">連續缺席警告</div><div class="desc">連續 3 次缺席發警告</div></div><label class="switch"><input type="checkbox" id="notify-warning" checked><span class="slider"></span></label></div>
+            </div>
+            <button class="btn btn-primary btn-block" onclick="toast('設定已儲存！')">💾 儲存設定</button>
+        </div>
+        <!-- LINE Bot -->
+        <div class="page" id="page-linebot">
+            <div class="header"><h1 class="page-title">LINE Bot 設定</h1><p class="page-subtitle">如何發布與使用</p></div>
+            <div class="card">
+                <div class="card-title">📋 發布步驟</div>
+                <div class="alert alert-info">
+                    <b>Step 1:</b> 前往 <a href="https://developers.line.biz/" target="_blank" style="color:#1d4ed8">LINE Developers</a> 登入
+                </div>
+                <div class="alert alert-info">
+                    <b>Step 2:</b> 建立 Provider → 建立 Messaging API Channel
+                </div>
+                <div class="alert alert-info">
+                    <b>Step 3:</b> 在 Channel 設定中：<br>
+                    • Webhook URL 填入：<br>
+                    <code style="background:#e2e8f0;padding:4px 8px;border-radius:4px;font-size:12px;word-break:break-all">${location.origin}/webhook</code>
+                </div>
+                <div class="alert alert-info">
+                    <b>Step 4:</b> 開啟「Use webhook」
+                </div>
+                <div class="alert alert-info">
+                    <b>Step 5:</b> 複製 Channel Secret 和 Channel Access Token，填入 Render 環境變數
+                </div>
             </div>
             <div class="card">
-                <div class="card-title">👨‍👩‍👧 家長通知</div>
-                <div class="setting-item"><div><div class="label">缺席通知家長</div><div class="desc">缺席時通知家長</div></div><label class="switch"><input type="checkbox" id="notify-parent"><span class="slider"></span></label></div>
-                <div class="setting-item"><div><div class="label">連續缺席通知家長</div><div class="desc">連續缺席時通知家長</div></div><label class="switch"><input type="checkbox" id="notify-parent-warning"><span class="slider"></span></label></div>
+                <div class="card-title">⚙️ Render 環境變數</div>
+                <div class="alert alert-warning">
+                    在 Render Dashboard → Environment 加入：<br><br>
+                    <code>LINE_CHANNEL_SECRET</code> = 你的 Secret<br>
+                    <code>LINE_CHANNEL_ACCESS_TOKEN</code> = 你的 Token<br>
+                    <code>GOOGLE_SHEETS_ID</code> = 你的試算表 ID<br>
+                    <code>GOOGLE_SERVICE_ACCOUNT_EMAIL</code> = 服務帳戶 Email<br>
+                    <code>GOOGLE_PRIVATE_KEY</code> = 服務帳戶金鑰
+                </div>
             </div>
-            <button class="btn btn-primary btn-block" onclick="saveNotifySettings()">💾 儲存設定</button>
+            <div class="card">
+                <div class="card-title">📱 學生如何使用</div>
+                <div class="alert alert-success">
+                    1. 掃描 LINE Bot QR Code 加好友<br>
+                    2. 傳送「註冊 學號 姓名 班級」<br>
+                    3. 上課時掃描老師的簽到 QR Code<br>
+                    4. 傳送「簽到」完成
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">🔗 Bot ID</div>
+                <div class="form-group"><input type="text" class="form-input" id="bot-id" placeholder="@xxx"></div>
+                <button class="btn btn-primary btn-block" onclick="saveBotId()">💾 儲存</button>
+            </div>
         </div>
         <!-- Settings -->
         <div class="page" id="page-settings">
             <div class="header"><h1 class="page-title">系統設定</h1></div>
-            <div class="card"><div class="card-title">🔗 後端連線</div><div class="form-group"><label class="form-label">API 網址</label><input type="text" class="form-input" id="api-url"></div><button class="btn btn-primary btn-block" onclick="testConn()">🔍 測試連線</button></div>
-            <div class="card"><div class="card-title">📱 LINE Bot</div><div class="form-group"><label class="form-label">Bot ID</label><input type="text" class="form-input" id="line-bot-id"></div><button class="btn btn-success btn-block" onclick="saveSettings()">💾 儲存</button></div>
+            <div class="card"><div class="card-title">🔗 API 連線</div><div class="form-group"><label class="form-label">後端網址</label><input type="text" class="form-input" id="api-url" placeholder="https://your-app.onrender.com"></div><button class="btn btn-primary btn-block" onclick="testConn()">🔍 測試連線</button></div>
         </div>
     </main>
     <div class="toast-container" id="toasts"></div>
 
     <!-- Modals -->
-    <div class="modal-overlay" id="modal-addClass"><div class="modal"><div class="modal-header"><h3 class="modal-title">新增班級</h3><button class="modal-close" onclick="closeModal('addClass')">&times;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">班級代碼</label><input type="text" class="form-input" id="class-code" placeholder="801"></div><div class="form-group"><label class="form-label">班級名稱</label><input type="text" class="form-input" id="class-name" placeholder="八年一班"></div><div class="form-group"><label class="form-label">部別</label><select class="form-select" id="class-division"><option value="day">日間部</option><option value="night">夜間部</option><option value="weekend">進修部</option></select></div><div class="form-group"><label class="form-label">導師</label><input type="text" class="form-input" id="class-teacher"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('addClass')">取消</button><button class="btn btn-primary" onclick="addClass()">新增</button></div></div></div>
-    <div class="modal-overlay" id="modal-addCourse"><div class="modal"><div class="modal-header"><h3 class="modal-title">新增課程</h3><button class="modal-close" onclick="closeModal('addCourse')">&times;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">課程名稱</label><input type="text" class="form-input" id="course-name" placeholder="物理"></div><div class="form-group"><label class="form-label">班級</label><select class="form-select" id="course-class"></select></div><div class="form-group"><label class="form-label">星期</label><select class="form-select" id="course-day"><option value="1">週一</option><option value="2">週二</option><option value="3">週三</option><option value="4">週四</option><option value="5">週五</option><option value="6">週六</option><option value="0">週日</option></select></div><div class="form-group"><label class="form-label">節次</label><select class="form-select" id="course-period"></select></div><div class="form-group"><label class="form-label">教室</label><input type="text" class="form-input" id="course-room"></div><div class="form-group"><label class="form-label">GPS 位置</label><select class="form-select" id="course-location"><option value="">選擇已儲存位置</option></select></div><div class="form-row"><div class="form-group"><label class="form-label">緯度</label><input type="number" step="any" class="form-input" id="course-lat"></div><div class="form-group"><label class="form-label">經度</label><input type="number" step="any" class="form-input" id="course-lon"></div></div><button type="button" class="btn btn-outline btn-block" onclick="getLoc()">📍 取得目前位置</button></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('addCourse')">取消</button><button class="btn btn-primary" onclick="addCourse()">新增</button></div></div></div>
-    <div class="modal-overlay" id="modal-addMakeup"><div class="modal"><div class="modal-header"><h3 class="modal-title">🔄 調課</h3><button class="modal-close" onclick="closeModal('addMakeup')">&times;</button></div><div class="modal-body"><div class="alert alert-info">ℹ️ 調課會自動通知學生</div><div class="form-group"><label class="form-label">課程</label><select class="form-select" id="makeup-course"></select></div><div class="form-group"><label class="form-label">原日期</label><input type="date" class="form-input" id="makeup-from"></div><div class="form-group"><label class="form-label">調至日期</label><input type="date" class="form-input" id="makeup-to"></div><div class="form-row"><div class="form-group"><label class="form-label">時間</label><input type="time" class="form-input" id="makeup-time"></div><div class="form-group"><label class="form-label">教室</label><input type="text" class="form-input" id="makeup-room"></div></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('addMakeup')">取消</button><button class="btn btn-warning" onclick="addMakeup()">確認調課</button></div></div></div>
-    <div class="modal-overlay" id="modal-qr"><div class="modal"><div class="modal-header"><h3 class="modal-title">📱 簽到 QR Code</h3><button class="modal-close" onclick="closeModal('qr')">&times;</button></div><div class="modal-body"><div class="qr-container"><div class="qr-code"><canvas id="qr-canvas"></canvas></div><div class="qr-info"><strong id="qr-name"></strong><span id="qr-time"></span></div></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('qr')">關閉</button><button class="btn btn-primary" onclick="downloadQR()">📥 下載</button><button class="btn btn-success" onclick="sendRemind()">📲 通知學生</button></div></div></div>
-    <div class="modal-overlay" id="modal-reviewLeave"><div class="modal"><div class="modal-header"><h3 class="modal-title">📋 審核請假</h3><button class="modal-close" onclick="closeModal('reviewLeave')">&times;</button></div><div class="modal-body"><div id="leave-detail"></div><div class="form-group"><label class="form-label">審核備註</label><textarea class="form-textarea" id="review-note" placeholder="選填"></textarea></div></div><div class="modal-footer"><button class="btn btn-danger" onclick="reviewLeave('已駁回')">❌ 駁回</button><button class="btn btn-success" onclick="reviewLeave('已核准')">✅ 核准</button></div></div></div>
-    <div class="modal-overlay" id="modal-addRecord"><div class="modal"><div class="modal-header"><h3 class="modal-title">手動新增紀錄</h3><button class="modal-close" onclick="closeModal('addRecord')">&times;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">學號</label><input type="text" class="form-input" id="record-student"></div><div class="form-group"><label class="form-label">日期</label><input type="date" class="form-input" id="record-date"></div><div class="form-group"><label class="form-label">狀態</label><select class="form-select" id="record-status"><option value="已報到">已報到</option><option value="遲到">遲到</option><option value="缺席">缺席</option></select></div><div class="form-group"><label class="form-label">備註</label><input type="text" class="form-input" id="record-note" placeholder="選填"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('addRecord')">取消</button><button class="btn btn-primary" onclick="addManualRecord()">新增</button></div></div></div>
-    <div class="modal-overlay" id="modal-editRecord"><div class="modal"><div class="modal-header"><h3 class="modal-title">修改紀錄</h3><button class="modal-close" onclick="closeModal('editRecord')">&times;</button></div><div class="modal-body"><div id="edit-record-info"></div><div class="form-group"><label class="form-label">狀態</label><select class="form-select" id="edit-status"><option value="已報到">已報到</option><option value="遲到">遲到</option><option value="缺席">缺席</option></select></div><div class="form-group"><label class="form-label">備註</label><input type="text" class="form-input" id="edit-note"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('editRecord')">取消</button><button class="btn btn-primary" onclick="saveRecordEdit()">儲存</button></div></div></div>
-    <div class="modal-overlay" id="modal-addLocation"><div class="modal"><div class="modal-header"><h3 class="modal-title">新增 GPS 位置</h3><button class="modal-close" onclick="closeModal('addLocation')">&times;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">位置名稱</label><input type="text" class="form-input" id="loc-name" placeholder="物理實驗室"></div><div class="form-row"><div class="form-group"><label class="form-label">緯度</label><input type="number" step="any" class="form-input" id="loc-lat"></div><div class="form-group"><label class="form-label">經度</label><input type="number" step="any" class="form-input" id="loc-lon"></div></div><div class="form-group"><label class="form-label">有效半徑 (公尺)</label><input type="number" class="form-input" id="loc-radius" value="50"></div><button type="button" class="btn btn-outline btn-block" onclick="getLocForModal()">📍 取得目前位置</button></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('addLocation')">取消</button><button class="btn btn-primary" onclick="addLocation()">新增</button></div></div></div>
+    <div class="modal-overlay" id="modal-addClass"><div class="modal"><div class="modal-header"><h3 class="modal-title">新增班級</h3><button class="modal-close" onclick="closeModal('addClass')">&times;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">班級代碼 *</label><input type="text" class="form-input" id="class-code" placeholder="801"></div><div class="form-group"><label class="form-label">班級名稱 *</label><input type="text" class="form-input" id="class-name" placeholder="八年一班"></div><div class="form-group"><label class="form-label">部別</label><select class="form-select" id="class-division"><option value="day">日間部</option><option value="night">夜間部</option><option value="weekend">進修部</option></select></div><div class="form-group"><label class="form-label">導師</label><input type="text" class="form-input" id="class-teacher"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('addClass')">取消</button><button class="btn btn-primary" onclick="addClass()">新增</button></div></div></div>
+    
+    <div class="modal-overlay" id="modal-editClass"><div class="modal"><div class="modal-header"><h3 class="modal-title">編輯班級</h3><button class="modal-close" onclick="closeModal('editClass')">&times;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">班級代碼</label><input type="text" class="form-input" id="edit-class-code" readonly></div><div class="form-group"><label class="form-label">班級名稱</label><input type="text" class="form-input" id="edit-class-name"></div><div class="form-group"><label class="form-label">部別</label><select class="form-select" id="edit-class-division"><option value="day">日間部</option><option value="night">夜間部</option><option value="weekend">進修部</option></select></div><div class="form-group"><label class="form-label">導師</label><input type="text" class="form-input" id="edit-class-teacher"></div></div><div class="modal-footer"><button class="btn btn-danger" onclick="deleteClass()">🗑️ 刪除</button><button class="btn btn-primary" onclick="saveClass()">💾 儲存</button></div></div></div>
+
+    <div class="modal-overlay" id="modal-addCourse"><div class="modal"><div class="modal-header"><h3 class="modal-title">新增課程</h3><button class="modal-close" onclick="closeModal('addCourse')">&times;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">課程名稱 *</label><input type="text" class="form-input" id="course-name" placeholder="物理"></div><div class="form-group"><label class="form-label">班級 *</label><select class="form-select" id="course-class"></select></div><div class="form-row"><div class="form-group"><label class="form-label">星期 *</label><select class="form-select" id="course-day"><option value="1">週一</option><option value="2">週二</option><option value="3">週三</option><option value="4">週四</option><option value="5">週五</option><option value="6">週六</option><option value="0">週日</option></select></div><div class="form-group"><label class="form-label">節次 *</label><select class="form-select" id="course-period"></select></div></div><div class="form-group"><label class="form-label">教室</label><input type="text" class="form-input" id="course-room" placeholder="物理實驗室"></div><div class="form-row"><div class="form-group"><label class="form-label">GPS 緯度</label><input type="number" step="any" class="form-input" id="course-lat"></div><div class="form-group"><label class="form-label">GPS 經度</label><input type="number" step="any" class="form-input" id="course-lon"></div></div><button type="button" class="btn btn-outline btn-block" onclick="getLocation()">📍 取得目前位置</button></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('addCourse')">取消</button><button class="btn btn-primary" onclick="addCourse()">新增</button></div></div></div>
+
+    <div class="modal-overlay" id="modal-editCourse"><div class="modal"><div class="modal-header"><h3 class="modal-title">編輯課程</h3><button class="modal-close" onclick="closeModal('editCourse')">&times;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">課程名稱</label><input type="text" class="form-input" id="edit-course-name"></div><div class="form-group"><label class="form-label">班級</label><select class="form-select" id="edit-course-class"></select></div><div class="form-row"><div class="form-group"><label class="form-label">星期</label><select class="form-select" id="edit-course-day"><option value="1">週一</option><option value="2">週二</option><option value="3">週三</option><option value="4">週四</option><option value="5">週五</option><option value="6">週六</option><option value="0">週日</option></select></div><div class="form-group"><label class="form-label">節次</label><select class="form-select" id="edit-course-period"></select></div></div><div class="form-group"><label class="form-label">教室</label><input type="text" class="form-input" id="edit-course-room"></div></div><div class="modal-footer"><button class="btn btn-danger" onclick="deleteCourse()">🗑️ 刪除</button><button class="btn btn-primary" onclick="saveCourse()">💾 儲存</button></div></div></div>
+
+    <div class="modal-overlay" id="modal-addStudent"><div class="modal"><div class="modal-header"><h3 class="modal-title">新增學生</h3><button class="modal-close" onclick="closeModal('addStudent')">&times;</button></div><div class="modal-body"><div class="alert alert-info">💡 學生也可以透過 LINE Bot 自行註冊</div><div class="form-group"><label class="form-label">學號 *</label><input type="text" class="form-input" id="student-id" placeholder="110001"></div><div class="form-group"><label class="form-label">姓名 *</label><input type="text" class="form-input" id="student-name" placeholder="王小明"></div><div class="form-group"><label class="form-label">班級 *</label><select class="form-select" id="student-class"></select></div><div class="form-group"><label class="form-label">電話</label><input type="tel" class="form-input" id="student-phone" placeholder="0912345678"></div><div class="form-group"><label class="form-label">家長電話</label><input type="tel" class="form-input" id="student-parent-phone"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('addStudent')">取消</button><button class="btn btn-primary" onclick="addStudent()">新增</button></div></div></div>
+
+    <div class="modal-overlay" id="modal-editStudent"><div class="modal"><div class="modal-header"><h3 class="modal-title">編輯學生</h3><button class="modal-close" onclick="closeModal('editStudent')">&times;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">學號</label><input type="text" class="form-input" id="edit-student-id" readonly></div><div class="form-group"><label class="form-label">姓名</label><input type="text" class="form-input" id="edit-student-name"></div><div class="form-group"><label class="form-label">班級</label><select class="form-select" id="edit-student-class"></select></div><div class="form-group"><label class="form-label">電話</label><input type="tel" class="form-input" id="edit-student-phone"></div><div class="form-group"><label class="form-label">家長電話</label><input type="tel" class="form-input" id="edit-student-parent-phone"></div></div><div class="modal-footer"><button class="btn btn-danger" onclick="deleteStudent()">🗑️ 刪除</button><button class="btn btn-primary" onclick="saveStudent()">💾 儲存</button></div></div></div>
+
+    <div class="modal-overlay" id="modal-addRecord"><div class="modal"><div class="modal-header"><h3 class="modal-title">手動新增紀錄</h3><button class="modal-close" onclick="closeModal('addRecord')">&times;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">學號 *</label><input type="text" class="form-input" id="record-student"></div><div class="form-group"><label class="form-label">日期 *</label><input type="date" class="form-input" id="record-date"></div><div class="form-group"><label class="form-label">狀態</label><select class="form-select" id="record-status"><option value="已報到">已報到</option><option value="遲到">遲到</option><option value="缺席">缺席</option></select></div><div class="form-group"><label class="form-label">備註</label><input type="text" class="form-input" id="record-note"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('addRecord')">取消</button><button class="btn btn-primary" onclick="addRecord()">新增</button></div></div></div>
+
+    <div class="modal-overlay" id="modal-reviewLeave"><div class="modal"><div class="modal-header"><h3 class="modal-title">審核請假</h3><button class="modal-close" onclick="closeModal('reviewLeave')">&times;</button></div><div class="modal-body"><div id="leave-detail"></div><div class="form-group"><label class="form-label">備註</label><textarea class="form-textarea" id="review-note"></textarea></div></div><div class="modal-footer"><button class="btn btn-danger" onclick="reviewLeave('已駁回')">❌ 駁回</button><button class="btn btn-success" onclick="reviewLeave('已核准')">✅ 核准</button></div></div></div>
+
+    <div class="modal-overlay" id="modal-qr"><div class="modal"><div class="modal-header"><h3 class="modal-title">📱 簽到 QR Code</h3><button class="modal-close" onclick="closeModal('qr')">&times;</button></div><div class="modal-body"><div class="qr-container"><div class="qr-code"><canvas id="qr-canvas"></canvas></div><div class="qr-info"><strong id="qr-name"></strong><span id="qr-time"></span></div></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('qr')">關閉</button><button class="btn btn-primary" onclick="downloadQR()">📥 下載</button></div></div></div>
 
     <script>
-        let API=localStorage.getItem('apiUrl')||'',BOT=localStorage.getItem('lineBotId')||'@BOT';
-        let sem=JSON.parse(localStorage.getItem('sem')||'null')||{div:'day',start:'',end:'',periods:[]};
-        let classes=[],courses=[],leaves=[],locations=[],currentLeave=null,currentRecord=null,leaveFilter='pending',exportType='detail';
-        let trendChart=null,classChart=null;
-        const PERIODS={day:[{n:1,s:'08:00',e:'08:50'},{n:2,s:'09:00',e:'09:50'},{n:3,s:'10:00',e:'10:50'},{n:4,s:'11:00',e:'11:50'},{n:5,s:'13:00',e:'13:50'},{n:6,s:'14:00',e:'14:50'},{n:7,s:'15:00',e:'15:50'},{n:8,s:'16:00',e:'17:00'}],night:[{n:1,s:'18:00',e:'18:50'},{n:2,s:'19:00',e:'19:50'},{n:3,s:'20:00',e:'20:50'},{n:4,s:'21:00',e:'22:00'}],weekend:[{n:1,s:'08:00',e:'08:50'},{n:2,s:'09:00',e:'09:50'},{n:3,s:'10:00',e:'10:50'},{n:4,s:'11:00',e:'11:50'},{n:5,s:'13:00',e:'13:50'},{n:6,s:'14:00',e:'14:50'},{n:7,s:'15:00',e:'15:50'},{n:8,s:'16:00',e:'17:00'}]};
+        // === 全域變數 ===
+        let API = localStorage.getItem('apiUrl') || '';
+        let BOT = localStorage.getItem('botId') || '@bot';
+        let sem = JSON.parse(localStorage.getItem('semester') || 'null') || { div: 'day', start: '', end: '', periods: [] };
+        let classes = [], courses = [], students = [], leaves = [];
+        let currentClass = null, currentCourse = null, currentStudent = null, currentLeave = null;
+        let leaveFilter = 'pending';
         
-        async function api(p,o={}){if(!API)return null;try{const r=await fetch(API+p,{...o,headers:{'Content-Type':'application/json'}});if(!r.ok)throw 0;document.getElementById('status-dot').classList.add('connected');return await r.json()}catch{document.getElementById('status-dot').classList.remove('connected');return null}}
-        function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('open');document.getElementById('hamburger').classList.toggle('active')}
-        function showPage(p){document.querySelectorAll('.nav-link').forEach(l=>l.classList.toggle('active',l.dataset.page===p));document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id==='page-'+p))}
-        document.querySelectorAll('.nav-link').forEach(l=>l.addEventListener('click',e=>{e.preventDefault();showPage(l.dataset.page);if(innerWidth<768)toggleSidebar();loadPage(l.dataset.page)}));
-        function openModal(id){document.getElementById('modal-'+id).classList.add('active')}
-        function closeModal(id){document.getElementById('modal-'+id).classList.remove('active')}
-        function toast(m,t='success'){const d=document.createElement('div');d.className='toast '+t;d.textContent=(t==='success'?'✅ ':t==='warning'?'⏳ ':'❌ ')+m;document.getElementById('toasts').appendChild(d);setTimeout(()=>d.remove(),3000)}
-        
-        // Semester
-        function selectDivision(d){sem.div=d;document.querySelectorAll('#division-chips .chip').forEach(c=>c.classList.remove('active'));document.querySelector('.chip.'+d).classList.add('active');renderPeriods()}
-        function renderPeriods(){const ps=PERIODS[sem.div];sem.periods=ps;document.getElementById('period-settings').innerHTML='<table class="period-table"><thead><tr><th>節次</th><th>開始</th><th>結束</th></tr></thead><tbody>'+ps.map((p,i)=>'<tr><td>第'+p.n+'節</td><td><input type="time" class="form-input" value="'+p.s+'" onchange="sem.periods['+i+'].s=this.value" style="padding:8px"></td><td><input type="time" class="form-input" value="'+p.e+'" onchange="sem.periods['+i+'].e=this.value" style="padding:8px"></td></tr>').join('')+'</tbody></table>';updatePeriodDD()}
-        function calcWeeks(){const s=document.getElementById('semester-start').value,e=document.getElementById('semester-end').value;if(s&&e){const w=Math.ceil((new Date(e)-new Date(s))/(7*24*60*60*1000));document.getElementById('semester-weeks').textContent=w;sem.start=s;sem.end=e}}
-        function saveSemester(){calcWeeks();localStorage.setItem('sem',JSON.stringify(sem));toast('學期設定已儲存！')}
-        function updatePeriodDD(){const ps=sem.periods.length?sem.periods:PERIODS.day;document.getElementById('course-period').innerHTML=ps.map(p=>'<option value="'+p.n+'">第'+p.n+'節 ('+p.s+'-'+p.e+')</option>').join('')}
+        const PERIODS = {
+            day: [{n:1,s:'08:00',e:'08:50'},{n:2,s:'09:00',e:'09:50'},{n:3,s:'10:00',e:'10:50'},{n:4,s:'11:00',e:'11:50'},{n:5,s:'13:00',e:'13:50'},{n:6,s:'14:00',e:'14:50'},{n:7,s:'15:00',e:'15:50'},{n:8,s:'16:00',e:'17:00'}],
+            night: [{n:1,s:'18:00',e:'18:50'},{n:2,s:'19:00',e:'19:50'},{n:3,s:'20:00',e:'20:50'},{n:4,s:'21:00',e:'22:00'}],
+            weekend: [{n:1,s:'08:00',e:'08:50'},{n:2,s:'09:00',e:'09:50'},{n:3,s:'10:00',e:'10:50'},{n:4,s:'11:00',e:'11:50'},{n:5,s:'13:00',e:'13:50'},{n:6,s:'14:00',e:'14:50'},{n:7,s:'15:00',e:'15:50'},{n:8,s:'16:00',e:'17:00'}]
+        };
+        const DAY_NAMES = ['日', '一', '二', '三', '四', '五', '六'];
+        const DIV_NAMES = { day: '日間部', night: '夜間部', weekend: '進修部' };
 
-        // Schedule
-        function showView(v){document.querySelectorAll('.tabs .tab').forEach((t,i)=>t.classList.toggle('active',i===(v==='week'?0:1)));document.getElementById('week-view').style.display=v==='week'?'block':'none';document.getElementById('list-view').style.display=v==='list'?'block':'none'}
-        function renderGrid(){const ps=sem.periods.length?sem.periods:PERIODS.day,days=sem.div==='weekend'?['','六','日']:['','一','二','三','四','五'];let h=days.map(d=>'<div class="schedule-header">'+(d||'節次')+'</div>').join('');ps.forEach(p=>{h+='<div class="schedule-time">'+p.n+'<br><small>'+p.s+'</small></div>';for(let i=1;i<days.length;i++){const dn=sem.div==='weekend'?(i===1?6:0):i,c=courses.find(x=>x.day==dn&&x.period==p.n);h+=c?'<div class="schedule-cell has-class"><div class="class-tag">'+c.name+'<br>'+c.classCode+'</div></div>':'<div class="schedule-cell" onclick="quickAdd('+dn+','+p.n+')"></div>'}});document.getElementById('schedule-grid').innerHTML=h;document.getElementById('schedule-grid').style.gridTemplateColumns='60px repeat('+(days.length-1)+',1fr)'}
-        function quickAdd(d,p){document.getElementById('course-day').value=d;document.getElementById('course-period').value=p;openModal('addCourse')}
+        // === API ===
+        async function api(path, opts = {}) {
+            if (!API) return null;
+            try {
+                const res = await fetch(API + path, { ...opts, headers: { 'Content-Type': 'application/json' } });
+                if (!res.ok) throw new Error();
+                document.getElementById('status-dot').classList.add('connected');
+                return await res.json();
+            } catch {
+                document.getElementById('status-dot').classList.remove('connected');
+                return null;
+            }
+        }
 
-        // Classes
-        async function loadClasses(){const d=await api('/api/classes');if(d){classes=d;renderClasses();updateClassDD()}}
-        function renderClasses(){const dn={day:'日間部',night:'夜間部',weekend:'進修部'},tb=document.getElementById('classes-table');tb.innerHTML=classes.length?classes.map(c=>'<tr class="clickable"><td><b>'+c.code+'</b></td><td>'+c.name+'</td><td><span class="badge primary">'+(dn[c.division]||'日間部')+'</span></td><td>'+(c.count||0)+'</td></tr>').join(''):'<tr><td colspan="4" class="empty">尚無班級</td></tr>'}
-        async function addClass(){const code=document.getElementById('class-code').value.trim(),name=document.getElementById('class-name').value.trim(),division=document.getElementById('class-division').value,teacher=document.getElementById('class-teacher').value.trim();if(!code||!name){toast('請填寫必填','danger');return}const r=await api('/api/classes',{method:'POST',body:JSON.stringify({code,name,division,teacher})});if(r?.success){toast('已新增');closeModal('addClass');loadClasses()}}
-        function updateClassDD(){const o='<option value="">選擇</option>'+classes.map(c=>'<option value="'+c.code+'">'+c.name+'</option>').join('');document.getElementById('course-class').innerHTML=o;document.getElementById('makeup-course').innerHTML=o;document.getElementById('filter-class').innerHTML='<option value="">全部班級</option>'+classes.map(c=>'<option value="'+c.code+'">'+c.name+'</option>').join('');document.getElementById('export-class').innerHTML='<option value="">全部班級</option>'+classes.map(c=>'<option value="'+c.code+'">'+c.name+'</option>').join('')}
+        // === UI ===
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('open');
+            document.getElementById('hamburger').classList.toggle('active');
+        }
+        function showPage(page) {
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.toggle('active', l.dataset.page === page));
+            document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + page));
+        }
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', e => {
+                e.preventDefault();
+                showPage(link.dataset.page);
+                if (innerWidth < 768) toggleSidebar();
+                loadPage(link.dataset.page);
+            });
+        });
+        function openModal(id) { document.getElementById('modal-' + id).classList.add('active'); }
+        function closeModal(id) { document.getElementById('modal-' + id).classList.remove('active'); }
+        function toast(msg, type = 'success') {
+            const el = document.createElement('div');
+            el.className = 'toast ' + type;
+            el.textContent = (type === 'success' ? '✅ ' : type === 'warning' ? '⏳ ' : '❌ ') + msg;
+            document.getElementById('toasts').appendChild(el);
+            setTimeout(() => el.remove(), 3000);
+        }
 
-        // Courses
-        async function loadCourses(){const d=await api('/api/courses');if(d){courses=d;renderCourses();renderGrid()}}
-        function renderCourses(){const dn=['日','一','二','三','四','五','六'],tb=document.getElementById('courses-table');tb.innerHTML=courses.length?courses.map(c=>'<tr class="clickable"><td><b>'+(c.name||c.subject)+'</b></td><td>'+c.classCode+'</td><td>週'+dn[c.day]+' 第'+c.period+'節</td><td>'+(c.room||'-')+'</td></tr>').join(''):'<tr><td colspan="4" class="empty">尚無課程</td></tr>'}
-        async function addCourse(){const name=document.getElementById('course-name').value.trim(),classCode=document.getElementById('course-class').value,day=document.getElementById('course-day').value,period=document.getElementById('course-period').value,room=document.getElementById('course-room').value.trim(),lat=document.getElementById('course-lat').value,lon=document.getElementById('course-lon').value;if(!name||!classCode){toast('請填寫必填','danger');return}const p=sem.periods.find(x=>x.n==period)||{};const r=await api('/api/courses',{method:'POST',body:JSON.stringify({subject:name,name,classCode,day:+day,period:+period,time:p.s+'-'+p.e,room,lat:lat?+lat:0,lon:lon?+lon:0,radius:50000})});if(r?.success){toast('已新增');closeModal('addCourse');loadCourses()}}
-        function getLoc(){if(!navigator.geolocation)return;toast('定位中...','warning');navigator.geolocation.getCurrentPosition(p=>{document.getElementById('course-lat').value=p.coords.latitude.toFixed(6);document.getElementById('course-lon').value=p.coords.longitude.toFixed(6);toast('已定位')},()=>toast('定位失敗','danger'),{enableHighAccuracy:true})}
+        // === 學期設定 ===
+        function selectDivision(div) {
+            sem.div = div;
+            document.querySelectorAll('#division-chips .chip').forEach(c => {
+                c.classList.toggle('active', c.dataset.div === div);
+            });
+            sem.periods = [...PERIODS[div]];
+            renderPeriods();
+            localStorage.setItem('semester', JSON.stringify(sem));
+        }
+        function renderPeriods() {
+            const ps = sem.periods.length ? sem.periods : PERIODS[sem.div];
+            document.getElementById('period-settings').innerHTML = '<table class="period-table"><thead><tr><th>節次</th><th>開始</th><th>結束</th></tr></thead><tbody>' + ps.map((p, i) => '<tr><td>第' + p.n + '節</td><td><input type="time" class="form-input" value="' + p.s + '" onchange="updatePeriod(' + i + ',\'s\',this.value)" style="padding:8px"></td><td><input type="time" class="form-input" value="' + p.e + '" onchange="updatePeriod(' + i + ',\'e\',this.value)" style="padding:8px"></td></tr>').join('') + '</tbody></table>';
+            updatePeriodDropdowns();
+        }
+        function updatePeriod(idx, key, val) {
+            sem.periods[idx][key] = val;
+            localStorage.setItem('semester', JSON.stringify(sem));
+        }
+        function calcWeeks() {
+            const s = document.getElementById('semester-start').value;
+            const e = document.getElementById('semester-end').value;
+            if (s && e) {
+                const weeks = Math.ceil((new Date(e) - new Date(s)) / (7 * 24 * 60 * 60 * 1000));
+                document.getElementById('semester-weeks').textContent = weeks;
+                sem.start = s;
+                sem.end = e;
+                sem.weeks = weeks;
+            }
+        }
+        function saveSemester() {
+            calcWeeks();
+            localStorage.setItem('semester', JSON.stringify(sem));
+            toast('學期設定已儲存！');
+        }
+        function updatePeriodDropdowns() {
+            const ps = sem.periods.length ? sem.periods : PERIODS[sem.div];
+            const opts = ps.map(p => '<option value="' + p.n + '">第' + p.n + '節 (' + p.s + '-' + p.e + ')</option>').join('');
+            document.getElementById('course-period').innerHTML = opts;
+            document.getElementById('edit-course-period').innerHTML = opts;
+        }
 
-        // Sessions
-        async function loadSessions(){const now=new Date();document.getElementById('session-date').textContent=now.toLocaleDateString('zh-TW',{year:'numeric',month:'long',day:'numeric',weekday:'long'});const dow=now.getDay(),today=courses.filter(c=>c.day==dow);if(!today.length){document.getElementById('sessions-list').innerHTML='<div class="empty"><div class="icon">📅</div><h3>今日無課程</h3></div>';return}document.getElementById('sessions-list').innerHTML=today.map(c=>{const p=sem.periods.find(x=>x.n==c.period)||{s:'',e:''};const nowTime=now.getHours()*60+now.getMinutes();const endTime=parseInt((p.e||'17:00').split(':')[0])*60+parseInt((p.e||'17:00').split(':')[1]);const completed=nowTime>endTime;return'<div class="session-item'+(completed?' completed':'')+'"><div class="session-header"><div class="session-icon">📖</div><div class="session-info"><h4>'+(c.name||c.subject)+' - '+c.classCode+'</h4><span>第'+c.period+'節 · '+p.s+'-'+p.e+' · '+(c.room||'教室未設定')+'</span></div></div><div class="session-actions">'+(completed?'<button class="btn btn-outline btn-sm" disabled>已結束</button>':'<button class="btn btn-primary btn-sm" onclick="startSession(\''+c.id+'\')">📱 簽到</button><button class="btn btn-outline btn-sm" onclick="endSession(\''+c.id+'\')">⏹️ 結束</button>')+'</div></div>'}).join('')}
-        async function startSession(id){const c=courses.find(x=>x.id===id);if(!c)return;const today=new Date().toISOString().split('T')[0],p=sem.periods.find(x=>x.n==c.period)||{s:'08:00',e:'09:00'};const r=await api('/api/sessions',{method:'POST',body:JSON.stringify({courseId:id,date:today,startTime:p.s,endTime:p.e})});if(r?.success){showQR(r.qrContent,c.name+' - '+c.classCode,today+' '+p.s);toast('簽到已建立！')}}
-        async function endSession(id){if(!confirm('確定結束？未簽到學生將被標記為缺席。'))return;const r=await api('/api/sessions/'+id+'/complete',{method:'POST'});if(r?.success){toast('已結束，'+r.marked+'人缺席');loadSessions()}}
-        function showQR(qr,name,time){document.getElementById('qr-name').textContent=name;document.getElementById('qr-time').textContent=time;QRCode.toCanvas(document.getElementById('qr-canvas'),'https://line.me/R/oaMessage/'+BOT+'/?'+encodeURIComponent(qr),{width:200});openModal('qr')}
-        function downloadQR(){const c=document.getElementById('qr-canvas'),a=document.createElement('a');a.download='qrcode.png';a.href=c.toDataURL();a.click();toast('已下載')}
-        async function sendRemind(){toast('已發送通知給學生！')}
-        function addMakeup(){toast('調課已建立！');closeModal('addMakeup')}
+        // === 班級管理 ===
+        async function loadClasses() {
+            const data = await api('/api/classes');
+            if (data) {
+                classes = data;
+                renderClasses();
+                updateClassDropdowns();
+            }
+        }
+        function renderClasses() {
+            document.getElementById('classes-list').innerHTML = classes.length ? classes.map(c => 
+                '<div class="item-card" onclick="editClass(\'' + c.code + '\')">' +
+                '<div class="icon" style="background:var(--primary)">🏫</div>' +
+                '<div class="info"><h5>' + c.code + ' - ' + c.name + '</h5><span>' + (DIV_NAMES[c.division] || '日間部') + (c.teacher ? ' · ' + c.teacher : '') + '</span></div>' +
+                '<div class="actions"><span class="badge primary">' + (c.count || 0) + ' 人</span></div></div>'
+            ).join('') : '<div class="empty">尚無班級，請點擊上方按鈕新增</div>';
+        }
+        async function addClass() {
+            const code = document.getElementById('class-code').value.trim();
+            const name = document.getElementById('class-name').value.trim();
+            const division = document.getElementById('class-division').value;
+            const teacher = document.getElementById('class-teacher').value.trim();
+            if (!code || !name) { toast('請填寫班級代碼和名稱', 'danger'); return; }
+            const r = await api('/api/classes', { method: 'POST', body: JSON.stringify({ code, name, division, teacher }) });
+            if (r?.success) { toast('班級已新增！'); closeModal('addClass'); loadClasses(); document.getElementById('class-code').value = ''; document.getElementById('class-name').value = ''; document.getElementById('class-teacher').value = ''; }
+            else { toast(r?.message || '新增失敗', 'danger'); }
+        }
+        function editClass(code) {
+            currentClass = classes.find(c => c.code === code);
+            if (!currentClass) return;
+            document.getElementById('edit-class-code').value = currentClass.code;
+            document.getElementById('edit-class-name').value = currentClass.name;
+            document.getElementById('edit-class-division').value = currentClass.division || 'day';
+            document.getElementById('edit-class-teacher').value = currentClass.teacher || '';
+            openModal('editClass');
+        }
+        async function saveClass() {
+            const name = document.getElementById('edit-class-name').value.trim();
+            const division = document.getElementById('edit-class-division').value;
+            const teacher = document.getElementById('edit-class-teacher').value.trim();
+            const r = await api('/api/classes/' + currentClass.code, { method: 'PUT', body: JSON.stringify({ name, division, teacher }) });
+            if (r?.success) { toast('班級已更新！'); closeModal('editClass'); loadClasses(); }
+        }
+        async function deleteClass() {
+            if (!confirm('確定刪除班級 ' + currentClass.code + '？')) return;
+            await api('/api/classes/' + currentClass.code, { method: 'DELETE' });
+            toast('班級已刪除！'); closeModal('editClass'); loadClasses();
+        }
+        function updateClassDropdowns() {
+            const opts = '<option value="">選擇班級</option>' + classes.map(c => '<option value="' + c.code + '">' + c.code + ' - ' + c.name + '</option>').join('');
+            document.getElementById('course-class').innerHTML = opts;
+            document.getElementById('edit-course-class').innerHTML = opts;
+            document.getElementById('student-class').innerHTML = opts;
+            document.getElementById('edit-student-class').innerHTML = opts;
+            document.getElementById('student-filter').innerHTML = '<option value="">全部班級</option>' + classes.map(c => '<option value="' + c.code + '">' + c.name + '</option>').join('');
+        }
 
-        // Students
-        async function loadStudents(){const d=await api('/api/students');const stats=await api('/api/stats/attendance');const rateMap={};if(stats?.students)stats.students.forEach(s=>rateMap[s.studentId]=s.rate);document.getElementById('students-table').innerHTML=d?.length?d.map(s=>{const rate=rateMap[s.studentId]||100;const cls=rate>=80?'success':rate>=60?'warning':'danger';return'<tr><td><b>'+s.studentId+'</b></td><td>'+s.name+'</td><td>'+s.classCode+'</td><td><span class="badge '+cls+'">'+rate+'%</span></td><td>'+(s.parentLineId?'<span class="badge success">已綁定</span>':'<span class="badge gray">未綁定</span>')+'</td></tr>'}).join(''):'<tr><td colspan="5" class="empty">學生將透過 LINE 註冊</td></tr>'}
+        // === 課程管理 ===
+        async function loadCourses() {
+            const data = await api('/api/courses');
+            if (data) {
+                courses = data;
+                renderCourses();
+                renderScheduleGrid();
+            }
+        }
+        function renderCourses() {
+            document.getElementById('courses-list').innerHTML = courses.length ? courses.map(c => {
+                const dayName = DAY_NAMES[c.day] || '?';
+                const period = c.period || '?';
+                return '<div class="item-card" onclick="editCourse(\'' + c.id + '\')">' +
+                    '<div class="icon" style="background:var(--success)">📖</div>' +
+                    '<div class="info"><h5>' + (c.name || c.subject || '未命名') + '</h5><span>班級 ' + c.classCode + ' · 週' + dayName + ' 第' + period + '節 · ' + (c.room || '教室未設定') + '</span></div></div>';
+            }).join('') : '<div class="empty">尚無課程</div>';
+        }
+        function showView(view) {
+            document.querySelectorAll('.tabs .tab').forEach((t, i) => t.classList.toggle('active', i === (view === 'grid' ? 0 : 1)));
+            document.getElementById('grid-view').style.display = view === 'grid' ? 'block' : 'none';
+            document.getElementById('list-view').style.display = view === 'list' ? 'block' : 'none';
+        }
+        function renderScheduleGrid() {
+            const ps = sem.periods.length ? sem.periods : PERIODS[sem.div];
+            const days = sem.div === 'weekend' ? ['', '六', '日'] : ['', '一', '二', '三', '四', '五'];
+            let html = days.map(d => '<div class="schedule-header">' + (d || '節次') + '</div>').join('');
+            ps.forEach(p => {
+                html += '<div class="schedule-time">' + p.n + '<br><small>' + p.s + '</small></div>';
+                for (let i = 1; i < days.length; i++) {
+                    const dayNum = sem.div === 'weekend' ? (i === 1 ? 6 : 0) : i;
+                    const c = courses.find(x => x.day == dayNum && x.period == p.n);
+                    if (c) {
+                        html += '<div class="schedule-cell has-class" onclick="editCourse(\'' + c.id + '\')"><div class="class-tag">' + (c.name || c.subject) + '<br>' + c.classCode + '</div></div>';
+                    } else {
+                        html += '<div class="schedule-cell" onclick="quickAddCourse(' + dayNum + ',' + p.n + ')"></div>';
+                    }
+                }
+            });
+            document.getElementById('schedule-grid').innerHTML = html;
+            document.getElementById('schedule-grid').style.gridTemplateColumns = '60px repeat(' + (days.length - 1) + ', 1fr)';
+        }
+        function quickAddCourse(day, period) {
+            document.getElementById('course-day').value = day;
+            document.getElementById('course-period').value = period;
+            openModal('addCourse');
+        }
+        async function addCourse() {
+            const name = document.getElementById('course-name').value.trim();
+            const classCode = document.getElementById('course-class').value;
+            const day = parseInt(document.getElementById('course-day').value);
+            const period = parseInt(document.getElementById('course-period').value);
+            const room = document.getElementById('course-room').value.trim();
+            const lat = document.getElementById('course-lat').value;
+            const lon = document.getElementById('course-lon').value;
+            if (!name || !classCode) { toast('請填寫課程名稱和班級', 'danger'); return; }
+            const p = sem.periods.find(x => x.n == period) || {};
+            const r = await api('/api/courses', { method: 'POST', body: JSON.stringify({ subject: name, name, classCode, day, period, time: p.s + '-' + p.e, room, lat: lat ? +lat : 0, lon: lon ? +lon : 0, radius: 50000 }) });
+            if (r?.success) { toast('課程已新增！'); closeModal('addCourse'); loadCourses(); document.getElementById('course-name').value = ''; document.getElementById('course-room').value = ''; }
+        }
+        function editCourse(id) {
+            currentCourse = courses.find(c => c.id === id);
+            if (!currentCourse) return;
+            document.getElementById('edit-course-name').value = currentCourse.name || currentCourse.subject || '';
+            document.getElementById('edit-course-class').value = currentCourse.classCode || '';
+            document.getElementById('edit-course-day').value = currentCourse.day || 1;
+            document.getElementById('edit-course-period').value = currentCourse.period || 1;
+            document.getElementById('edit-course-room').value = currentCourse.room || '';
+            openModal('editCourse');
+        }
+        async function saveCourse() {
+            const subject = document.getElementById('edit-course-name').value.trim();
+            const classCode = document.getElementById('edit-course-class').value;
+            const day = parseInt(document.getElementById('edit-course-day').value);
+            const period = parseInt(document.getElementById('edit-course-period').value);
+            const room = document.getElementById('edit-course-room').value.trim();
+            const p = sem.periods.find(x => x.n == period) || {};
+            const r = await api('/api/courses/' + currentCourse.id, { method: 'PUT', body: JSON.stringify({ subject, classCode, day, period, time: p.s + '-' + p.e, room }) });
+            if (r?.success) { toast('課程已更新！'); closeModal('editCourse'); loadCourses(); }
+        }
+        async function deleteCourse() {
+            if (!confirm('確定刪除此課程？')) return;
+            await api('/api/courses/' + currentCourse.id, { method: 'DELETE' });
+            toast('課程已刪除！'); closeModal('editCourse'); loadCourses();
+        }
+        function getLocation() {
+            if (!navigator.geolocation) { toast('瀏覽器不支援定位', 'danger'); return; }
+            toast('定位中...', 'warning');
+            navigator.geolocation.getCurrentPosition(pos => {
+                document.getElementById('course-lat').value = pos.coords.latitude.toFixed(6);
+                document.getElementById('course-lon').value = pos.coords.longitude.toFixed(6);
+                toast('定位成功！');
+            }, () => toast('定位失敗', 'danger'), { enableHighAccuracy: true });
+        }
 
-        // Leaves
-        async function loadLeaves(){const d=await api('/api/leaves');if(d){leaves=d;const pending=leaves.filter(l=>l.status==='待審核').length;const badge=document.getElementById('leave-badge');if(pending>0){badge.textContent=pending;badge.style.display='inline'}else{badge.style.display='none'}renderLeaves()}}
-        function filterLeaves(f){leaveFilter=f;document.querySelectorAll('#page-leaves .tab').forEach((t,i)=>{const filters=['pending','approved','rejected','all'];t.classList.toggle('active',filters[i]===f)});renderLeaves()}
-        function renderLeaves(){let filtered=leaves;if(leaveFilter==='pending')filtered=leaves.filter(l=>l.status==='待審核');else if(leaveFilter==='approved')filtered=leaves.filter(l=>l.status==='已核准');else if(leaveFilter==='rejected')filtered=leaves.filter(l=>l.status==='已駁回');document.getElementById('leaves-list').innerHTML=filtered.length?filtered.map(l=>{const cls=l.status==='待審核'?'pending':l.status==='已核准'?'approved':'rejected';const badge=l.status==='待審核'?'warning':l.status==='已核准'?'success':'danger';return'<div class="leave-item '+cls+'"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><div style="font-weight:600">'+l.name+' ('+l.studentId+')</div><span class="badge '+badge+'">'+l.status+'</span></div><div style="font-size:14px;color:var(--text-light);margin-bottom:10px">📅 '+l.date+' · 第'+l.periods+'節<br>📝 '+l.type+'：'+(l.reason||'無')+'</div>'+(l.status==='待審核'?'<button class="btn btn-sm btn-success" onclick="openReview(\''+l.id+'\')">審核</button>':'')+'</div>'}).join(''):'<div class="empty">無請假紀錄</div>'}
-        function openReview(id){currentLeave=leaves.find(l=>l.id===id);if(!currentLeave)return;document.getElementById('leave-detail').innerHTML='<div class="alert alert-info"><b>'+currentLeave.name+'</b> ('+currentLeave.studentId+')<br>📅 '+currentLeave.date+' · 第'+currentLeave.periods+'節<br>📝 '+currentLeave.type+'：'+(currentLeave.reason||'無')+'</div>';document.getElementById('review-note').value='';openModal('reviewLeave')}
-        async function reviewLeave(status){if(!currentLeave)return;const note=document.getElementById('review-note').value.trim();const r=await api('/api/leaves/'+currentLeave.id,{method:'PUT',body:JSON.stringify({status,note})});if(r?.success){toast(status==='已核准'?'已核准':'已駁回');closeModal('reviewLeave');loadLeaves()}else{toast('失敗','danger')}}
+        // === 學生管理 ===
+        async function loadStudents() {
+            const filter = document.getElementById('student-filter')?.value || '';
+            const data = await api('/api/students');
+            if (data) {
+                students = filter ? data.filter(s => s.classCode === filter) : data;
+                renderStudents();
+            }
+        }
+        function renderStudents() {
+            document.getElementById('students-list').innerHTML = students.length ? students.map(s =>
+                '<div class="item-card" onclick="editStudent(\'' + s.studentId + '\')">' +
+                '<div class="icon" style="background:var(--primary)">' + (s.name ? s.name.charAt(0) : '?') + '</div>' +
+                '<div class="info"><h5>' + s.studentId + ' - ' + s.name + '</h5><span>' + s.classCode + (s.lineId ? ' · LINE 已綁定' : '') + '</span></div></div>'
+            ).join('') : '<div class="empty">尚無學生</div>';
+        }
+        async function addStudent() {
+            const studentId = document.getElementById('student-id').value.trim();
+            const name = document.getElementById('student-name').value.trim();
+            const classCode = document.getElementById('student-class').value;
+            const phone = document.getElementById('student-phone').value.trim();
+            const parentPhone = document.getElementById('student-parent-phone').value.trim();
+            if (!studentId || !name || !classCode) { toast('請填寫學號、姓名和班級', 'danger'); return; }
+            const r = await api('/api/students', { method: 'POST', body: JSON.stringify({ studentId, name, classCode, phone, parentPhone }) });
+            if (r?.success) { toast('學生已新增！'); closeModal('addStudent'); loadStudents(); document.getElementById('student-id').value = ''; document.getElementById('student-name').value = ''; document.getElementById('student-phone').value = ''; document.getElementById('student-parent-phone').value = ''; }
+            else { toast(r?.message || '新增失敗', 'danger'); }
+        }
+        function editStudent(id) {
+            currentStudent = students.find(s => s.studentId === id);
+            if (!currentStudent) return;
+            document.getElementById('edit-student-id').value = currentStudent.studentId;
+            document.getElementById('edit-student-name').value = currentStudent.name;
+            document.getElementById('edit-student-class').value = currentStudent.classCode;
+            document.getElementById('edit-student-phone').value = currentStudent.phone || '';
+            document.getElementById('edit-student-parent-phone').value = currentStudent.parentPhone || '';
+            openModal('editStudent');
+        }
+        async function saveStudent() {
+            const name = document.getElementById('edit-student-name').value.trim();
+            const classCode = document.getElementById('edit-student-class').value;
+            const phone = document.getElementById('edit-student-phone').value.trim();
+            const parentPhone = document.getElementById('edit-student-parent-phone').value.trim();
+            const r = await api('/api/students/' + currentStudent.studentId, { method: 'PUT', body: JSON.stringify({ name, classCode, phone, parentPhone }) });
+            if (r?.success) { toast('學生已更新！'); closeModal('editStudent'); loadStudents(); }
+        }
+        async function deleteStudent() {
+            if (!confirm('確定刪除學生 ' + currentStudent.name + '？')) return;
+            await api('/api/students/' + currentStudent.studentId, { method: 'DELETE' });
+            toast('學生已刪除！'); closeModal('editStudent'); loadStudents();
+        }
 
-        // Records
-        async function loadRecords(){const d=await api('/api/records');document.getElementById('records-table').innerHTML=d?.length?d.slice(-50).reverse().map((r,i)=>{const cls=r.status==='已報到'?'success':r.status==='遲到'?'warning':'danger';return'<tr><td>'+(r.date||'-')+'</td><td>'+r.studentId+'</td><td>'+(r.studentName||'-')+'</td><td>'+r.courseName+'</td><td><span class="badge '+cls+'">'+r.status+'</span></td><td><button class="btn btn-sm btn-outline" onclick="editRecord('+i+')">✏️</button></td></tr>'}).join(''):'<tr><td colspan="6" class="empty">尚無紀錄</td></tr>'}
-        function editRecord(i){currentRecord=i;document.getElementById('edit-record-info').innerHTML='<div class="alert alert-info">修改出席紀錄</div>';openModal('editRecord')}
-        async function saveRecordEdit(){const status=document.getElementById('edit-status').value,note=document.getElementById('edit-note').value;toast('紀錄已更新！');closeModal('editRecord');loadRecords()}
-        async function addManualRecord(){const studentId=document.getElementById('record-student').value.trim(),date=document.getElementById('record-date').value,status=document.getElementById('record-status').value,note=document.getElementById('record-note').value;if(!studentId||!date){toast('請填寫學號和日期','danger');return}const r=await api('/api/records/manual',{method:'POST',body:JSON.stringify({studentId,date,status,note})});if(r?.success){toast('已新增！');closeModal('addRecord');loadRecords()}else{toast('新增失敗','danger')}}
+        // === 簽到管理 ===
+        async function loadSessions() {
+            const now = new Date();
+            document.getElementById('session-date').textContent = now.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+            const dow = now.getDay();
+            const today = courses.filter(c => c.day == dow);
+            if (!today.length) {
+                document.getElementById('sessions-list').innerHTML = '<div class="empty"><div class="icon">📅</div><h3>今日無課程</h3></div>';
+                return;
+            }
+            document.getElementById('sessions-list').innerHTML = today.map(c => {
+                const p = sem.periods.find(x => x.n == c.period) || { s: '', e: '' };
+                const nowTime = now.getHours() * 60 + now.getMinutes();
+                const endTime = parseInt((p.e || '17:00').split(':')[0]) * 60 + parseInt((p.e || '17:00').split(':')[1] || 0);
+                const completed = nowTime > endTime;
+                return '<div class="session-item' + (completed ? ' completed' : '') + '"><div class="session-header"><div class="session-icon">📖</div><div class="session-info"><h4>' + (c.name || c.subject) + ' - ' + c.classCode + '</h4><span>第' + c.period + '節 · ' + p.s + '-' + p.e + ' · ' + (c.room || '教室') + '</span></div></div><div class="session-actions">' + (completed ? '<button class="btn btn-outline btn-sm" disabled>已結束</button>' : '<button class="btn btn-primary btn-sm" onclick="startSession(\'' + c.id + '\')">📱 簽到</button><button class="btn btn-outline btn-sm" onclick="endSession(\'' + c.id + '\')">⏹️ 結束</button>') + '</div></div>';
+            }).join('');
+        }
+        async function startSession(id) {
+            const c = courses.find(x => x.id === id);
+            if (!c) return;
+            const today = new Date().toISOString().split('T')[0];
+            const p = sem.periods.find(x => x.n == c.period) || { s: '08:00', e: '09:00' };
+            const r = await api('/api/sessions', { method: 'POST', body: JSON.stringify({ courseId: id, date: today, startTime: p.s, endTime: p.e }) });
+            if (r?.success) {
+                showQR(r.qrContent, (c.name || c.subject) + ' - ' + c.classCode, today + ' ' + p.s);
+                toast('簽到已建立！');
+            }
+        }
+        async function endSession(id) {
+            if (!confirm('確定結束？未簽到學生將被標記為缺席。')) return;
+            const r = await api('/api/sessions/' + id + '/complete', { method: 'POST' });
+            if (r?.success) { toast('已結束，' + r.marked + ' 人缺席'); loadSessions(); }
+        }
+        function showQR(content, name, time) {
+            document.getElementById('qr-name').textContent = name;
+            document.getElementById('qr-time').textContent = time;
+            QRCode.toCanvas(document.getElementById('qr-canvas'), 'https://line.me/R/oaMessage/' + BOT + '/?' + encodeURIComponent(content), { width: 200 });
+            openModal('qr');
+        }
+        function downloadQR() {
+            const canvas = document.getElementById('qr-canvas');
+            const link = document.createElement('a');
+            link.download = 'qrcode.png';
+            link.href = canvas.toDataURL();
+            link.click();
+            toast('已下載！');
+        }
 
-        // Stats
-        async function loadStats(){const d=await api('/api/stats/attendance');if(d){document.getElementById('overall-rate').textContent=d.overall+'%';document.getElementById('stats-attended').textContent=d.attended||0;document.getElementById('stats-late').textContent=d.late||0;document.getElementById('stats-absent').textContent=d.absent||0;document.getElementById('stats-total').textContent=d.totalRecords||0;const offset=327-327*(d.overall/100);document.getElementById('progress-circle').style.strokeDashoffset=offset;const low=d.lowAttendance||[];document.getElementById('low-attendance-list').innerHTML=low.length?low.slice(0,10).map(s=>'<div class="student-alert '+(s.rate<60?'critical':'warning')+'"><div class="avatar">'+s.name.charAt(0)+'</div><div class="info"><h5>'+s.name+' ('+s.studentId+')</h5><span>'+s.classCode+' · 出席率 '+s.rate+'%</span></div><button class="btn btn-sm btn-outline" onclick="notifyParent(\''+s.studentId+'\')">👨‍👩‍👧</button></div>').join(''):'<div class="empty">所有學生出席率良好 👍</div>'}loadClassChart()}
-        async function loadClassChart(){const d=await api('/api/charts/class-comparison');if(d?.data&&classChart){classChart.data.labels=d.data.map(x=>x.name);classChart.data.datasets[0].data=d.data.map(x=>x.rate);classChart.update()}}
+        // === 請假管理 ===
+        async function loadLeaves() {
+            const data = await api('/api/leaves');
+            if (data) {
+                leaves = data;
+                const pending = leaves.filter(l => l.status === '待審核').length;
+                const badge = document.getElementById('leave-badge');
+                badge.style.display = pending > 0 ? 'inline' : 'none';
+                badge.textContent = pending;
+                renderLeaves();
+            }
+        }
+        function filterLeaves(filter) {
+            leaveFilter = filter;
+            document.querySelectorAll('#page-leaves .tab').forEach((t, i) => {
+                const filters = ['pending', 'approved', 'rejected', 'all'];
+                t.classList.toggle('active', filters[i] === filter);
+            });
+            renderLeaves();
+        }
+        function renderLeaves() {
+            let filtered = leaves;
+            if (leaveFilter === 'pending') filtered = leaves.filter(l => l.status === '待審核');
+            else if (leaveFilter === 'approved') filtered = leaves.filter(l => l.status === '已核准');
+            else if (leaveFilter === 'rejected') filtered = leaves.filter(l => l.status === '已駁回');
+            document.getElementById('leaves-list').innerHTML = filtered.length ? filtered.map(l => {
+                const badge = l.status === '待審核' ? 'warning' : l.status === '已核准' ? 'success' : 'danger';
+                return '<div class="leave-item ' + l.status.replace('已', '').toLowerCase() + '"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><b>' + l.name + ' (' + l.studentId + ')</b><span class="badge ' + badge + '">' + l.status + '</span></div><div style="font-size:14px;color:var(--text-light);margin-bottom:10px">📅 ' + l.date + ' · 第' + l.periods + '節<br>📝 ' + l.type + '：' + (l.reason || '無說明') + '</div>' + (l.status === '待審核' ? '<button class="btn btn-sm btn-success" onclick="openReviewLeave(\'' + l.id + '\')">審核</button>' : '') + '</div>';
+            }).join('') : '<div class="empty">無請假紀錄</div>';
+        }
+        function openReviewLeave(id) {
+            currentLeave = leaves.find(l => l.id === id);
+            if (!currentLeave) return;
+            document.getElementById('leave-detail').innerHTML = '<div class="alert alert-info"><b>' + currentLeave.name + '</b> (' + currentLeave.studentId + ')<br>📅 ' + currentLeave.date + ' · 第' + currentLeave.periods + '節<br>📝 ' + currentLeave.type + '：' + (currentLeave.reason || '無') + '</div>';
+            document.getElementById('review-note').value = '';
+            openModal('reviewLeave');
+        }
+        async function reviewLeave(status) {
+            if (!currentLeave) return;
+            const note = document.getElementById('review-note').value.trim();
+            const r = await api('/api/leaves/' + currentLeave.id, { method: 'PUT', body: JSON.stringify({ status, note }) });
+            if (r?.success) { toast(status === '已核准' ? '已核准！' : '已駁回！'); closeModal('reviewLeave'); loadLeaves(); }
+        }
 
-        // Alerts
-        async function loadAlerts(){const d=await api('/api/stats/consecutive-absent');if(d?.alerts){document.getElementById('alert-list').innerHTML=d.alerts.length?d.alerts.map(s=>'<div class="student-alert '+(s.level==='critical'?'critical':'warning')+'"><div class="avatar">'+s.name.charAt(0)+'</div><div class="info"><h5>'+s.name+' ('+s.studentId+')</h5><span>'+s.classCode+' · 連續缺席 <b>'+s.consecutiveAbsent+'</b> 次</span></div><div style="display:flex;gap:6px"><button class="btn btn-sm btn-danger" onclick="sendWarningTo(\''+s.studentId+'\','+s.consecutiveAbsent+')">📲</button><button class="btn btn-sm btn-warning" onclick="notifyParent(\''+s.studentId+'\',\'warning\')">👨‍👩‍👧</button></div></div>').join(''):'<div class="empty">目前沒有連續缺席的學生 ✨</div>'}}
-        async function sendWarningTo(id,count=3){const r=await api('/api/notify/warning',{method:'POST',body:JSON.stringify({studentId:id,consecutiveCount:count})});toast(r?.success?'已發送！':'失敗',r?.success?'success':'danger')}
-        async function sendAllWarnings(){const d=await api('/api/stats/consecutive-absent');if(d?.alerts){for(const s of d.alerts)await api('/api/notify/warning',{method:'POST',body:JSON.stringify({studentId:s.studentId,consecutiveCount:s.consecutiveAbsent})});toast('已發送 '+d.alerts.length+' 則！')}}
-        async function notifyParent(id,type='absent'){const r=await api('/api/notify/parent',{method:'POST',body:JSON.stringify({studentId:id,type})});toast(r?.success?'已通知家長！':r?.message||'失敗',r?.success?'success':'danger')}
-        async function sendAllParentWarnings(){const d=await api('/api/stats/consecutive-absent');if(d?.alerts){const ids=d.alerts.map(s=>s.studentId);const r=await api('/api/notify/parents-batch',{method:'POST',body:JSON.stringify({studentIds:ids,type:'warning'})});toast('已通知 '+r.sent+' 位家長！')}}
+        // === 出缺紀錄 ===
+        async function loadRecords() {
+            const data = await api('/api/records');
+            document.getElementById('records-table').innerHTML = data?.length ? data.slice(-50).reverse().map(r => {
+                const badge = r.status === '已報到' ? 'success' : r.status === '遲到' ? 'warning' : 'danger';
+                return '<tr><td>' + (r.date || '-') + '</td><td>' + r.studentId + '</td><td>' + (r.studentName || '-') + '</td><td><span class="badge ' + badge + '">' + r.status + '</span></td></tr>';
+            }).join('') : '<tr><td colspan="4" class="empty">尚無紀錄</td></tr>';
+        }
+        async function addRecord() {
+            const studentId = document.getElementById('record-student').value.trim();
+            const date = document.getElementById('record-date').value;
+            const status = document.getElementById('record-status').value;
+            const note = document.getElementById('record-note').value.trim();
+            if (!studentId || !date) { toast('請填寫學號和日期', 'danger'); return; }
+            const r = await api('/api/records/manual', { method: 'POST', body: JSON.stringify({ studentId, date, status, note }) });
+            if (r?.success) { toast('紀錄已新增！'); closeModal('addRecord'); loadRecords(); }
+        }
 
-        // Reports
-        async function generateReport(){const start=document.getElementById('report-start').value,end=document.getElementById('report-end').value;if(!start||!end){toast('請選擇日期','danger');return}const r=await api('/api/reports/weekly?weekStart='+start+'&weekEnd='+end);if(r?.success){document.getElementById('report-result').innerHTML='<div class="report-card"><div class="report-header">📊 週報 ('+start+' ~ '+end+')</div><div class="report-stats"><div class="report-stat"><div class="value">'+r.summary.rate+'%</div><div class="label">出席率</div></div><div class="report-stat"><div class="value">'+r.summary.attended+'</div><div class="label">出席</div></div><div class="report-stat"><div class="value">'+r.summary.late+'</div><div class="label">遲到</div></div><div class="report-stat"><div class="value">'+r.summary.absent+'</div><div class="label">缺席</div></div></div></div>'+(r.problemStudents?.length?'<div class="card"><div class="card-title">⚠️ 需關注學生</div>'+r.problemStudents.map(s=>'<div style="padding:8px 0;border-bottom:1px solid var(--border)">'+s.name+' - 缺席'+s.absent+'次, 遲到'+s.late+'次</div>').join('')+'</div>':'<div class="alert alert-success">✅ 本週無異常</div>')+'<button class="btn btn-primary btn-block" onclick="sendReport()">📲 發送週報</button>';toast('已產生！')}else{toast('失敗','danger')}}
-        async function sendReport(){toast('週報已發送！')}
+        // === 統計 ===
+        async function loadStats() {
+            const data = await api('/api/stats/attendance');
+            if (data) {
+                document.getElementById('overall-rate').textContent = data.overall + '%';
+                document.getElementById('stats-attended').textContent = data.attended || 0;
+                document.getElementById('stats-late').textContent = data.late || 0;
+                document.getElementById('stats-absent').textContent = data.absent || 0;
+                document.getElementById('stats-total').textContent = data.totalRecords || 0;
+                const offset = 327 - 327 * (data.overall / 100);
+                document.getElementById('progress-circle').style.strokeDashoffset = offset;
+                const low = data.lowAttendance || [];
+                document.getElementById('low-attendance-list').innerHTML = low.length ? low.slice(0, 10).map(s => '<div class="student-alert ' + (s.rate < 60 ? 'critical' : 'warning') + '"><div class="avatar">' + s.name.charAt(0) + '</div><div class="info"><h5>' + s.name + ' (' + s.studentId + ')</h5><span>' + s.classCode + ' · 出席率 ' + s.rate + '%</span></div></div>').join('') : '<div class="empty">所有學生出席率良好 👍</div>';
+            }
+        }
 
-        // Export
-        function selectExportType(t){exportType=t;document.querySelectorAll('.export-option').forEach((e,i)=>e.classList.toggle('active',(i===0&&t==='detail')||(i===1&&t==='summary')))}
-        function exportExcel(){const start=document.getElementById('export-start').value,end=document.getElementById('export-end').value,cls=document.getElementById('export-class').value;let url=API+'/api/export/excel?type='+exportType;if(start)url+='&startDate='+start;if(end)url+='&endDate='+end;if(cls)url+='&classCode='+cls;window.open(url,'_blank');toast('正在下載...')}
+        // === 警示 ===
+        async function loadAlerts() {
+            const data = await api('/api/stats/consecutive-absent');
+            if (data?.alerts) {
+                document.getElementById('alert-list').innerHTML = data.alerts.length ? data.alerts.map(s => '<div class="student-alert ' + (s.level === 'critical' ? 'critical' : 'warning') + '"><div class="avatar">' + s.name.charAt(0) + '</div><div class="info"><h5>' + s.name + ' (' + s.studentId + ')</h5><span>' + s.classCode + ' · 連續缺席 <b>' + s.consecutiveAbsent + '</b> 次</span></div><button class="btn btn-sm btn-danger" onclick="sendWarning(\'' + s.studentId + '\',' + s.consecutiveAbsent + ')">📲 通知</button></div>').join('') : '<div class="empty">目前沒有連續缺席的學生 ✨</div>';
+            }
+        }
+        async function sendWarning(id, count) {
+            const r = await api('/api/notify/warning', { method: 'POST', body: JSON.stringify({ studentId: id, consecutiveCount: count }) });
+            toast(r?.success ? '警告已發送！' : '發送失敗', r?.success ? 'success' : 'danger');
+        }
+        async function sendAllWarnings() {
+            const data = await api('/api/stats/consecutive-absent');
+            if (data?.alerts) {
+                for (const s of data.alerts) {
+                    await api('/api/notify/warning', { method: 'POST', body: JSON.stringify({ studentId: s.studentId, consecutiveCount: s.consecutiveAbsent }) });
+                }
+                toast('已發送 ' + data.alerts.length + ' 則警告！');
+            }
+        }
 
-        // Rewards
-        async function findPerfectAttendance(){const start=document.getElementById('reward-start').value,end=document.getElementById('reward-end').value;if(!start||!end){toast('請選擇日期','danger');return}const r=await api('/api/rewards/perfect-attendance?startDate='+start+'&endDate='+end);if(r?.students){document.getElementById('perfect-list').innerHTML=r.students.length?'<div class="reward-card"><div class="icon">🏆</div><h3>恭喜！共 '+r.students.length+' 位全勤</h3><p>'+start+' ~ '+end+'</p></div>'+r.students.map(s=>'<div class="student-alert success"><div class="avatar">🏆</div><div class="info"><h5>'+s.name+' ('+s.studentId+')</h5><span>'+s.classCode+' · '+s.totalClasses+' 堂課全勤</span></div><button class="btn btn-sm btn-success" onclick="sendReward(\''+s.studentId+'\')">📲 發獎</button></div>').join('')+'<button class="btn btn-success btn-block" onclick="sendAllRewards()">📲 發送全部獎勵通知</button>':'<div class="empty">此期間無全勤學生</div>'}}
-        async function sendReward(id){const r=await api('/api/rewards/send',{method:'POST',body:JSON.stringify({studentIds:[id]})});toast(r?.success?'已發送獎勵！':'失敗',r?.success?'success':'danger')}
-        async function sendAllRewards(){const start=document.getElementById('reward-start').value,end=document.getElementById('reward-end').value;const r=await api('/api/rewards/perfect-attendance?startDate='+start+'&endDate='+end);if(r?.students){const ids=r.students.map(s=>s.studentId);const res=await api('/api/rewards/send',{method:'POST',body:JSON.stringify({studentIds:ids})});toast('已發送 '+res.sent+' 則獎勵！')}}
+        // === 儀表板 ===
+        async function loadDashboard() {
+            const now = new Date();
+            document.getElementById('today-info').textContent = now.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+            const data = await api('/api/dashboard');
+            if (data) {
+                document.getElementById('stat-students').textContent = data.totalStudents || 0;
+                document.getElementById('stat-attended').textContent = data.todayAttended || 0;
+                document.getElementById('stat-late').textContent = data.todayLate || 0;
+                document.getElementById('stat-absent').textContent = data.todayAbsent || 0;
+            }
+            const dow = now.getDay();
+            const today = courses.filter(c => c.day == dow);
+            document.getElementById('today-classes').innerHTML = today.length ? today.map(c => {
+                const p = sem.periods.find(x => x.n == c.period) || { s: '', e: '' };
+                return '<div style="padding:10px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center"><div><b>' + (c.name || c.subject) + '</b> - ' + c.classCode + '<br><small>第' + c.period + '節 ' + p.s + '-' + p.e + '</small></div><button class="btn btn-primary btn-sm" onclick="startSession(\'' + c.id + '\')">📱</button></div>';
+            }).join('') : '<div class="empty">今日無課程</div>';
+            const alerts = await api('/api/stats/consecutive-absent');
+            document.getElementById('dashboard-alerts').innerHTML = alerts?.alerts?.length ? alerts.alerts.slice(0, 3).map(s => '<div style="padding:8px 0;border-bottom:1px solid var(--border)">⚠️ ' + s.name + ' 連續缺席 ' + s.consecutiveAbsent + ' 次</div>').join('') : '<div class="empty">無異常 ✨</div>';
+        }
 
-        // Locations
-        async function loadLocations(){const d=await api('/api/locations');if(d){locations=d;document.getElementById('locations-list').innerHTML=locations.length?locations.map(l=>'<div class="location-item"><div class="location-icon">📍</div><div class="location-info"><h5>'+l.name+'</h5><span>'+l.lat.toFixed(6)+', '+l.lon.toFixed(6)+' · 半徑 '+l.radius+'m</span></div><button class="btn btn-sm btn-danger" onclick="deleteLocation(\''+l.id+'\')">🗑️</button></div>').join(''):'<div class="empty">尚無儲存的位置</div>';updateLocationDD()}}
-        function updateLocationDD(){const sel=document.getElementById('course-location');sel.innerHTML='<option value="">選擇已儲存位置</option>'+locations.map(l=>'<option value="'+l.id+'" data-lat="'+l.lat+'" data-lon="'+l.lon+'">'+l.name+'</option>').join('');sel.onchange=function(){const opt=this.options[this.selectedIndex];if(opt.dataset.lat){document.getElementById('course-lat').value=opt.dataset.lat;document.getElementById('course-lon').value=opt.dataset.lon}}}
-        function getLocForModal(){if(!navigator.geolocation)return;toast('定位中...','warning');navigator.geolocation.getCurrentPosition(p=>{document.getElementById('loc-lat').value=p.coords.latitude.toFixed(6);document.getElementById('loc-lon').value=p.coords.longitude.toFixed(6);toast('已定位')},()=>toast('定位失敗','danger'),{enableHighAccuracy:true})}
-        async function addLocation(){const name=document.getElementById('loc-name').value.trim(),lat=document.getElementById('loc-lat').value,lon=document.getElementById('loc-lon').value,radius=document.getElementById('loc-radius').value;if(!name||!lat||!lon){toast('請填寫必填','danger');return}const r=await api('/api/locations',{method:'POST',body:JSON.stringify({name,lat:+lat,lon:+lon,radius:+radius||50})});if(r?.success){toast('已新增！');closeModal('addLocation');loadLocations()}}
-        async function deleteLocation(id){if(!confirm('確定刪除？'))return;await api('/api/locations/'+id,{method:'DELETE'});toast('已刪除');loadLocations()}
+        // === 設定 ===
+        async function testConn() {
+            const url = document.getElementById('api-url').value.trim();
+            if (!url) { toast('請輸入網址', 'danger'); return; }
+            toast('測試中...', 'warning');
+            try {
+                const res = await fetch(url + '/api/health');
+                if (res.ok) {
+                    API = url;
+                    localStorage.setItem('apiUrl', url);
+                    document.getElementById('status-dot').classList.add('connected');
+                    toast('連線成功！');
+                    loadAll();
+                } else throw new Error();
+            } catch { toast('連線失敗', 'danger'); }
+        }
+        function saveBotId() {
+            BOT = document.getElementById('bot-id').value.trim() || '@bot';
+            localStorage.setItem('botId', BOT);
+            toast('Bot ID 已儲存！');
+        }
 
-        // Dashboard
-        async function loadDashboard(){const now=new Date();document.getElementById('today-info').textContent=now.toLocaleDateString('zh-TW',{year:'numeric',month:'long',day:'numeric',weekday:'long'});const d=await api('/api/dashboard');if(d){document.getElementById('stat-students').textContent=d.totalStudents||0;document.getElementById('stat-attended').textContent=d.todayAttended||0;document.getElementById('stat-late').textContent=d.todayLate||0;document.getElementById('stat-absent').textContent=d.todayAbsent||0}loadTrendChart();const dow=now.getDay(),today=courses.filter(c=>c.day==dow);document.getElementById('today-classes').innerHTML=today.length?today.map(c=>{const p=sem.periods.find(x=>x.n==c.period)||{s:'',e:''};return'<div style="padding:10px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center"><div><b>'+c.name+'</b> - '+c.classCode+'<br><small>第'+c.period+'節 '+p.s+'-'+p.e+'</small></div><button class="btn btn-primary btn-sm" onclick="startSession(\''+c.id+'\')">📱</button></div>'}).join(''):'<div class="empty">今日無課程</div>';const alerts=await api('/api/stats/consecutive-absent');document.getElementById('dashboard-alerts').innerHTML=alerts?.alerts?.length?alerts.alerts.slice(0,3).map(s=>'<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between"><span>⚠️ '+s.name+' 連續缺席 '+s.consecutiveAbsent+' 次</span><button class="btn btn-sm btn-outline" onclick="sendWarningTo(\''+s.studentId+'\','+s.consecutiveAbsent+')">通知</button></div>').join(''):'<div class="empty">無異常 ✨</div>'}
-        async function loadTrendChart(){const d=await api('/api/charts/attendance-trend?days=7');if(d?.data&&trendChart){trendChart.data.labels=d.data.map(x=>x.label);trendChart.data.datasets[0].data=d.data.map(x=>x.rate);trendChart.update()}}
-
-        async function saveNotifySettings(){toast('通知設定已儲存！')}
-
-        async function loadPage(p){if(p==='dashboard')loadDashboard();if(p==='semester'){renderPeriods();if(sem.start)document.getElementById('semester-start').value=sem.start;if(sem.end)document.getElementById('semester-end').value=sem.end;calcWeeks()}if(p==='schedule'){renderGrid();renderCourses()}if(p==='sessions')loadSessions();if(p==='classes')loadClasses();if(p==='students')loadStudents();if(p==='leaves')loadLeaves();if(p==='records')loadRecords();if(p==='stats')loadStats();if(p==='alerts')loadAlerts();if(p==='reports'){const now=new Date(),start=new Date(now);start.setDate(now.getDate()-now.getDay());document.getElementById('report-start').value=start.toISOString().split('T')[0];document.getElementById('report-end').value=now.toISOString().split('T')[0]}if(p==='export'){const now=new Date(),start=new Date(now);start.setMonth(now.getMonth()-1);document.getElementById('export-start').value=start.toISOString().split('T')[0];document.getElementById('export-end').value=now.toISOString().split('T')[0]}if(p==='rewards'){const now=new Date(),start=new Date(now);start.setMonth(now.getMonth()-1);document.getElementById('reward-start').value=start.toISOString().split('T')[0];document.getElementById('reward-end').value=now.toISOString().split('T')[0]}if(p==='locations')loadLocations()}
-        async function loadAll(){await loadClasses();await loadCourses();await loadLeaves();await loadLocations();await loadDashboard()}
-        async function testConn(){const url=document.getElementById('api-url').value.trim();if(!url){toast('請輸入網址','danger');return}toast('測試中...','warning');try{const r=await fetch(url+'/api/health');if(r.ok){API=url;localStorage.setItem('apiUrl',url);document.getElementById('status-dot').classList.add('connected');toast('連線成功！');loadAll()}else throw 0}catch{toast('連線失敗','danger')}}
-        function saveSettings(){const url=document.getElementById('api-url').value.trim(),bot=document.getElementById('line-bot-id').value.trim();if(url){API=url;localStorage.setItem('apiUrl',url)}if(bot){BOT=bot;localStorage.setItem('lineBotId',bot)}toast('已儲存')}
-        
-        function initCharts(){const ctx1=document.getElementById('trend-chart')?.getContext('2d');if(ctx1){trendChart=new Chart(ctx1,{type:'line',data:{labels:[],datasets:[{label:'出席率 %',data:[],borderColor:'#4f46e5',backgroundColor:'rgba(79,70,229,0.1)',fill:true,tension:0.4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:100}}}})}const ctx2=document.getElementById('class-chart')?.getContext('2d');if(ctx2){classChart=new Chart(ctx2,{type:'bar',data:{labels:[],datasets:[{label:'出席率 %',data:[],backgroundColor:'#10b981'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:100}}}})}}
-        
-        function init(){document.getElementById('api-url').value=API;document.getElementById('line-bot-id').value=BOT;renderPeriods();initCharts();if(!API&&location.origin.includes('onrender.com')){API=location.origin;localStorage.setItem('apiUrl',API);document.getElementById('api-url').value=API}if(API)loadAll()}
+        // === 頁面載入 ===
+        function loadPage(page) {
+            if (page === 'dashboard') loadDashboard();
+            if (page === 'semester') { document.getElementById('semester-start').value = sem.start || ''; document.getElementById('semester-end').value = sem.end || ''; calcWeeks(); renderPeriods(); }
+            if (page === 'schedule') { renderScheduleGrid(); renderCourses(); }
+            if (page === 'sessions') loadSessions();
+            if (page === 'classes') loadClasses();
+            if (page === 'students') loadStudents();
+            if (page === 'leaves') loadLeaves();
+            if (page === 'records') { document.getElementById('record-date').value = new Date().toISOString().split('T')[0]; loadRecords(); }
+            if (page === 'stats') loadStats();
+            if (page === 'alerts') loadAlerts();
+            if (page === 'linebot') document.getElementById('bot-id').value = BOT;
+        }
+        async function loadAll() {
+            await loadClasses();
+            await loadCourses();
+            await loadLeaves();
+            await loadDashboard();
+        }
+        function init() {
+            document.getElementById('api-url').value = API;
+            document.getElementById('bot-id').value = BOT;
+            // 載入部別設定
+            selectDivision(sem.div || 'day');
+            if (sem.start) document.getElementById('semester-start').value = sem.start;
+            if (sem.end) document.getElementById('semester-end').value = sem.end;
+            calcWeeks();
+            // 自動偵測 API
+            if (!API && location.origin.includes('onrender.com')) {
+                API = location.origin;
+                localStorage.setItem('apiUrl', API);
+                document.getElementById('api-url').value = API;
+            }
+            if (API) loadAll();
+        }
         init();
     </script>
 </body>
