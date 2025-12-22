@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📚 簽到系統設定教學</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #06c755;
+            --primary-dark: #05a648;
+            --google-blue: #4285f4;
+            --google-green: #34a853;
+            --render-purple: #6366f1;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.8;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-light);
+            margin-bottom: 40px;
+        }
+
+        /* Progress Steps */
+        .progress {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .progress-step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: var(--card);
+            border-radius: 30px;
+            border: 2px solid var(--border);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .progress-step:hover {
+            border-color: var(--primary);
+        }
+
+        .progress-step.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .progress-step.done {
+            background: var(--success);
+            color: white;
+            border-color: var(--success);
+        }
+
+        .step-num {
+            width: 24px;
+            height: 24px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        /* Section */
+        .section {
+            background: var(--card);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .section-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .section-icon.line { background: linear-gradient(135deg, #06c755, #05a648); }
+        .section-icon.google { background: linear-gradient(135deg, #4285f4, #34a853); }
+        .section-icon.render { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+        .section-icon.test { background: linear-gradient(135deg, #f59e0b, #ef4444); }
+
+        .section-title {
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .section-subtitle {
+            font-size: 14px;
+            color: var(--text-light);
+        }
+
+        /* Steps */
+        .step {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 25px;
+            padding-bottom: 25px;
+            border-bottom: 1px dashed var(--border);
+        }
+
+        .step:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .step-number {
+            width: 36px;
+            height: 36px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .step.google .step-number { background: var(--google-blue); }
+        .step.render .step-number { background: var(--render-purple); }
+
+        .step-content {
+            flex: 1;
+        }
+
+        .step-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .step-desc {
+            color: var(--text-light);
+            margin-bottom: 15px;
+        }
+
+        /* Link Button */
+        .link-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            background: var(--primary);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 500;
+            transition: all 0.3s;
+            margin-bottom: 15px;
+        }
+
+        .link-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(6, 199, 85, 0.3);
+        }
+
+        .link-btn.google { background: var(--google-blue); }
+        .link-btn.google:hover { box-shadow: 0 10px 20px rgba(66, 133, 244, 0.3); }
+
+        .link-btn.render { background: var(--render-purple); }
+        .link-btn.render:hover { box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3); }
+
+        /* Info Box */
+        .info-box {
+            background: #f0fdf4;
+            border: 1px solid #86efac;
+            border-radius: 10px;
+            padding: 15px 20px;
+            margin: 15px 0;
+            display: flex;
+            gap: 12px;
+        }
+
+        .info-box.warning {
+            background: #fffbeb;
+            border-color: #fcd34d;
+        }
+
+        .info-box.danger {
+            background: #fef2f2;
+            border-color: #fca5a5;
+        }
+
+        .info-box-icon {
+            font-size: 20px;
+        }
+
+        .info-box-content {
+            flex: 1;
+        }
+
+        .info-box-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        /* Code Block */
+        .code-block {
+            background: #1e293b;
+            color: #e2e8f0;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            overflow-x: auto;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 14px;
+            position: relative;
+        }
+
+        .code-block code {
+            display: block;
+            white-space: pre;
+        }
+
+        .code-label {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255,255,255,0.1);
+            padding: 3px 10px;
+            border-radius: 5px;
+            font-size: 11px;
+            color: #94a3b8;
+        }
+
+        .copy-btn {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        /* Input Display */
+        .input-display {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #f1f5f9;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .input-label {
+            font-weight: 600;
+            color: var(--text-light);
+            white-space: nowrap;
+        }
+
+        .input-value {
+            flex: 1;
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 15px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 13px;
+            color: var(--text);
+        }
+
+        /* Image Placeholder */
+        .img-placeholder {
+            background: linear-gradient(135deg, #e2e8f0, #f1f5f9);
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            margin: 15px 0;
+            border: 2px dashed var(--border);
+        }
+
+        .img-placeholder .icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .img-placeholder p {
+            color: var(--text-light);
+        }
+
+        /* Table */
+        .env-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        .env-table th,
+        .env-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border: 1px solid var(--border);
+        }
+
+        .env-table th {
+            background: #f1f5f9;
+            font-weight: 600;
+        }
+
+        .env-table code {
+            background: #e2e8f0;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        /* Checklist */
+        .checklist {
+            list-style: none;
+            margin: 15px 0;
+        }
+
+        .checklist li {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .checklist li:last-child {
+            border-bottom: none;
+        }
+
+        .check-icon {
+            width: 24px;
+            height: 24px;
+            background: var(--border);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            flex-shrink: 0;
+        }
+
+        .check-icon.checked {
+            background: var(--success);
+            color: white;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-light);
+        }
+
+        .footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        /* Collapsible */
+        .collapsible {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+
+        .collapsible-header {
+            padding: 15px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+        }
+
+        .collapsible-header:hover {
+            background: #f1f5f9;
+        }
+
+        .collapsible-content {
+            padding: 0 20px 20px;
+            display: none;
+        }
+
+        .collapsible.open .collapsible-content {
+            display: block;
+        }
+
+        .collapsible-arrow {
+            transition: transform 0.3s;
+        }
+
+        .collapsible.open .collapsible-arrow {
+            transform: rotate(180deg);
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .step {
+                flex-direction: column;
+            }
+            .progress {
+                gap: 5px;
+            }
+            .progress-step {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 學生簽到系統設定教學</h1>
+        <p class="subtitle">跟著步驟完成設定，大約需要 15-20 分鐘</p>
+
+        <!-- Progress -->
+        <div class="progress">
+            <div class="progress-step active" onclick="scrollToSection('line')">
+                <span class="step-num">1</span>
+                LINE Bot
+            </div>
+            <div class="progress-step" onclick="scrollToSection('sheets')">
+                <span class="step-num">2</span>
+                Google Sheets
+            </div>
+            <div class="progress-step" onclick="scrollToSection('render')">
+                <span class="step-num">3</span>
+                部署 Render
+            </div>
+            <div class="progress-step" onclick="scrollToSection('test')">
+                <span class="step-num">4</span>
+                測試
+            </div>
+        </div>
+
+        <!-- ==================== PART 1: LINE Bot ==================== -->
+        <div class="section" id="line">
+            <div class="section-header">
+                <div class="section-icon line">💬</div>
+                <div>
+                    <div class="section-title">第一部分：建立 LINE Bot</div>
+                    <div class="section-subtitle">預計時間：5 分鐘</div>
+                </div>
+            </div>
+
+            <!-- Step 1 -->
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <div class="step-title">前往 LINE Developers Console</div>
+                    <div class="step-desc">用你的 LINE 帳號登入開發者平台</div>
+                    
+                    <a href="https://developers.line.biz/console/" target="_blank" class="link-btn">
+                        🔗 開啟 LINE Developers
+                    </a>
+
+                    <div class="info-box">
+                        <span class="info-box-icon">💡</span>
+                        <div class="info-box-content">
+                            <div class="info-box-title">提示</div>
+                            如果是第一次使用，需要同意開發者條款
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <div class="step-title">建立 Provider</div>
+                    <div class="step-desc">Provider 是用來管理你的 LINE 應用程式的容器</div>
+                    
+                    <div class="img-placeholder">
+                        <div class="icon">🏢</div>
+                        <p>點擊 <strong>Create</strong> 按鈕 → 輸入名稱（例如：學校簽到系統）</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <div class="step-title">建立 Messaging API Channel</div>
+                    <div class="step-desc">這就是你的 LINE Bot</div>
+                    
+                    <ul class="checklist">
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>點擊 <strong>Create a new channel</strong></span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>選擇 <strong>Messaging API</strong></span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>Channel name: <code>學生簽到系統</code></span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>Channel description: <code>課堂 GPS 簽到系統</code></span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>Category: <code>教育</code> → Subcategory: <code>學校</code></span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>同意條款並點擊 <strong>Create</strong></span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <div class="step-title">取得 Channel Secret</div>
+                    <div class="step-desc">在 <strong>Basic settings</strong> 分頁中找到</div>
+                    
+                    <div class="input-display">
+                        <span class="input-label">Channel Secret:</span>
+                        <input type="text" class="input-value" id="line-secret" placeholder="貼上你的 Channel Secret">
+                    </div>
+
+                    <div class="info-box warning">
+                        <span class="info-box-icon">⚠️</span>
+                        <div class="info-box-content">
+                            <div class="info-box-title">重要</div>
+                            請妥善保存，不要分享給他人
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 5 -->
+            <div class="step">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                    <div class="step-title">取得 Channel Access Token</div>
+                    <div class="step-desc">在 <strong>Messaging API</strong> 分頁中找到，點擊 <strong>Issue</strong> 產生</div>
+                    
+                    <div class="input-display">
+                        <span class="input-label">Access Token:</span>
+                        <input type="text" class="input-value" id="line-token" placeholder="貼上你的 Channel Access Token">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 6 -->
+            <div class="step">
+                <div class="step-number">6</div>
+                <div class="step-content">
+                    <div class="step-title">關閉自動回覆</div>
+                    <div class="step-desc">避免 Bot 自動回覆干擾</div>
+                    
+                    <ul class="checklist">
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>在 Messaging API 分頁，找到 <strong>Auto-reply messages</strong> → 點擊 <strong>Edit</strong></span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>關閉 <strong>Auto-reply messages</strong>（設為 Disabled）</span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>關閉 <strong>Greeting messages</strong>（設為 Disabled）</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <span class="info-box-icon">✅</span>
+                <div class="info-box-content">
+                    <div class="info-box-title">LINE Bot 設定完成！</div>
+                    Webhook URL 稍後在 Render 部署完成後再設定
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== PART 2: Google Sheets ==================== -->
+        <div class="section" id="sheets">
+            <div class="section-header">
+                <div class="section-icon google">📊</div>
+                <div>
+                    <div class="section-title">第二部分：設定 Google Sheets</div>
+                    <div class="section-subtitle">預計時間：10 分鐘</div>
+                </div>
+            </div>
+
+            <!-- Step 1 -->
+            <div class="step google">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <div class="step-title">建立新的 Google Sheets</div>
+                    <div class="step-desc">這將用來儲存所有簽到資料</div>
+                    
+                    <a href="https://sheets.google.com/" target="_blank" class="link-btn google">
+                        🔗 開啟 Google Sheets
+                    </a>
+
+                    <ul class="checklist">
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>點擊 <strong>空白試算表</strong></span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>命名為 <code>學生簽到系統資料庫</code></span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="step google">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <div class="step-title">取得試算表 ID</div>
+                    <div class="step-desc">從網址中取得 ID</div>
+                    
+                    <div class="code-block">
+                        <span class="code-label">網址格式</span>
+                        <code>https://docs.google.com/spreadsheets/d/<strong style="color:#22c55e;">這一段就是ID</strong>/edit</code>
+                    </div>
+
+                    <div class="input-display">
+                        <span class="input-label">Sheet ID:</span>
+                        <input type="text" class="input-value" id="sheet-id" placeholder="貼上你的 Google Sheets ID">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="step google">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <div class="step-title">前往 Google Cloud Console</div>
+                    <div class="step-desc">建立服務帳號來讓程式存取試算表</div>
+                    
+                    <a href="https://console.cloud.google.com/" target="_blank" class="link-btn google">
+                        🔗 開啟 Google Cloud Console
+                    </a>
+                </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="step google">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <div class="step-title">建立新專案</div>
+                    
+                    <ul class="checklist">
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>點擊頂部的專案選擇器 → <strong>新增專案</strong></span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>專案名稱: <code>attendance-system</code></span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>點擊 <strong>建立</strong></span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Step 5 -->
+            <div class="step google">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                    <div class="step-title">啟用 Google Sheets API</div>
+                    
+                    <a href="https://console.cloud.google.com/apis/library/sheets.googleapis.com" target="_blank" class="link-btn google">
+                        🔗 啟用 Sheets API
+                    </a>
+
+                    <ul class="checklist">
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>確認已選擇正確的專案</span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>點擊 <strong>啟用</strong> 按鈕</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Step 6 -->
+            <div class="step google">
+                <div class="step-number">6</div>
+                <div class="step-content">
+                    <div class="step-title">建立服務帳號</div>
+                    
+                    <a href="https://console.cloud.google.com/iam-admin/serviceaccounts" target="_blank" class="link-btn google">
+                        🔗 服務帳號頁面
+                    </a>
+
+                    <ul class="checklist">
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>點擊 <strong>+ 建立服務帳號</strong></span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>服務帳號名稱: <code>attendance-bot</code></span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>點擊 <strong>建立並繼續</strong></span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>角色選擇 <strong>編輯者</strong>（可跳過）</span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>點擊 <strong>完成</strong></span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Step 7 -->
+            <div class="step google">
+                <div class="step-number">7</div>
+                <div class="step-content">
+                    <div class="step-title">下載金鑰（JSON）</div>
+                    <div class="step-desc">這個檔案包含程式需要的認證資訊</div>
+                    
+                    <ul class="checklist">
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>點擊剛建立的服務帳號</span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>切換到 <strong>金鑰</strong> 分頁</span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>點擊 <strong>新增金鑰</strong> → <strong>建立新金鑰</strong></span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>選擇 <strong>JSON</strong> → 點擊 <strong>建立</strong></span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>檔案會自動下載（妥善保存！）</span>
+                        </li>
+                    </ul>
+
+                    <div class="info-box danger">
+                        <span class="info-box-icon">🔐</span>
+                        <div class="info-box-content">
+                            <div class="info-box-title">安全提醒</div>
+                            這個 JSON 檔案非常重要，不要上傳到公開的地方！
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 8 -->
+            <div class="step google">
+                <div class="step-number">8</div>
+                <div class="step-content">
+                    <div class="step-title">從 JSON 檔案取得資訊</div>
+                    <div class="step-desc">用文字編輯器打開下載的 JSON 檔案</div>
+                    
+                    <div class="input-display">
+                        <span class="input-label">client_email:</span>
+                        <input type="text" class="input-value" id="google-email" placeholder="xxx@xxx.iam.gserviceaccount.com">
+                    </div>
+
+                    <div class="collapsible" onclick="this.classList.toggle('open')">
+                        <div class="collapsible-header">
+                            <span>📋 如何找到 private_key？</span>
+                            <span class="collapsible-arrow">▼</span>
+                        </div>
+                        <div class="collapsible-content">
+                            <p>在 JSON 檔案中找到 <code>"private_key"</code>，複製整段內容（包含 -----BEGIN PRIVATE KEY----- 和 -----END PRIVATE KEY-----）</p>
+                            <div class="code-block">
+                                <code>"private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQ...(很長一串)...\n-----END PRIVATE KEY-----\n"</code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 9 -->
+            <div class="step google">
+                <div class="step-number">9</div>
+                <div class="step-content">
+                    <div class="step-title">授權服務帳號存取試算表</div>
+                    <div class="step-desc">讓程式可以讀寫你的試算表</div>
+                    
+                    <ul class="checklist">
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>開啟你的 Google Sheets</span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>點擊右上角 <strong>共用</strong> 按鈕</span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>貼上服務帳號的 Email（client_email）</span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>權限選擇 <strong>編輯者</strong></span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>取消勾選「通知使用者」→ 點擊 <strong>共用</strong></span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <span class="info-box-icon">✅</span>
+                <div class="info-box-content">
+                    <div class="info-box-title">Google Sheets 設定完成！</div>
+                    你現在應該有：Sheet ID、服務帳號 Email、Private Key
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== PART 3: Render ==================== -->
+        <div class="section" id="render">
+            <div class="section-header">
+                <div class="section-icon render">🚀</div>
+                <div>
+                    <div class="section-title">第三部分：部署到 Render</div>
+                    <div class="section-subtitle">預計時間：5 分鐘</div>
+                </div>
+            </div>
+
+            <!-- Step 1 -->
+            <div class="step render">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <div class="step-title">登入 Render</div>
+                    <div class="step-desc">用 GitHub 帳號登入最方便</div>
+                    
+                    <a href="https://dashboard.render.com/" target="_blank" class="link-btn render">
+                        🔗 開啟 Render Dashboard
+                    </a>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="step render">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <div class="step-title">建立 Web Service</div>
+                    
+                    <ul class="checklist">
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>點擊 <strong>New +</strong> → <strong>Web Service</strong></span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>選擇 <strong>Build and deploy from a Git repository</strong></span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>連結你的 GitHub 帳號（如果還沒連結）</span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>選擇 <strong>attendance-line-bot</strong> Repository</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="step render">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <div class="step-title">設定服務</div>
+                    
+                    <table class="env-table">
+                        <tr>
+                            <th>欄位</th>
+                            <th>值</th>
+                        </tr>
+                        <tr>
+                            <td>Name</td>
+                            <td><code>attendance-line-bot</code></td>
+                        </tr>
+                        <tr>
+                            <td>Region</td>
+                            <td><code>Singapore</code>（離台灣最近）</td>
+                        </tr>
+                        <tr>
+                            <td>Branch</td>
+                            <td><code>main</code></td>
+                        </tr>
+                        <tr>
+                            <td>Runtime</td>
+                            <td><code>Node</code></td>
+                        </tr>
+                        <tr>
+                            <td>Build Command</td>
+                            <td><code>npm install</code></td>
+                        </tr>
+                        <tr>
+                            <td>Start Command</td>
+                            <td><code>npm start</code></td>
+                        </tr>
+                        <tr>
+                            <td>Instance Type</td>
+                            <td><code>Free</code></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="step render">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <div class="step-title">設定環境變數</div>
+                    <div class="step-desc">展開 <strong>Advanced</strong> 或在建立後到 <strong>Environment</strong> 設定</div>
+                    
+                    <table class="env-table">
+                        <tr>
+                            <th>Key</th>
+                            <th>Value（你的資料）</th>
+                        </tr>
+                        <tr>
+                            <td><code>LINE_CHANNEL_ACCESS_TOKEN</code></td>
+                            <td>LINE Bot 的 Access Token</td>
+                        </tr>
+                        <tr>
+                            <td><code>LINE_CHANNEL_SECRET</code></td>
+                            <td>LINE Bot 的 Channel Secret</td>
+                        </tr>
+                        <tr>
+                            <td><code>GOOGLE_SHEET_ID</code></td>
+                            <td>Google Sheets 的 ID</td>
+                        </tr>
+                        <tr>
+                            <td><code>GOOGLE_SERVICE_ACCOUNT_EMAIL</code></td>
+                            <td>服務帳號的 Email</td>
+                        </tr>
+                        <tr>
+                            <td><code>GOOGLE_PRIVATE_KEY</code></td>
+                            <td>服務帳號的 Private Key（整段）</td>
+                        </tr>
+                    </table>
+
+                    <div class="info-box warning">
+                        <span class="info-box-icon">⚠️</span>
+                        <div class="info-box-content">
+                            <div class="info-box-title">Private Key 格式</div>
+                            直接貼上 JSON 中的 private_key 值，包含換行符號 \n
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 5 -->
+            <div class="step render">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                    <div class="step-title">建立並等待部署</div>
+                    
+                    <ul class="checklist">
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>點擊 <strong>Create Web Service</strong></span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>等待部署完成（約 2-3 分鐘）</span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>看到 <strong>Live</strong> 就表示成功！</span>
+                        </li>
+                    </ul>
+
+                    <div class="input-display">
+                        <span class="input-label">你的網址:</span>
+                        <input type="text" class="input-value" id="render-url" placeholder="https://xxx.onrender.com">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 6 -->
+            <div class="step render">
+                <div class="step-number">6</div>
+                <div class="step-content">
+                    <div class="step-title">回到 LINE Developers 設定 Webhook</div>
+                    
+                    <a href="https://developers.line.biz/console/" target="_blank" class="link-btn">
+                        🔗 開啟 LINE Developers
+                    </a>
+
+                    <ul class="checklist">
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>進入你的 Channel → <strong>Messaging API</strong> 分頁</span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>找到 <strong>Webhook settings</strong></span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>Webhook URL 填入: <code>https://你的網址.onrender.com/webhook</code></span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>點擊 <strong>Verify</strong> 確認連線</span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>開啟 <strong>Use webhook</strong></span>
+                        </li>
+                    </ul>
+
+                    <div class="info-box">
+                        <span class="info-box-icon">✅</span>
+                        <div class="info-box-content">
+                            <div class="info-box-title">看到 Success 就完成了！</div>
+                            如果 Verify 失敗，請檢查環境變數是否正確
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== PART 4: Test ==================== -->
+        <div class="section" id="test">
+            <div class="section-header">
+                <div class="section-icon test">🧪</div>
+                <div>
+                    <div class="section-title">第四部分：測試系統</div>
+                    <div class="section-subtitle">確認一切運作正常</div>
+                </div>
+            </div>
+
+            <!-- Step 1 -->
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <div class="step-title">加入 LINE Bot 好友</div>
+                    <div class="step-desc">在 LINE Developers 的 Messaging API 分頁找到 QR Code</div>
+                    
+                    <ul class="checklist">
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>用 LINE 掃描 Bot 的 QR Code</span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>加入好友</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <div class="step-title">測試基本功能</div>
+                    
+                    <ul class="checklist">
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>傳送「說明」→ 應該收到使用說明</span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>傳送「註冊」→ 開始綁定流程</span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>輸入學號、姓名、班級完成註冊</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <div class="step-title">檢查 Google Sheets</div>
+                    <div class="step-desc">確認資料有正確寫入</div>
+                    
+                    <ul class="checklist">
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>打開你的 Google Sheets</span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>應該看到自動建立的「學生名單」工作表</span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>確認你的註冊資料有出現</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <div class="step-title">開啟教師管理介面</div>
+                    
+                    <div class="input-display">
+                        <span class="input-label">教師介面:</span>
+                        <input type="text" class="input-value" readonly value="https://你的網址.onrender.com/">
+                    </div>
+
+                    <ul class="checklist">
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>建立班級</span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>建立課程（設定 GPS 座標）</span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>建立簽到活動</span>
+                        </li>
+                        <li>
+                            <span class="check-icon" onclick="toggleCheck(this)"></span>
+                            <span>產生 QR Code</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <span class="info-box-icon">🎉</span>
+                <div class="info-box-content">
+                    <div class="info-box-title">恭喜！系統設定完成！</div>
+                    現在可以開始使用學生簽到系統了
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>📚 學生簽到系統 - 設定教學</p>
+            <p>如有問題，請檢查 Render 的 Logs 查看錯誤訊息</p>
+        </div>
+    </div>
+
+    <script>
+        function toggleCheck(el) {
+            el.classList.toggle('checked');
+            if (el.classList.contains('checked')) {
+                el.innerHTML = '✓';
+            } else {
+                el.innerHTML = '';
+            }
+        }
+
+        function scrollToSection(id) {
+            document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Update progress on scroll
+        window.addEventListener('scroll', () => {
+            const sections = ['line', 'sheets', 'render', 'test'];
+            const steps = document.querySelectorAll('.progress-step');
+            
+            sections.forEach((id, index) => {
+                const section = document.getElementById(id);
+                const rect = section.getBoundingClientRect();
+                
+                if (rect.top < window.innerHeight / 2 && rect.bottom > 0) {
+                    steps.forEach(s => s.classList.remove('active'));
+                    steps[index].classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
