@@ -113,7 +113,7 @@
         <!-- Semester -->
         <div class="page" id="page-semester">
             <div class="header"><h1 class="page-title">學期設定</h1><p class="page-subtitle">設定學期日期與節次時間</p></div>
-            <div class="card"><div class="card-title">🏫 部別選擇</div><div class="chip-group" id="division-chips"><div class="chip day" data-div="day" onclick="selectDivision('day')">☀️ 日間部</div><div class="chip night" data-div="night" onclick="selectDivision('night')">🌙 夜間部</div><div class="chip weekend" data-div="weekend" onclick="selectDivision('weekend')">📅 進修部</div></div></div>
+            <div class="card"><div class="card-title">🏫 部別選擇</div><div class="chip-group" id="division-chips"><div class="chip day" data-div="day" onclick="selectDivision('day', true)">☀️ 日間部</div><div class="chip night" data-div="night" onclick="selectDivision('night', true)">🌙 夜間部</div><div class="chip weekend" data-div="weekend" onclick="selectDivision('weekend', true)">📅 進修部</div></div></div>
             <div class="card"><div class="card-title">📆 學期期間</div><div class="form-row"><div class="form-group"><label class="form-label">開學日期</label><input type="date" class="form-input" id="semester-start" onchange="calcWeeks()"></div><div class="form-group"><label class="form-label">結業日期</label><input type="date" class="form-input" id="semester-end" onchange="calcWeeks()"></div></div><div class="alert alert-info">ℹ️ 自動計算：<strong id="semester-weeks">0</strong> 週</div></div>
             <div class="card"><div class="card-title">⏰ 節次時間表</div><div id="period-settings"></div></div>
             <button class="btn btn-primary btn-block" onclick="saveSemester()">💾 儲存學期設定</button>
@@ -332,12 +332,16 @@
         }
 
         // === 學期設定 ===
-        function selectDivision(div) {
+        function selectDivision(div, forceReset = false) {
+            const prevDiv = sem.div;
             sem.div = div;
             document.querySelectorAll('#division-chips .chip').forEach(c => {
                 c.classList.toggle('active', c.dataset.div === div);
             });
-            sem.periods = [...PERIODS[div]];
+            // 只有切換部別或強制重設時才重設節次
+            if (forceReset || prevDiv !== div || !sem.periods || sem.periods.length === 0) {
+                sem.periods = [...PERIODS[div]];
+            }
             renderPeriods();
             localStorage.setItem('semester', JSON.stringify(sem));
         }
@@ -790,11 +794,23 @@
         function init() {
             document.getElementById('api-url').value = API;
             document.getElementById('bot-id').value = BOT;
-            // 載入部別設定
-            selectDivision(sem.div || 'day');
+            
+            // 載入部別設定 - 只更新 UI，不重設 periods
+            const savedDiv = sem.div || 'day';
+            document.querySelectorAll('#division-chips .chip').forEach(c => {
+                c.classList.toggle('active', c.dataset.div === savedDiv);
+            });
+            
+            // 如果沒有保存的 periods，才使用預設
+            if (!sem.periods || sem.periods.length === 0) {
+                sem.periods = [...PERIODS[savedDiv]];
+            }
+            renderPeriods();
+            
             if (sem.start) document.getElementById('semester-start').value = sem.start;
             if (sem.end) document.getElementById('semester-end').value = sem.end;
             calcWeeks();
+            
             // 自動偵測 API
             if (!API && location.origin.includes('onrender.com')) {
                 API = location.origin;
