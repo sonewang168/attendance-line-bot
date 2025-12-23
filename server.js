@@ -135,9 +135,8 @@ async function registerStudent(lineUserId, lineName, studentId, studentName, cla
  */
 async function getCourse(courseId) {
     const sheet = await getOrCreateSheet('課程列表', [
-        '課程ID', '科目', '班級', '教師', '上課時間', '教室', 
-        '教室緯度', '教室經度', '簽到範圍(公尺)', '遲到標準(分鐘)', 
-        '通知教師', '通知家長', '狀態', '建立時間'
+        '課程ID', '科目', '班級', '教師', '星期', '節次', '上課時間', '教室', 
+        '教室緯度', '教室經度', '簽到範圍', '遲到標準', '狀態', '建立時間'
     ]);
     const rows = await sheet.getRows();
     return rows.find(row => row.get('課程ID') === courseId);
@@ -152,10 +151,11 @@ async function getTodaySession(courseId) {
         '活動ID', '課程ID', '日期', '開始時間', '結束時間', 'QR碼內容', '狀態'
     ]);
     const rows = await sheet.getRows();
+    // 允許「進行中」狀態的活動
     return rows.find(row => 
         row.get('課程ID') === courseId && 
         row.get('日期') === today &&
-        row.get('狀態') === '進行中'
+        (row.get('狀態') === '進行中' || row.get('狀態') === '處理中')
     );
 }
 
@@ -414,7 +414,9 @@ async function handleRegistrationFlow(event, userId, userName, text, state) {
 }
 
 /**
- * 處理簽到請求（掃描老師手機 QR Code - 直接簽到）
+ * 處理簽到請求
+ * - 如果課程有設定 GPS（座標不為 0 且範圍 > 0），要求學生傳送位置
+ * - 如果沒有 GPS 設定，直接簽到
  */
 async function handleCheckinRequest(event, userId, text) {
     const student = await getStudent(userId);
@@ -448,11 +450,50 @@ async function handleCheckinRequest(event, userId, text) {
         return replyText(event, `✅ 您已經簽到過了！\n\n📚 課程：${course.get('科目')}\n⏰ 簽到時間：${existingRecord.get('簽到時間')}`);
     }
     
-    // 直接簽到（掃描老師手機，不需要 GPS）
+    // 檢查是否需要 GPS 驗證
+    const classroomLat = parseFloat(course.get('教室緯度')) || 0;
+    const classroomLon = parseFloat(course.get('教室經度')) || 0;
+    const checkRadius = parseInt(course.get('簽到範圍')) || 0;
+    
+    // 如果有設定 GPS 座標且範圍 > 0，要求傳送位置
+    if (classroomLat !== 0 && classroomLon !== 0 && checkRadius > 0) {
+        // 儲存待簽到資訊
+        userStates.set(userId, { 
+            step: 'waitingLocation',
+            courseId,
+            sessionId,
+            courseName: course.get('科目'),
+            classroomLat,
+            classroomLon,
+            checkRadius,
+            lateMinutes: parseInt(course.get('遲到標準')) || 10,
+            startTime: session.get('開始時間')
+        });
+        
+        // 請求位置
+        return lineClient.replyMessage(event.replyToken, {
+            type: 'template',
+            altText: '📍 請傳送您的位置以完成簽到',
+            template: {
+                type: 'buttons',
+                title: `📍 GPS 簽到 - ${course.get('科目')}`,
+                text: `簽到範圍：${checkRadius} 公尺\n請點擊下方按鈕傳送您的位置`,
+                actions: [
+                    {
+                        type: 'uri',
+                        label: '📍 傳送位置',
+                        uri: 'https://line.me/R/nv/location'
+                    }
+                ]
+            }
+        });
+    }
+    
+    // 不需要 GPS，直接簽到
     const startTime = session.get('開始時間');
-    const lateMinutes = parseInt(course.get('遲到標準(分鐘)')) || 10;
+    const lateMinutes = parseInt(course.get('遲到標準')) || 10;
     const now = new Date();
-    const [startHour, startMin] = startTime.split(':').map(Number);
+    const [startHour, startMin] = (startTime || '08:00').split(':').map(Number);
     const startDate = new Date();
     startDate.setHours(startHour, startMin, 0, 0);
     
@@ -465,7 +506,7 @@ async function handleCheckinRequest(event, userId, text) {
         student.get('學號'),
         status,
         diffMinutes > lateMinutes ? diffMinutes : 0,
-        '', ''  // 不記錄 GPS（因為是掃老師手機）
+        '', ''  // 不記錄 GPS
     );
     
     if (result.success) {
