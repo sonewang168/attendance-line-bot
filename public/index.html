@@ -267,6 +267,25 @@
         <div class="page" id="page-settings">
             <div class="header"><h1 class="page-title">系統設定</h1></div>
             <div class="card"><div class="card-title">🔗 API 連線</div><div class="form-group"><label class="form-label">後端網址</label><input type="text" class="form-input" id="api-url" placeholder="https://your-app.onrender.com"></div><button class="btn btn-primary btn-block" onclick="testConn()">🔍 測試連線</button></div>
+            <div class="card"><div class="card-title">🧪 測試驗證</div>
+                <p style="color:var(--text-light);font-size:13px;margin-bottom:15px">老師可以在這裡測試各項功能，不需要等到實際課堂結束。</p>
+                <div class="form-group">
+                    <label class="form-label">選擇測試班級</label>
+                    <select class="form-select" id="test-class"></select>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:10px">
+                    <button class="btn btn-outline" onclick="testSemesterEndNotify()">📚 測試學期結束通知</button>
+                    <button class="btn btn-outline" onclick="testCheckinNotify()">✅ 測試簽到成功通知</button>
+                    <button class="btn btn-outline" onclick="testLateNotify()">⚠️ 測試遲到通知</button>
+                    <button class="btn btn-outline" onclick="testAbsentNotify()">❌ 測試缺席通知</button>
+                    <button class="btn btn-outline" onclick="testReminderNotify()">📢 測試上課提醒</button>
+                </div>
+                <div class="alert alert-warning" style="margin-top:15px;font-size:12px">⚠️ 測試通知會發送給該班級所有已綁定 LINE 的學生</div>
+            </div>
+            <div class="card"><div class="card-title">🔧 LINE Bot 設定</div>
+                <div class="form-group"><label class="form-label">LINE Bot ID</label><input type="text" class="form-input" id="bot-id" placeholder="@516bpeih"></div>
+                <button class="btn btn-primary btn-block" onclick="saveBotId()">💾 儲存 Bot ID</button>
+            </div>
         </div>
     </main>
     <div class="toast-container" id="toasts"></div>
@@ -1113,6 +1132,74 @@
             localStorage.setItem('botId', BOT);
             toast('Bot ID 已儲存！');
         }
+        
+        // === 測試驗證功能 ===
+        async function testSemesterEndNotify() {
+            const classCode = document.getElementById('test-class').value;
+            if (!classCode) { toast('請選擇測試班級', 'danger'); return; }
+            if (!confirm('確定發送「學期結束通知」給 ' + classCode + ' 班級所有學生？')) return;
+            toast('發送中...', 'warning');
+            const r = await api('/api/test/semester-end', { method: 'POST', body: JSON.stringify({ classCode }) });
+            if (r?.success) {
+                toast('已發送 ' + r.count + ' 則學期結束通知！');
+            } else {
+                toast(r?.message || '發送失敗', 'danger');
+            }
+        }
+        async function testCheckinNotify() {
+            const classCode = document.getElementById('test-class').value;
+            if (!classCode) { toast('請選擇測試班級', 'danger'); return; }
+            if (!confirm('確定發送「簽到成功通知」給 ' + classCode + ' 班級所有學生？')) return;
+            toast('發送中...', 'warning');
+            const r = await api('/api/test/checkin-notify', { method: 'POST', body: JSON.stringify({ classCode, status: '已報到' }) });
+            if (r?.success) {
+                toast('已發送 ' + r.count + ' 則簽到成功通知！');
+            } else {
+                toast(r?.message || '發送失敗', 'danger');
+            }
+        }
+        async function testLateNotify() {
+            const classCode = document.getElementById('test-class').value;
+            if (!classCode) { toast('請選擇測試班級', 'danger'); return; }
+            if (!confirm('確定發送「遲到通知」給 ' + classCode + ' 班級所有學生？')) return;
+            toast('發送中...', 'warning');
+            const r = await api('/api/test/checkin-notify', { method: 'POST', body: JSON.stringify({ classCode, status: '遲到', lateMinutes: 15 }) });
+            if (r?.success) {
+                toast('已發送 ' + r.count + ' 則遲到通知！');
+            } else {
+                toast(r?.message || '發送失敗', 'danger');
+            }
+        }
+        async function testAbsentNotify() {
+            const classCode = document.getElementById('test-class').value;
+            if (!classCode) { toast('請選擇測試班級', 'danger'); return; }
+            if (!confirm('確定發送「缺席通知」給 ' + classCode + ' 班級所有學生？')) return;
+            toast('發送中...', 'warning');
+            const r = await api('/api/test/checkin-notify', { method: 'POST', body: JSON.stringify({ classCode, status: '缺席' }) });
+            if (r?.success) {
+                toast('已發送 ' + r.count + ' 則缺席通知！');
+            } else {
+                toast(r?.message || '發送失敗', 'danger');
+            }
+        }
+        async function testReminderNotify() {
+            const classCode = document.getElementById('test-class').value;
+            if (!classCode) { toast('請選擇測試班級', 'danger'); return; }
+            if (!confirm('確定發送「上課提醒」給 ' + classCode + ' 班級所有學生？')) return;
+            toast('發送中...', 'warning');
+            const r = await api('/api/test/reminder', { method: 'POST', body: JSON.stringify({ classCode }) });
+            if (r?.success) {
+                toast('已發送 ' + r.count + ' 則上課提醒！');
+            } else {
+                toast(r?.message || '發送失敗', 'danger');
+            }
+        }
+        function updateTestClassDropdown() {
+            const select = document.getElementById('test-class');
+            if (select) {
+                select.innerHTML = '<option value="">-- 選擇班級 --</option>' + classes.map(c => '<option value="' + c.code + '">' + c.code + ' - ' + c.name + '</option>').join('');
+            }
+        }
 
         // === 頁面載入 ===
         function loadPage(page) {
@@ -1127,6 +1214,7 @@
             if (page === 'stats') loadStats();
             if (page === 'alerts') loadAlerts();
             if (page === 'linebot') document.getElementById('bot-id').value = BOT;
+            if (page === 'settings') { updateTestClassDropdown(); document.getElementById('bot-id').value = BOT; }
         }
         async function loadAll() {
             await loadClasses();
