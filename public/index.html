@@ -288,7 +288,7 @@
 
     <div class="modal-overlay" id="modal-reviewLeave"><div class="modal"><div class="modal-header"><h3 class="modal-title">審核請假</h3><button class="modal-close" onclick="closeModal('reviewLeave')">&times;</button></div><div class="modal-body"><div id="leave-detail"></div><div class="form-group"><label class="form-label">備註</label><textarea class="form-textarea" id="review-note"></textarea></div></div><div class="modal-footer"><button class="btn btn-danger" onclick="reviewLeave('已駁回')">❌ 駁回</button><button class="btn btn-success" onclick="reviewLeave('已核准')">✅ 核准</button></div></div></div>
 
-    <div class="modal-overlay" id="modal-qr"><div class="modal"><div class="modal-header"><h3 class="modal-title">📱 簽到 QR Code</h3><button class="modal-close" onclick="closeModal('qr')">&times;</button></div><div class="modal-body"><div class="qr-container"><div class="qr-code" id="qr-container"></div><div class="qr-info"><strong id="qr-name"></strong><span id="qr-time"></span></div><div id="qr-link-box" style="margin-top:15px;padding:10px;background:#f0f9ff;border-radius:10px;display:none"><p style="font-size:12px;color:#666;margin-bottom:8px">📤 學生可點此連結自行簽到（含GPS定位）：</p><input type="text" id="qr-link" readonly style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:11px" onclick="this.select()"><button class="btn btn-outline btn-sm" style="margin-top:8px;width:100%" onclick="copyQRLink()">📋 複製連結</button></div></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('qr')">關閉</button><button class="btn btn-success" onclick="sendReminderFromQR()">📢 發送通知</button><button class="btn btn-primary" onclick="downloadQR()">📥 下載</button></div></div></div>
+    <div class="modal-overlay" id="modal-qr"><div class="modal"><div class="modal-header"><h3 class="modal-title">📱 簽到 QR Code</h3><button class="modal-close" onclick="closeModal('qr')">&times;</button></div><div class="modal-body"><div class="qr-container"><div class="qr-code" id="qr-container"></div><div class="qr-info"><strong id="qr-name"></strong><span id="qr-time"></span></div><div class="alert alert-success" style="margin-top:10px;font-size:12px">👆 學生掃此 QR Code → 直接簽到成功</div><div id="qr-link-box" style="margin-top:15px;padding:10px;background:#fff3cd;border-radius:10px"><p style="font-size:12px;color:#856404;margin-bottom:8px">📤 學生自己手機簽到連結（需 GPS 驗證）：</p><input type="text" id="qr-link" readonly style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:11px" onclick="this.select()"><button class="btn btn-outline btn-sm" style="margin-top:8px;width:100%" onclick="copyQRLink()">📋 複製連結分享給學生</button></div></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('qr')">關閉</button><button class="btn btn-success" onclick="sendReminderFromQR()">📢 發送通知</button><button class="btn btn-primary" onclick="downloadQR()">📥 下載</button></div></div></div>
 
     <script>
         // === 全域變數 ===
@@ -813,7 +813,8 @@
             if (r?.success && r.qrContent) {
                 currentSessionId = r.sessionId;
                 currentSessionCourseId = id;
-                showQR(r.qrContent, (c.name || c.subject) + ' - ' + c.classCode, today + ' ' + p.s);
+                currentGpsCheckinCode = r.gpsCheckinCode;
+                showQR(r.qrContent, r.gpsCheckinCode, (c.name || c.subject) + ' - ' + c.classCode, today + ' ' + p.s);
                 toast('簽到已建立！');
             } else {
                 toast(r?.error || '建立簽到失敗', 'danger');
@@ -870,9 +871,11 @@
         }
         
         let currentQRUrl = '';
+        let currentGpsUrl = '';
+        let currentGpsCheckinCode = '';
         
-        function showQR(content, name, time) {
-            console.log('顯示 QR Code:', { content, name, time, BOT });
+        function showQR(directContent, gpsContent, name, time) {
+            console.log('顯示 QR Code:', { directContent, gpsContent, name, time, BOT });
             
             // 設定文字
             document.getElementById('qr-name').textContent = name;
@@ -882,21 +885,25 @@
             const container = document.getElementById('qr-container');
             container.innerHTML = '';
             
-            // 建立簽到連結
+            // 建立連結
             const botId = BOT || '@516bpeih';
-            currentQRUrl = 'https://line.me/R/oaMessage/' + botId + '/?' + encodeURIComponent(content);
+            // 老師手機 QR Code（直接簽到）
+            currentQRUrl = 'https://line.me/R/oaMessage/' + botId + '/?' + encodeURIComponent(directContent);
+            // 學生連結（GPS 簽到）
+            currentGpsUrl = 'https://line.me/R/oaMessage/' + botId + '/?' + encodeURIComponent(gpsContent);
             
-            // 顯示簽到連結
-            document.getElementById('qr-link').value = currentQRUrl;
+            // 顯示學生 GPS 簽到連結
+            document.getElementById('qr-link').value = currentGpsUrl;
             document.getElementById('qr-link-box').style.display = 'block';
             
             // 開啟 modal
             openModal('qr');
             
-            // 生成 QR Code
+            // 生成 QR Code（老師手機用，直接簽到）
             setTimeout(() => {
                 try {
-                    console.log('QR URL:', currentQRUrl);
+                    console.log('QR URL (直接簽到):', currentQRUrl);
+                    console.log('學生連結 (GPS簽到):', currentGpsUrl);
                     
                     new QRCode(container, {
                         text: currentQRUrl,
