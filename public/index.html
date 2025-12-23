@@ -282,6 +282,15 @@
                 </div>
                 <div class="alert alert-warning" style="margin-top:15px;font-size:12px">⚠️ 測試通知會發送給該班級所有已綁定 LINE 的學生</div>
             </div>
+            <div class="card"><div class="card-title">🔍 課程設定除錯</div>
+                <p style="color:var(--text-light);font-size:13px;margin-bottom:15px">檢查課程的簽到範圍是否正確儲存</p>
+                <div class="form-group">
+                    <label class="form-label">選擇課程</label>
+                    <select class="form-select" id="debug-course"></select>
+                </div>
+                <button class="btn btn-outline btn-block" onclick="debugCourse()">🔍 檢查課程設定</button>
+                <div id="debug-result" style="margin-top:10px;padding:10px;background:#f5f5f5;border-radius:8px;font-size:12px;font-family:monospace;display:none"></div>
+            </div>
             <div class="card"><div class="card-title">🔧 LINE Bot 設定</div>
                 <div class="form-group"><label class="form-label">LINE Bot ID</label><input type="text" class="form-input" id="bot-id" placeholder="@516bpeih"></div>
                 <button class="btn btn-primary btn-block" onclick="saveBotId()">💾 儲存 Bot ID</button>
@@ -701,12 +710,14 @@
             const lon = document.getElementById('edit-course-lon').value;
             const radius = parseInt(document.getElementById('edit-course-radius').value);
             const p = ((sem.periods && sem.periods.length > 0 ? sem.periods : PERIODS[sem.div || "day"])).find(x => x.n == period) || {};
-            console.log('儲存課程:', currentCourse.id, { subject, classCode, day, period, room, lat, lon, radius });
+            console.log('📝 儲存課程:', currentCourse.id, { radius, radiusType: typeof radius });
             const r = await api('/api/courses/' + currentCourse.id, { method: 'PUT', body: JSON.stringify({ subject, classCode, day, period, time: p.s + '-' + p.e, room, lat: lat ? +lat : 0, lon: lon ? +lon : 0, radius }) });
-            console.log('API 回應:', r);
+            console.log('📝 API 回應:', r);
             if (r?.success) { 
                 const radiusText = radius === -1 ? '現場簽到' : radius === 0 ? '不限制' : `GPS ${radius}公尺`;
-                toast(`課程已更新！簽到方式：${radiusText}`); 
+                // 顯示伺服器確認的值
+                const serverRadius = r.radius || radius;
+                toast(`✅ 已更新！簽到範圍：${serverRadius} 公尺`); 
                 closeModal('editCourse'); 
                 await loadCourses(); 
             } else {
@@ -1270,6 +1281,44 @@
             const select = document.getElementById('test-class');
             if (select) {
                 select.innerHTML = '<option value="">-- 選擇班級 --</option>' + classes.map(c => '<option value="' + c.code + '">' + c.code + ' - ' + c.name + '</option>').join('');
+            }
+            // 同時更新課程除錯下拉選單
+            const debugSelect = document.getElementById('debug-course');
+            if (debugSelect) {
+                debugSelect.innerHTML = '<option value="">-- 選擇課程 --</option>' + courses.map(c => '<option value="' + c.id + '">' + (c.name || c.subject) + ' (' + c.classCode + ') - 目前設定: ' + c.radius + 'm</option>').join('');
+            }
+        }
+        
+        async function debugCourse() {
+            const courseId = document.getElementById('debug-course').value;
+            if (!courseId) { toast('請選擇課程', 'danger'); return; }
+            
+            toast('檢查中...', 'warning');
+            const resultDiv = document.getElementById('debug-result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '載入中...';
+            
+            try {
+                const r = await api('/api/debug/course/' + courseId);
+                if (r) {
+                    resultDiv.innerHTML = '<b>📋 Google Sheets 原始資料：</b><br>' +
+                        '課程ID: ' + r.courseId + '<br>' +
+                        '科目: ' + r.科目 + '<br>' +
+                        '班級: ' + r.班級 + '<br>' +
+                        '教室緯度: ' + r.教室緯度 + '<br>' +
+                        '教室經度: ' + r.教室經度 + '<br>' +
+                        '<b style="color:var(--primary)">簽到範圍原始值: ' + r.簽到範圍_原始值 + '</b><br>' +
+                        '簽到範圍類型: ' + r.簽到範圍_類型 + '<br>' +
+                        '簽到範圍解析: ' + r.簽到範圍_解析 + '<br>' +
+                        '<br><b>前端目前快取的值: ' + (courses.find(c => c.id === courseId)?.radius || '找不到') + '</b>';
+                    toast('檢查完成');
+                } else {
+                    resultDiv.innerHTML = '無法取得資料';
+                    toast('檢查失敗', 'danger');
+                }
+            } catch (e) {
+                resultDiv.innerHTML = '錯誤: ' + e.message;
+                toast('檢查失敗', 'danger');
             }
         }
 
