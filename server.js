@@ -139,18 +139,37 @@ async function registerStudent(lineUserId, lineName, studentId, studentName, cla
  * 取得課程資料
  */
 async function getCourse(courseId) {
-    // 強制重新載入文檔資訊以獲取最新資料
-    await doc.loadInfo();
-    const sheet = doc.sheetsByTitle['課程列表'];
-    if (!sheet) {
+    try {
+        // 強制重新載入整個文檔
+        await doc.loadInfo();
+        const sheet = doc.sheetsByTitle['課程列表'];
+        if (!sheet) {
+            console.log('❌ 課程列表不存在');
+            return null;
+        }
+        
+        // 清除並重新載入所有儲存格
+        await sheet.loadHeaderRow();
+        
+        // 使用 limit 參數強制重新讀取
+        const rows = await sheet.getRows({ limit: 500 });
+        
+        const course = rows.find(row => row.get('課程ID') === courseId);
+        if (course) {
+            const radius = course.get('簽到範圍');
+            console.log(`📖 讀取課程 ${courseId}:`, {
+                科目: course.get('科目'),
+                簽到範圍: radius,
+                簽到範圍類型: typeof radius
+            });
+        } else {
+            console.log(`❌ 找不到課程 ${courseId}`);
+        }
+        return course;
+    } catch (error) {
+        console.error('getCourse 錯誤:', error);
         return null;
     }
-    const rows = await sheet.getRows();
-    const course = rows.find(row => row.get('課程ID') === courseId);
-    if (course) {
-        console.log('讀取課程設定:', courseId, '簽到範圍:', course.get('簽到範圍'));
-    }
-    return course;
 }
 
 /**
@@ -642,13 +661,38 @@ async function handleGPSCheckin(event, userId, text) {
         return replyText(event, `✅ 您已經簽到過了！\n\n📚 課程：${course.get('科目')}\n⏰ 簽到時間：${existingRecord.get('簽到時間')}`);
     }
     
-    // 取得簽到設定
+    // 取得簽到設定（從 Google Sheets 直接讀取）
     const classroomLat = parseFloat(course.get('教室緯度')) || 0;
     const classroomLon = parseFloat(course.get('教室經度')) || 0;
     const rawRadius = course.get('簽到範圍');
-    const checkRadius = rawRadius !== '' && rawRadius !== undefined && rawRadius !== null ? parseInt(rawRadius) : 100;
     
-    console.log('GPS 簽到設定:', { classroomLat, classroomLon, rawRadius, checkRadius });
+    // 詳細記錄讀取到的值
+    console.log('🔍 簽到範圍原始值:', {
+        rawRadius,
+        type: typeof rawRadius,
+        isEmpty: rawRadius === '',
+        isNull: rawRadius === null,
+        isUndefined: rawRadius === undefined
+    });
+    
+    // 解析 radius
+    let checkRadius;
+    if (rawRadius === '' || rawRadius === undefined || rawRadius === null) {
+        checkRadius = 100;  // 預設值
+        console.log('⚠️ 使用預設值 100');
+    } else {
+        checkRadius = parseInt(rawRadius);
+        console.log('✅ 解析後的 checkRadius:', checkRadius);
+    }
+    
+    console.log('📍 GPS 簽到設定:', { 
+        courseId, 
+        科目: course.get('科目'),
+        classroomLat, 
+        classroomLon, 
+        rawRadius, 
+        checkRadius 
+    });
     
     // 簽到模式判斷
     // -1: 現場簽到（只能掃 QR Code，不能用連結）
@@ -1604,14 +1648,21 @@ app.put('/api/courses/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { subject, classCode, day, period, time, room, lat, lon, radius } = req.body;
-        console.log('更新課程:', id, { subject, classCode, day, period, time, room, lat, lon, radius });
+        console.log('📝 更新課程請求:', id, { radius, radiusType: typeof radius });
         
+        // 強制刷新
+        await doc.loadInfo();
         const sheet = doc.sheetsByTitle['課程列表'];
         if (!sheet) return res.json({ success: false, message: '資料表不存在' });
         
-        const rows = await sheet.getRows();
+        await sheet.loadHeaderRow();
+        const rows = await sheet.getRows({ limit: 500 });
         const row = rows.find(r => r.get('課程ID') === id);
         if (!row) return res.json({ success: false, message: '課程不存在' });
+        
+        // 記錄更新前的值
+        const oldRadius = row.get('簽到範圍');
+        console.log('📝 更新前簽到範圍:', oldRadius);
         
         if (subject) row.set('科目', subject);
         if (classCode) row.set('班級', classCode);
@@ -1621,11 +1672,24 @@ app.put('/api/courses/:id', async (req, res) => {
         if (room !== undefined) row.set('教室', room);
         if (lat !== undefined) row.set('教室緯度', lat);
         if (lon !== undefined) row.set('教室經度', lon);
-        if (radius !== undefined) row.set('簽到範圍', radius);
+        if (radius !== undefined) {
+            // 確保存入數字
+            row.set('簽到範圍', parseInt(radius));
+        }
+        
         await row.save();
         
-        console.log('課程更新成功，簽到範圍:', radius);
-        res.json({ success: true, radius });
+        // 驗證：重新讀取確認更新成功
+        await doc.loadInfo();
+        const verifySheet = doc.sheetsByTitle['課程列表'];
+        await verifySheet.loadHeaderRow();
+        const verifyRows = await verifySheet.getRows({ limit: 500 });
+        const verifyRow = verifyRows.find(r => r.get('課程ID') === id);
+        const newRadius = verifyRow ? verifyRow.get('簽到範圍') : '找不到';
+        
+        console.log('✅ 更新後簽到範圍:', newRadius, '(預期:', radius, ')');
+        
+        res.json({ success: true, radius: newRadius, oldRadius, requestedRadius: radius });
     } catch (error) {
         console.error('更新課程錯誤:', error);
         res.status(500).json({ success: false, error: error.message });
@@ -3092,6 +3156,37 @@ app.get('/api/charts/class-comparison', async (req, res) => {
 });
 
 // ===== 測試驗證 API =====
+
+// 檢查課程簽到範圍設定（除錯用）
+app.get('/api/debug/course/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await doc.loadInfo();
+        const sheet = doc.sheetsByTitle['課程列表'];
+        if (!sheet) return res.json({ error: '課程列表不存在' });
+        
+        await sheet.loadHeaderRow();
+        const rows = await sheet.getRows({ limit: 500 });
+        const row = rows.find(r => r.get('課程ID') === id);
+        
+        if (!row) return res.json({ error: '課程不存在', courseId: id });
+        
+        const rawRadius = row.get('簽到範圍');
+        res.json({
+            courseId: id,
+            科目: row.get('科目'),
+            班級: row.get('班級'),
+            教室緯度: row.get('教室緯度'),
+            教室經度: row.get('教室經度'),
+            簽到範圍_原始值: rawRadius,
+            簽到範圍_類型: typeof rawRadius,
+            簽到範圍_解析: parseInt(rawRadius),
+            所有欄位: sheet.headerValues
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
 // 測試學期結束通知
 app.post('/api/test/semester-end', async (req, res) => {
