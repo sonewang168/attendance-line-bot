@@ -139,12 +139,18 @@ async function registerStudent(lineUserId, lineName, studentId, studentName, cla
  * 取得課程資料
  */
 async function getCourse(courseId) {
-    const sheet = await getOrCreateSheet('課程列表', [
-        '課程ID', '科目', '班級', '教師', '星期', '節次', '上課時間', '教室', 
-        '教室緯度', '教室經度', '簽到範圍', '遲到標準', '狀態', '建立時間'
-    ]);
+    // 強制重新載入文檔資訊以獲取最新資料
+    await doc.loadInfo();
+    const sheet = doc.sheetsByTitle['課程列表'];
+    if (!sheet) {
+        return null;
+    }
     const rows = await sheet.getRows();
-    return rows.find(row => row.get('課程ID') === courseId);
+    const course = rows.find(row => row.get('課程ID') === courseId);
+    if (course) {
+        console.log('讀取課程設定:', courseId, '簽到範圍:', course.get('簽到範圍'));
+    }
+    return course;
 }
 
 /**
@@ -799,14 +805,29 @@ async function handleLocation(event, userId) {
     const { latitude, longitude } = event.message;
     const student = await getStudent(userId);
     
+    // 每次都重新讀取課程設定（確保使用最新的簽到範圍）
+    const course = await getCourse(state.courseId);
+    if (!course) {
+        userStates.delete(userId);
+        return replyText(event, '❌ 課程不存在！');
+    }
+    
+    // 重新讀取最新的簽到設定
+    const classroomLat = parseFloat(course.get('教室緯度')) || state.classroomLat;
+    const classroomLon = parseFloat(course.get('教室經度')) || state.classroomLon;
+    const rawRadius = course.get('簽到範圍');
+    const checkRadius = rawRadius !== '' && rawRadius !== undefined && rawRadius !== null ? parseInt(rawRadius) : state.checkRadius;
+    
+    console.log('位置驗證 - 最新設定:', { courseId: state.courseId, checkRadius, rawRadius });
+    
     // 計算距離
     const distance = calculateDistance(
         latitude, longitude,
-        state.classroomLat, state.classroomLon
+        classroomLat, classroomLon
     );
     
-    // 使用設定的範圍（不再有固定容錯）
-    const allowedRadius = state.checkRadius;
+    // 使用最新的設定範圍
+    const allowedRadius = checkRadius;
     
     // 檢查是否在範圍內
     if (distance > allowedRadius) {
