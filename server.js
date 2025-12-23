@@ -72,7 +72,12 @@ function formatDateTime(date) {
  * 取得今天日期字串
  */
 function getTodayString() {
-    return new Date().toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei' });
+    // 統一使用 YYYY-MM-DD 格式
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 // ===== Google Sheets 操作 =====
@@ -151,12 +156,24 @@ async function getTodaySession(courseId) {
         '活動ID', '課程ID', '日期', '開始時間', '結束時間', 'QR碼內容', '狀態'
     ]);
     const rows = await sheet.getRows();
-    // 允許「進行中」狀態的活動
-    return rows.find(row => 
-        row.get('課程ID') === courseId && 
-        row.get('日期') === today &&
-        (row.get('狀態') === '進行中' || row.get('狀態') === '處理中')
-    );
+    
+    // 找今天的活動（不限制狀態，只要不是「已結束」）
+    const session = rows.find(row => {
+        const rowCourseId = row.get('課程ID');
+        const rowDate = row.get('日期');
+        const rowStatus = row.get('狀態');
+        
+        // 日期可能是不同格式，都嘗試匹配
+        const dateMatch = rowDate === today || 
+                         rowDate === today.replace(/-/g, '/') ||
+                         rowDate?.includes(today.split('-')[1] + '/' + today.split('-')[2]);
+        
+        return rowCourseId === courseId && 
+               dateMatch && 
+               rowStatus !== '已結束';
+    });
+    
+    return session;
 }
 
 /**
@@ -438,14 +455,27 @@ async function handleCheckinRequest(event, userId, text) {
         return replyText(event, '❌ 找不到此課程！');
     }
     
-    // 取得今日活動
-    const session = await getTodaySession(courseId);
-    if (!session || session.get('活動ID') !== sessionId) {
-        return replyText(event, '❌ 此簽到活動已結束或不存在！');
+    // 取得今日活動（寬鬆匹配）
+    let session = await getTodaySession(courseId);
+    
+    // 如果找不到，嘗試直接用 sessionId 查找
+    if (!session) {
+        const sessionSheet = await getOrCreateSheet('簽到活動', [
+            '活動ID', '課程ID', '日期', '開始時間', '結束時間', 'QR碼內容', '狀態'
+        ]);
+        const rows = await sessionSheet.getRows();
+        session = rows.find(r => r.get('活動ID') === sessionId && r.get('狀態') !== '已結束');
     }
     
+    if (!session) {
+        return replyText(event, '❌ 此簽到活動已結束或不存在！\n\n請確認：\n1. 老師已開啟簽到\n2. QR Code 是今天的\n3. 課程尚未結束');
+    }
+    
+    // 使用找到的 session 的活動ID
+    const actualSessionId = session.get('活動ID');
+    
     // 檢查是否已簽到
-    const existingRecord = await checkExistingAttendance(sessionId, student.get('學號'));
+    const existingRecord = await checkExistingAttendance(actualSessionId, student.get('學號'));
     if (existingRecord) {
         return replyText(event, `✅ 您已經簽到過了！\n\n📚 課程：${course.get('科目')}\n⏰ 簽到時間：${existingRecord.get('簽到時間')}`);
     }
@@ -461,7 +491,7 @@ async function handleCheckinRequest(event, userId, text) {
         userStates.set(userId, { 
             step: 'waitingLocation',
             courseId,
-            sessionId,
+            sessionId: actualSessionId,
             courseName: course.get('科目'),
             classroomLat,
             classroomLon,
@@ -502,7 +532,7 @@ async function handleCheckinRequest(event, userId, text) {
     
     // 記錄簽到
     const result = await recordAttendance(
-        sessionId,
+        actualSessionId,
         student.get('學號'),
         status,
         diffMinutes > lateMinutes ? diffMinutes : 0,
@@ -821,6 +851,155 @@ async function checkAbsences() {
 
 // 每 10 分鐘檢查一次（減少干擾）
 cron.schedule('*/10 * * * *', checkAbsences);
+
+// ===== 自動上課提醒排程 =====
+async function autoClassReminder() {
+    console.log('⏰ 檢查上課提醒...');
+    
+    try {
+        // 取得學期設定
+        const settingsSheet = doc.sheetsByTitle['系統設定'];
+        let remindMinutes = 30; // 預設提前 30 分鐘提醒
+        let autoRemind = true;
+        
+        if (settingsSheet) {
+            const settings = await settingsSheet.getRows();
+            for (const s of settings) {
+                if (s.get('設定項目') === '上課提醒') autoRemind = s.get('設定值') === 'true';
+                if (s.get('設定項目') === '提醒分鐘') remindMinutes = parseInt(s.get('設定值')) || 30;
+            }
+        }
+        
+        if (!autoRemind) {
+            console.log('自動提醒已關閉');
+            return;
+        }
+        
+        // 取得今天星期幾
+        const now = new Date();
+        const dayOfWeek = now.getDay(); // 0=日, 1=一, ... 6=六
+        const currentHour = now.getHours();
+        const currentMin = now.getMinutes();
+        const currentTotalMin = currentHour * 60 + currentMin;
+        
+        // 取得今天的課程
+        const courseSheet = doc.sheetsByTitle['課程列表'];
+        if (!courseSheet) return;
+        
+        const courses = await courseSheet.getRows();
+        const todayCourses = courses.filter(c => parseInt(c.get('星期')) === dayOfWeek && c.get('狀態') === '啟用');
+        
+        if (todayCourses.length === 0) {
+            console.log('今天沒有課程');
+            return;
+        }
+        
+        // 取得已發送的提醒記錄（避免重複發送）
+        const reminderSheet = await getOrCreateSheet('提醒紀錄', ['課程ID', '日期', '類型', '發送時間']);
+        const reminders = await reminderSheet.getRows();
+        const today = getTodayString();
+        
+        for (const course of todayCourses) {
+            const courseId = course.get('課程ID');
+            const courseTime = course.get('上課時間') || '';
+            const [startTime] = courseTime.split('-');
+            
+            if (!startTime) continue;
+            
+            const [startHour, startMin] = startTime.split(':').map(Number);
+            const startTotalMin = startHour * 60 + startMin;
+            const reminderTime = startTotalMin - remindMinutes;
+            
+            // 檢查是否到了提醒時間（允許 5 分鐘誤差）
+            if (currentTotalMin >= reminderTime && currentTotalMin <= reminderTime + 5) {
+                // 檢查今天是否已發送過提醒
+                const alreadySent = reminders.some(r => 
+                    r.get('課程ID') === courseId && 
+                    r.get('日期') === today && 
+                    r.get('類型') === '上課提醒'
+                );
+                
+                if (alreadySent) {
+                    console.log(`課程 ${courseId} 今日已發送提醒`);
+                    continue;
+                }
+                
+                console.log(`📢 發送上課提醒: ${course.get('科目')}`);
+                
+                // 自動建立簽到活動
+                const sessionSheet = await getOrCreateSheet('簽到活動', [
+                    '活動ID', '課程ID', '日期', '開始時間', '結束時間', 'QR碼內容', '狀態'
+                ]);
+                
+                const sessionId = `S${Date.now()}`;
+                const qrContent = `簽到:${courseId}|${sessionId}`;
+                const [, endTime] = courseTime.split('-');
+                
+                await sessionSheet.addRow({
+                    '活動ID': sessionId,
+                    '課程ID': courseId,
+                    '日期': today,
+                    '開始時間': startTime,
+                    '結束時間': endTime || '',
+                    'QR碼內容': qrContent,
+                    '狀態': '進行中'
+                });
+                
+                // 發送 LINE 通知給學生
+                const classCode = course.get('班級');
+                const studentSheet = doc.sheetsByTitle['學生名單'];
+                if (studentSheet) {
+                    const students = await studentSheet.getRows();
+                    const classStudents = students.filter(s => s.get('班級') === classCode && s.get('LINE_ID'));
+                    
+                    const botId = process.env.LINE_BOT_ID || '@516bpeih';
+                    const checkinUrl = `https://line.me/R/oaMessage/${botId}/?${encodeURIComponent(qrContent)}`;
+                    
+                    for (const student of classStudents) {
+                        try {
+                            await lineClient.pushMessage(student.get('LINE_ID'), {
+                                type: 'template',
+                                altText: `📢 上課提醒 - ${course.get('科目')}`,
+                                template: {
+                                    type: 'buttons',
+                                    title: `📢 ${course.get('科目')} 即將上課`,
+                                    text: `⏰ ${courseTime}\n📍 ${course.get('教室') || '教室'}\n\n${remindMinutes} 分鐘後上課`,
+                                    actions: [
+                                        {
+                                            type: 'uri',
+                                            label: '📱 點我簽到',
+                                            uri: checkinUrl
+                                        }
+                                    ]
+                                }
+                            });
+                        } catch (e) {
+                            console.error(`發送提醒失敗 ${student.get('學號')}:`, e.message);
+                        }
+                    }
+                    
+                    console.log(`✅ 已發送 ${classStudents.length} 則提醒`);
+                }
+                
+                // 記錄已發送
+                await reminderSheet.addRow({
+                    '課程ID': courseId,
+                    '日期': today,
+                    '類型': '上課提醒',
+                    '發送時間': now.toLocaleString('zh-TW')
+                });
+            }
+        }
+        
+        console.log('✅ 上課提醒檢查完成');
+    } catch (error) {
+        console.error('上課提醒錯誤:', error);
+    }
+}
+
+// 每分鐘檢查一次（確保不會錯過提醒時間）
+cron.schedule('* * * * *', autoClassReminder);
+
 
 // 首頁路由
 app.get('/', (req, res) => {
@@ -1530,6 +1709,65 @@ app.post('/api/notify/batch', async (req, res) => {
 });
 
 // 取得通知設定
+// 取得設定（通用）
+app.get('/api/settings', async (req, res) => {
+    try {
+        const sheet = await getOrCreateSheet('系統設定', ['設定項目', '設定值']);
+        const rows = await sheet.getRows();
+        const settings = {};
+        rows.forEach(r => {
+            settings[r.get('設定項目')] = r.get('設定值');
+        });
+        res.json({
+            remindBeforeClass: settings['上課提醒'] !== 'false',
+            remindMinutes: parseInt(settings['提醒分鐘']) || 30,
+            notifyAbsent: settings['缺席通知'] === 'true',
+            notifyParent: settings['通知家長'] === 'true',
+            warningThreshold: parseInt(settings['警告門檻']) || 3,
+            weeklyReport: settings['週報'] === 'true',
+            semesterStart: settings['開學日期'] || '',
+            semesterEnd: settings['結業日期'] || ''
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 儲存設定（通用）
+app.post('/api/settings', async (req, res) => {
+    try {
+        const { remindBeforeClass, remindMinutes, notifyAbsent, notifyParent, warningThreshold, weeklyReport, semesterStart, semesterEnd } = req.body;
+        const sheet = await getOrCreateSheet('系統設定', ['設定項目', '設定值']);
+        
+        // 更新或新增設定
+        const rows = await sheet.getRows();
+        const settingsMap = {};
+        rows.forEach(r => { settingsMap[r.get('設定項目')] = r; });
+        
+        const updateOrAdd = async (key, value) => {
+            if (settingsMap[key]) {
+                settingsMap[key].set('設定值', value);
+                await settingsMap[key].save();
+            } else {
+                await sheet.addRow({ '設定項目': key, '設定值': value });
+            }
+        };
+        
+        if (remindBeforeClass !== undefined) await updateOrAdd('上課提醒', remindBeforeClass ? 'true' : 'false');
+        if (remindMinutes !== undefined) await updateOrAdd('提醒分鐘', remindMinutes);
+        if (notifyAbsent !== undefined) await updateOrAdd('缺席通知', notifyAbsent ? 'true' : 'false');
+        if (notifyParent !== undefined) await updateOrAdd('通知家長', notifyParent ? 'true' : 'false');
+        if (warningThreshold !== undefined) await updateOrAdd('警告門檻', warningThreshold);
+        if (weeklyReport !== undefined) await updateOrAdd('週報', weeklyReport ? 'true' : 'false');
+        if (semesterStart !== undefined) await updateOrAdd('開學日期', semesterStart);
+        if (semesterEnd !== undefined) await updateOrAdd('結業日期', semesterEnd);
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 app.get('/api/settings/notifications', async (req, res) => {
     try {
         const sheet = await getOrCreateSheet('系統設定', ['設定項目', '設定值']);
