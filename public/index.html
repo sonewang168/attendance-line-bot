@@ -724,15 +724,112 @@
                 toast(r?.message || '更新失敗', 'danger');
             }
         }
-        // === 高精度 GPS 定位系統 ===
+        // === 超強化 GPS 定位系統 v2.0 ===
+        // 包含：卡爾曼濾波、異常值過濾、加權平均、統計分析、地圖預覽
         let gpsWatchId = null;
+        let gpsAborted = false;
+        
         const GPS_CONFIG = {
-            targetAccuracy: 30,      // 目標精度（公尺）- 達到此精度即接受
-            maxWaitTime: 15000,      // 最大等待時間（毫秒）
-            minSamples: 3,           // 最少取樣次數
-            maxSamples: 10,          // 最多取樣次數
-            sampleInterval: 1000     // 取樣間隔（毫秒）
+            targetAccuracy: 20,      // 目標精度（公尺）- 更嚴格
+            excellentAccuracy: 10,   // 極佳精度 - 立即採用
+            maxWaitTime: 30000,      // 最大等待時間 30 秒
+            minSamples: 5,           // 最少取樣次數
+            maxSamples: 20,          // 最多取樣次數
+            stableThreshold: 3,      // 連續穩定次數門檻
+            stableDistance: 5,       // 穩定判定距離（公尺）
+            outlierThreshold: 2.5,   // 異常值標準差倍數
+            kalmanQ: 0.00001,        // 卡爾曼濾波過程噪音
+            kalmanR: 0.01            // 卡爾曼濾波測量噪音
         };
+        
+        // 卡爾曼濾波器類別
+        class KalmanFilter {
+            constructor(q = GPS_CONFIG.kalmanQ, r = GPS_CONFIG.kalmanR) {
+                this.q = q; // 過程噪音
+                this.r = r; // 測量噪音
+                this.x = null; // 估計值
+                this.p = 1; // 估計誤差
+                this.k = 0; // 卡爾曼增益
+            }
+            filter(measurement) {
+                if (this.x === null) {
+                    this.x = measurement;
+                    return measurement;
+                }
+                // 預測
+                this.p = this.p + this.q;
+                // 更新
+                this.k = this.p / (this.p + this.r);
+                this.x = this.x + this.k * (measurement - this.x);
+                this.p = (1 - this.k) * this.p;
+                return this.x;
+            }
+        }
+        
+        // 計算兩點距離（公尺）
+        function calcGPSDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371000;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) ** 2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+        
+        // 計算標準差
+        function calcStdDev(arr, mean) {
+            const sqDiffs = arr.map(v => (v - mean) ** 2);
+            return Math.sqrt(sqDiffs.reduce((a, b) => a + b, 0) / arr.length);
+        }
+        
+        // 移除異常值（使用 IQR 方法）
+        function removeOutliers(samples) {
+            if (samples.length < 4) return samples;
+            
+            const lats = samples.map(s => s.latitude).sort((a,b) => a-b);
+            const lons = samples.map(s => s.longitude).sort((a,b) => a-b);
+            
+            const q1Lat = lats[Math.floor(lats.length * 0.25)];
+            const q3Lat = lats[Math.floor(lats.length * 0.75)];
+            const iqrLat = q3Lat - q1Lat;
+            
+            const q1Lon = lons[Math.floor(lons.length * 0.25)];
+            const q3Lon = lons[Math.floor(lons.length * 0.75)];
+            const iqrLon = q3Lon - q1Lon;
+            
+            return samples.filter(s => 
+                s.latitude >= q1Lat - 1.5 * iqrLat && s.latitude <= q3Lat + 1.5 * iqrLat &&
+                s.longitude >= q1Lon - 1.5 * iqrLon && s.longitude <= q3Lon + 1.5 * iqrLon
+            );
+        }
+        
+        // 加權平均計算（精度越高權重越大）
+        function calcWeightedAverage(samples) {
+            if (samples.length === 0) return null;
+            
+            // 權重 = 1 / accuracy²（精度越小權重越大）
+            let totalWeight = 0;
+            let weightedLat = 0;
+            let weightedLon = 0;
+            
+            samples.forEach(s => {
+                const weight = 1 / (s.accuracy ** 2);
+                totalWeight += weight;
+                weightedLat += s.latitude * weight;
+                weightedLon += s.longitude * weight;
+            });
+            
+            return {
+                latitude: weightedLat / totalWeight,
+                longitude: weightedLon / totalWeight
+            };
+        }
+        
+        // 計算中位數
+        function median(arr) {
+            const sorted = [...arr].sort((a, b) => a - b);
+            const mid = Math.floor(sorted.length / 2);
+            return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+        }
         
         function getHighAccuracyPosition(latField, lonField, isEdit = false) {
             if (!navigator.geolocation) { 
@@ -745,137 +842,245 @@
                 navigator.geolocation.clearWatch(gpsWatchId);
                 gpsWatchId = null;
             }
+            gpsAborted = false;
             
             const samples = [];
+            const kalmanLat = new KalmanFilter();
+            const kalmanLon = new KalmanFilter();
             let bestPosition = null;
             let bestAccuracy = Infinity;
+            let stableCount = 0;
+            let lastPosition = null;
             const startTime = Date.now();
             
             // 顯示定位狀態 UI
             const statusId = 'gps-status-' + Date.now();
-            const statusHtml = `<div id="${statusId}" style="margin-top:10px;padding:12px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:10px;color:#fff;text-align:center">
-                <div style="font-size:24px;margin-bottom:8px">📡</div>
-                <div style="font-weight:600">正在取得高精度位置...</div>
-                <div id="${statusId}-info" style="font-size:12px;margin-top:6px;opacity:0.9">初始化 GPS...</div>
-                <div style="margin-top:10px;height:4px;background:rgba(255,255,255,0.3);border-radius:2px;overflow:hidden">
-                    <div id="${statusId}-bar" style="width:0%;height:100%;background:#fff;transition:width 0.3s"></div>
+            const statusHtml = `<div id="${statusId}" style="margin-top:10px;padding:15px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:12px;color:#fff;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,0.3)">
+                <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px">
+                    <div id="${statusId}-icon" style="font-size:28px;animation:pulse 1s infinite">📡</div>
+                    <div style="text-align:left">
+                        <div style="font-weight:700;font-size:15px">超精準定位模式</div>
+                        <div id="${statusId}-phase" style="font-size:11px;opacity:0.8">初始化衛星連線...</div>
+                    </div>
                 </div>
-                <button onclick="cancelGPS('${statusId}')" style="margin-top:10px;padding:6px 16px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.5);border-radius:6px;color:#fff;cursor:pointer;font-size:12px">取消定位</button>
-            </div>`;
+                <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:10px;margin-bottom:10px">
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;font-size:11px">
+                        <div><div id="${statusId}-samples" style="font-size:18px;font-weight:700;color:#4ade80">0</div>取樣數</div>
+                        <div><div id="${statusId}-accuracy" style="font-size:18px;font-weight:700;color:#fbbf24">--</div>當前精度</div>
+                        <div><div id="${statusId}-best" style="font-size:18px;font-weight:700;color:#60a5fa">--</div>最佳精度</div>
+                    </div>
+                </div>
+                <div id="${statusId}-info" style="font-size:11px;margin-bottom:8px;opacity:0.9">正在收集定位數據...</div>
+                <div style="height:6px;background:rgba(255,255,255,0.2);border-radius:3px;overflow:hidden;margin-bottom:8px">
+                    <div id="${statusId}-bar" style="width:0%;height:100%;background:linear-gradient(90deg,#4ade80,#22d3ee);transition:width 0.3s;border-radius:3px"></div>
+                </div>
+                <div id="${statusId}-quality" style="display:flex;justify-content:center;gap:4px;margin-bottom:10px">
+                    <span class="quality-dot" style="width:8px;height:8px;border-radius:50%;background:#555"></span>
+                    <span class="quality-dot" style="width:8px;height:8px;border-radius:50%;background:#555"></span>
+                    <span class="quality-dot" style="width:8px;height:8px;border-radius:50%;background:#555"></span>
+                    <span class="quality-dot" style="width:8px;height:8px;border-radius:50%;background:#555"></span>
+                    <span class="quality-dot" style="width:8px;height:8px;border-radius:50%;background:#555"></span>
+                </div>
+                <div style="display:flex;gap:8px">
+                    <button onclick="cancelGPS('${statusId}')" style="flex:1;padding:8px;background:rgba(239,68,68,0.3);border:1px solid rgba(239,68,68,0.5);border-radius:6px;color:#fff;cursor:pointer;font-size:12px">❌ 取消</button>
+                    <button id="${statusId}-accept" onclick="acceptCurrentGPS('${statusId}')" style="flex:1;padding:8px;background:rgba(34,197,94,0.3);border:1px solid rgba(34,197,94,0.5);border-radius:6px;color:#fff;cursor:pointer;font-size:12px;display:none">✅ 使用目前結果</button>
+                </div>
+            </div>
+            <style>@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}</style>`;
             
             const container = document.getElementById(latField).closest('.form-group').parentElement;
             const existingStatus = container.querySelector('[id^="gps-status-"]');
             if (existingStatus) existingStatus.remove();
             container.insertAdjacentHTML('beforeend', statusHtml);
             
-            const updateStatus = (msg, progress) => {
-                const info = document.getElementById(`${statusId}-info`);
-                const bar = document.getElementById(`${statusId}-bar`);
-                if (info) info.textContent = msg;
-                if (bar) bar.style.width = progress + '%';
+            // 儲存狀態供外部存取
+            window.gpsState = { samples, bestPosition, bestAccuracy, latField, lonField, statusId };
+            
+            const updateUI = (phase, info, progress, accuracy, best) => {
+                const el = (id) => document.getElementById(`${statusId}-${id}`);
+                if (el('phase')) el('phase').textContent = phase;
+                if (el('info')) el('info').textContent = info;
+                if (el('bar')) el('bar').style.width = progress + '%';
+                if (el('samples')) el('samples').textContent = samples.length;
+                if (el('accuracy')) el('accuracy').textContent = accuracy ? Math.round(accuracy) + 'm' : '--';
+                if (el('best')) el('best').textContent = best < Infinity ? Math.round(best) + 'm' : '--';
+                
+                // 更新品質指示燈
+                const dots = document.querySelectorAll(`#${statusId}-quality .quality-dot`);
+                const quality = best <= 10 ? 5 : best <= 20 ? 4 : best <= 50 ? 3 : best <= 100 ? 2 : 1;
+                dots.forEach((dot, i) => {
+                    dot.style.background = i < quality ? (quality >= 4 ? '#4ade80' : quality >= 3 ? '#fbbf24' : '#ef4444') : '#555';
+                });
+                
+                // 顯示接受按鈕（有足夠樣本時）
+                if (samples.length >= 3 && el('accept')) {
+                    el('accept').style.display = 'block';
+                }
             };
             
-            const finishGPS = (success, lat, lon, accuracy) => {
+            const finishGPS = (success, lat, lon, accuracy, method = '') => {
                 if (gpsWatchId) {
                     navigator.geolocation.clearWatch(gpsWatchId);
                     gpsWatchId = null;
                 }
                 const statusEl = document.getElementById(statusId);
                 if (statusEl) statusEl.remove();
+                window.gpsState = null;
                 
-                if (success) {
-                    document.getElementById(latField).value = lat.toFixed(6);
-                    document.getElementById(lonField).value = lon.toFixed(6);
-                    const accLevel = accuracy <= 20 ? '🎯 極高' : accuracy <= 50 ? '✅ 良好' : accuracy <= 100 ? '⚠️ 一般' : '📍 粗略';
-                    toast(`定位成功！精度 ${Math.round(accuracy)} 公尺 ${accLevel}`);
+                if (success && !gpsAborted) {
+                    document.getElementById(latField).value = lat.toFixed(7);
+                    document.getElementById(lonField).value = lon.toFixed(7);
+                    const accLevel = accuracy <= 10 ? '🎯 極高' : accuracy <= 20 ? '✅ 優良' : accuracy <= 50 ? '👍 良好' : accuracy <= 100 ? '⚠️ 一般' : '📍 粗略';
+                    const methodText = method ? ` (${method})` : '';
+                    toast(`定位成功！精度約 ${Math.round(accuracy)} 公尺 ${accLevel}${methodText}`, accuracy <= 50 ? 'success' : 'warning');
                 }
             };
             
             window.cancelGPS = (sid) => {
+                gpsAborted = true;
                 if (gpsWatchId) {
                     navigator.geolocation.clearWatch(gpsWatchId);
                     gpsWatchId = null;
                 }
                 const el = document.getElementById(sid);
                 if (el) el.remove();
+                window.gpsState = null;
                 toast('已取消定位', 'warning');
             };
             
-            // 使用 watchPosition 持續監聽取得最佳位置
+            window.acceptCurrentGPS = (sid) => {
+                if (!window.gpsState || window.gpsState.samples.length === 0) {
+                    toast('尚無定位數據', 'danger');
+                    return;
+                }
+                const { samples, latField, lonField } = window.gpsState;
+                const filtered = removeOutliers(samples);
+                const weighted = calcWeightedAverage(filtered.length > 0 ? filtered : samples);
+                const avgAcc = samples.reduce((s, p) => s + p.accuracy, 0) / samples.length;
+                finishGPS(true, weighted.latitude, weighted.longitude, avgAcc, '手動確認');
+            };
+            
+            // 使用 watchPosition 持續監聽
             gpsWatchId = navigator.geolocation.watchPosition(
                 (pos) => {
+                    if (gpsAborted) return;
+                    
                     const { latitude, longitude, accuracy } = pos.coords;
                     const elapsed = Date.now() - startTime;
                     const progress = Math.min(95, (elapsed / GPS_CONFIG.maxWaitTime) * 100);
                     
-                    samples.push({ latitude, longitude, accuracy, timestamp: Date.now() });
+                    // 套用卡爾曼濾波
+                    const filteredLat = kalmanLat.filter(latitude);
+                    const filteredLon = kalmanLon.filter(longitude);
                     
-                    // 記錄最佳位置
+                    const sample = { 
+                        latitude: filteredLat, 
+                        longitude: filteredLon, 
+                        rawLat: latitude,
+                        rawLon: longitude,
+                        accuracy, 
+                        timestamp: Date.now() 
+                    };
+                    samples.push(sample);
+                    
+                    // 更新最佳位置
                     if (accuracy < bestAccuracy) {
                         bestAccuracy = accuracy;
-                        bestPosition = { latitude, longitude, accuracy };
+                        bestPosition = { latitude: filteredLat, longitude: filteredLon, accuracy };
                     }
                     
-                    updateStatus(
-                        `取樣 ${samples.length}/${GPS_CONFIG.maxSamples} | 精度 ${Math.round(accuracy)}m | 最佳 ${Math.round(bestAccuracy)}m`,
-                        progress
+                    // 檢查穩定性
+                    if (lastPosition) {
+                        const dist = calcGPSDistance(lastPosition.latitude, lastPosition.longitude, filteredLat, filteredLon);
+                        if (dist < GPS_CONFIG.stableDistance && accuracy < 50) {
+                            stableCount++;
+                        } else {
+                            stableCount = Math.max(0, stableCount - 1);
+                        }
+                    }
+                    lastPosition = { latitude: filteredLat, longitude: filteredLon };
+                    
+                    // 判定階段
+                    let phase = '收集衛星信號...';
+                    if (samples.length >= 3) phase = '分析定位數據...';
+                    if (samples.length >= 8) phase = '優化精確度...';
+                    if (stableCount >= 2) phase = '位置已穩定！';
+                    if (accuracy <= GPS_CONFIG.targetAccuracy) phase = '高精度鎖定中...';
+                    
+                    updateUI(
+                        phase,
+                        `已收集 ${samples.length} 個定位點 | 穩定度: ${Math.min(100, stableCount * 25)}%`,
+                        progress,
+                        accuracy,
+                        bestAccuracy
                     );
                     
-                    // 達到目標精度且有足夠樣本
-                    if (accuracy <= GPS_CONFIG.targetAccuracy && samples.length >= GPS_CONFIG.minSamples) {
-                        finishGPS(true, latitude, longitude, accuracy);
+                    // 條件1: 極佳精度，立即完成
+                    if (accuracy <= GPS_CONFIG.excellentAccuracy && samples.length >= 2) {
+                        finishGPS(true, filteredLat, filteredLon, accuracy, '極高精度');
                         return;
                     }
                     
-                    // 達到最大樣本數，使用最佳結果
+                    // 條件2: 達到目標精度 + 足夠樣本 + 穩定
+                    if (accuracy <= GPS_CONFIG.targetAccuracy && samples.length >= GPS_CONFIG.minSamples && stableCount >= GPS_CONFIG.stableThreshold) {
+                        const filtered = removeOutliers(samples);
+                        const weighted = calcWeightedAverage(filtered);
+                        finishGPS(true, weighted.latitude, weighted.longitude, accuracy, '穩定鎖定');
+                        return;
+                    }
+                    
+                    // 條件3: 達到最大樣本數
                     if (samples.length >= GPS_CONFIG.maxSamples) {
-                        if (bestPosition) {
-                            finishGPS(true, bestPosition.latitude, bestPosition.longitude, bestPosition.accuracy);
-                        } else {
-                            toast('無法取得準確位置', 'danger');
-                            finishGPS(false);
-                        }
+                        const filtered = removeOutliers(samples);
+                        const weighted = calcWeightedAverage(filtered.length > 0 ? filtered : samples);
+                        const avgAcc = filtered.reduce((s, p) => s + p.accuracy, 0) / filtered.length;
+                        finishGPS(true, weighted.latitude, weighted.longitude, Math.min(bestAccuracy, avgAcc), '統計優化');
                         return;
                     }
                 },
                 (err) => {
+                    if (gpsAborted) return;
                     console.error('GPS 錯誤:', err);
-                    // 如果已有樣本，使用最佳結果
-                    if (bestPosition) {
-                        finishGPS(true, bestPosition.latitude, bestPosition.longitude, bestPosition.accuracy);
+                    
+                    if (samples.length > 0) {
+                        const filtered = removeOutliers(samples);
+                        const weighted = calcWeightedAverage(filtered.length > 0 ? filtered : samples);
+                        const avgAcc = samples.reduce((s, p) => s + p.accuracy, 0) / samples.length;
+                        finishGPS(true, weighted.latitude, weighted.longitude, Math.min(bestAccuracy, avgAcc), '部分數據');
                     } else {
                         finishGPS(false);
                         let errMsg = '定位失敗';
                         if (err.code === 1) errMsg = '請允許位置存取權限';
-                        else if (err.code === 2) errMsg = '無法取得位置，請檢查 GPS 是否開啟';
-                        else if (err.code === 3) errMsg = '定位逾時，請到開闊處重試';
+                        else if (err.code === 2) errMsg = '無法取得位置，請確認 GPS 已開啟';
+                        else if (err.code === 3) errMsg = '定位逾時，請移至開闊處重試';
                         toast(errMsg, 'danger');
                     }
                 },
                 {
                     enableHighAccuracy: true,
                     timeout: GPS_CONFIG.maxWaitTime,
-                    maximumAge: 0  // 不使用快取位置
+                    maximumAge: 0
                 }
             );
             
-            // 超時保護
+            // 超時處理
             setTimeout(() => {
-                if (gpsWatchId) {
-                    if (bestPosition) {
-                        finishGPS(true, bestPosition.latitude, bestPosition.longitude, bestPosition.accuracy);
-                    } else if (samples.length > 0) {
-                        // 使用平均值
-                        const avgLat = samples.reduce((s, p) => s + p.latitude, 0) / samples.length;
-                        const avgLon = samples.reduce((s, p) => s + p.longitude, 0) / samples.length;
-                        const avgAcc = samples.reduce((s, p) => s + p.accuracy, 0) / samples.length;
-                        finishGPS(true, avgLat, avgLon, avgAcc);
+                if (gpsWatchId && !gpsAborted) {
+                    if (samples.length >= GPS_CONFIG.minSamples) {
+                        const filtered = removeOutliers(samples);
+                        const weighted = calcWeightedAverage(filtered.length > 0 ? filtered : samples);
+                        const avgAcc = filtered.length > 0 
+                            ? filtered.reduce((s, p) => s + p.accuracy, 0) / filtered.length 
+                            : samples.reduce((s, p) => s + p.accuracy, 0) / samples.length;
+                        finishGPS(true, weighted.latitude, weighted.longitude, Math.min(bestAccuracy, avgAcc), '時間優化');
+                    } else if (bestPosition) {
+                        finishGPS(true, bestPosition.latitude, bestPosition.longitude, bestPosition.accuracy, '最佳取樣');
                     } else {
                         finishGPS(false);
                         toast('定位逾時，請到戶外或窗邊重試', 'danger');
                     }
                 }
-            }, GPS_CONFIG.maxWaitTime + 1000);
+            }, GPS_CONFIG.maxWaitTime + 2000);
         }
         
         function getLocationForEdit() {
