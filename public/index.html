@@ -295,9 +295,9 @@
     
     <div class="modal-overlay" id="modal-editClass"><div class="modal"><div class="modal-header"><h3 class="modal-title">編輯班級</h3><button class="modal-close" onclick="closeModal('editClass')">&times;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">班級代碼</label><input type="text" class="form-input" id="edit-class-code" readonly></div><div class="form-group"><label class="form-label">班級名稱</label><input type="text" class="form-input" id="edit-class-name"></div><div class="form-group"><label class="form-label">部別</label><select class="form-select" id="edit-class-division"><option value="day">日間部</option><option value="night">夜間部</option><option value="weekend">進修部</option></select></div><div class="form-group"><label class="form-label">導師</label><input type="text" class="form-input" id="edit-class-teacher"></div></div><div class="modal-footer"><button class="btn btn-danger" onclick="deleteClass()">🗑️ 刪除</button><button class="btn btn-primary" onclick="saveClass()">💾 儲存</button></div></div></div>
 
-    <div class="modal-overlay" id="modal-addCourse"><div class="modal"><div class="modal-header"><h3 class="modal-title">新增課程</h3><button class="modal-close" onclick="closeModal('addCourse')">&times;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">課程名稱 *</label><input type="text" class="form-input" id="course-name" placeholder="物理"></div><div class="form-group"><label class="form-label">班級 *</label><select class="form-select" id="course-class"></select></div><div class="form-row"><div class="form-group"><label class="form-label">星期 *</label><select class="form-select" id="course-day"><option value="1">週一</option><option value="2">週二</option><option value="3">週三</option><option value="4">週四</option><option value="5">週五</option><option value="6">週六</option><option value="0">週日</option></select></div><div class="form-group"><label class="form-label">節次 *</label><select class="form-select" id="course-period"></select></div></div><div class="form-group"><label class="form-label">教室</label><input type="text" class="form-input" id="course-room" placeholder="物理實驗室"></div><div class="form-row"><div class="form-group"><label class="form-label">GPS 緯度</label><input type="number" step="any" class="form-input" id="course-lat"></div><div class="form-group"><label class="form-label">GPS 經度</label><input type="number" step="any" class="form-input" id="course-lon"></div></div><div class="form-group"><label class="form-label">簽到方式</label><select class="form-select" id="course-radius"><option value="-1">📱 現場簽到（掃QR Code）</option><option value="10">📍 GPS 10 公尺（精準）</option><option value="50">📍 GPS 50 公尺（教室）</option><option value="100" selected>📍 GPS 100 公尺（樓層）</option><option value="150">📍 GPS 150 公尺（建築）</option><option value="200">📍 GPS 200 公尺（校園）</option><option value="0">🌐 不限制（線上課程）</option></select></div><button type="button" class="btn btn-outline btn-block" onclick="getLocation()">📍 取得目前位置</button></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('addCourse')">取消</button><button class="btn btn-primary" onclick="addCourse()">新增</button></div></div></div>
+    <div class="modal-overlay" id="modal-addCourse"><div class="modal"><div class="modal-header"><h3 class="modal-title">新增課程</h3><button class="modal-close" onclick="closeModal('addCourse')">&times;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">課程名稱 *</label><input type="text" class="form-input" id="course-name" placeholder="物理"></div><div class="form-group"><label class="form-label">班級 *</label><select class="form-select" id="course-class"></select></div><div class="form-row"><div class="form-group"><label class="form-label">星期 *</label><select class="form-select" id="course-day"><option value="1">週一</option><option value="2">週二</option><option value="3">週三</option><option value="4">週四</option><option value="5">週五</option><option value="6">週六</option><option value="0">週日</option></select></div><div class="form-group"><label class="form-label">節次 *</label><select class="form-select" id="course-period"></select></div></div><div class="form-group"><label class="form-label">教室</label><input type="text" class="form-input" id="course-room" placeholder="致遠樓 301"></div><div class="form-group"><label class="form-label">簽到方式</label><select class="form-select" id="course-radius"><option value="-1">📱 現場簽到（掃QR Code）</option><option value="10">📍 GPS 10 公尺（精準）</option><option value="50">📍 GPS 50 公尺（教室）</option><option value="100" selected>📍 GPS 100 公尺（樓層）</option><option value="150">📍 GPS 150 公尺（建築）</option><option value="200">📍 GPS 200 公尺（校園）</option><option value="0">🌐 不限制（線上課程）</option></select></div><div class="alert alert-info" style="font-size:12px;margin-bottom:10px">💡 <b>GPS 座標取得方式：</b><br>1. 點「📍 取得目前位置」自動定位<br>2. 或從 <a href="https://www.google.com/maps" target="_blank">Google Maps</a> 右鍵點擊位置複製座標<br>3. 室內定位不準時，建議使用較大範圍（100-200m）</div><div class="form-row"><div class="form-group"><label class="form-label">GPS 緯度</label><input type="number" step="any" class="form-input" id="course-lat" placeholder="22.6267"></div><div class="form-group"><label class="form-label">GPS 經度</label><input type="number" step="any" class="form-input" id="course-lon" placeholder="120.3565"></div></div><div style="display:flex;gap:8px"><button type="button" class="btn btn-outline" style="flex:1" onclick="getLocation()">📍 取得目前位置</button><button type="button" class="btn btn-outline" style="flex:1" onclick="parseGoogleMapsUrl()">🗺️ 貼上 Google Maps 連結</button></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('addCourse')">取消</button><button class="btn btn-primary" onclick="addCourse()">新增</button></div></div></div>
 
-    <div class="modal-overlay" id="modal-editCourse"><div class="modal"><div class="modal-header"><h3 class="modal-title">編輯課程</h3><button class="modal-close" onclick="closeModal('editCourse')">&times;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">課程名稱</label><input type="text" class="form-input" id="edit-course-name"></div><div class="form-group"><label class="form-label">班級</label><select class="form-select" id="edit-course-class"></select></div><div class="form-row"><div class="form-group"><label class="form-label">星期</label><select class="form-select" id="edit-course-day"><option value="1">週一</option><option value="2">週二</option><option value="3">週三</option><option value="4">週四</option><option value="5">週五</option><option value="6">週六</option><option value="0">週日</option></select></div><div class="form-group"><label class="form-label">節次</label><select class="form-select" id="edit-course-period"></select></div></div><div class="form-group"><label class="form-label">教室</label><input type="text" class="form-input" id="edit-course-room"></div><div class="form-row"><div class="form-group"><label class="form-label">GPS 緯度</label><input type="number" step="any" class="form-input" id="edit-course-lat"></div><div class="form-group"><label class="form-label">GPS 經度</label><input type="number" step="any" class="form-input" id="edit-course-lon"></div></div><div class="form-group"><label class="form-label">簽到方式</label><select class="form-select" id="edit-course-radius"><option value="-1">📱 現場簽到（掃QR Code）</option><option value="10">📍 GPS 10 公尺（精準）</option><option value="50">📍 GPS 50 公尺（教室）</option><option value="100">📍 GPS 100 公尺（樓層）</option><option value="150">📍 GPS 150 公尺（建築）</option><option value="200">📍 GPS 200 公尺（校園）</option><option value="0">🌐 不限制（線上課程）</option></select></div><button type="button" class="btn btn-outline btn-block" onclick="getLocationForEdit()">📍 取得目前位置</button></div><div class="modal-footer"><button class="btn btn-danger" onclick="deleteCourse()">🗑️ 刪除</button><button class="btn btn-primary" onclick="saveCourse()">💾 儲存</button></div></div></div>
+    <div class="modal-overlay" id="modal-editCourse"><div class="modal"><div class="modal-header"><h3 class="modal-title">編輯課程</h3><button class="modal-close" onclick="closeModal('editCourse')">&times;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">課程名稱</label><input type="text" class="form-input" id="edit-course-name"></div><div class="form-group"><label class="form-label">班級</label><select class="form-select" id="edit-course-class"></select></div><div class="form-row"><div class="form-group"><label class="form-label">星期</label><select class="form-select" id="edit-course-day"><option value="1">週一</option><option value="2">週二</option><option value="3">週三</option><option value="4">週四</option><option value="5">週五</option><option value="6">週六</option><option value="0">週日</option></select></div><div class="form-group"><label class="form-label">節次</label><select class="form-select" id="edit-course-period"></select></div></div><div class="form-group"><label class="form-label">教室</label><input type="text" class="form-input" id="edit-course-room"></div><div class="form-group"><label class="form-label">簽到方式</label><select class="form-select" id="edit-course-radius"><option value="-1">📱 現場簽到（掃QR Code）</option><option value="10">📍 GPS 10 公尺（精準）</option><option value="50">📍 GPS 50 公尺（教室）</option><option value="100">📍 GPS 100 公尺（樓層）</option><option value="150">📍 GPS 150 公尺（建築）</option><option value="200">📍 GPS 200 公尺（校園）</option><option value="0">🌐 不限制（線上課程）</option></select></div><div class="alert alert-info" style="font-size:12px;margin-bottom:10px">💡 室內定位不準時，可從 <a href="https://www.google.com/maps" target="_blank">Google Maps</a> 搜尋學校，右鍵點擊建築物位置複製座標</div><div class="form-row"><div class="form-group"><label class="form-label">GPS 緯度</label><input type="number" step="any" class="form-input" id="edit-course-lat" placeholder="22.6267"></div><div class="form-group"><label class="form-label">GPS 經度</label><input type="number" step="any" class="form-input" id="edit-course-lon" placeholder="120.3565"></div></div><div style="display:flex;gap:8px"><button type="button" class="btn btn-outline" style="flex:1" onclick="getLocationForEdit()">📍 取得目前位置</button><button type="button" class="btn btn-outline" style="flex:1" onclick="parseGoogleMapsUrlForEdit()">🗺️ 貼上 Google Maps 連結</button></div></div><div class="modal-footer"><button class="btn btn-danger" onclick="deleteCourse()">🗑️ 刪除</button><button class="btn btn-primary" onclick="saveCourse()">💾 儲存</button></div></div></div>
 
     <div class="modal-overlay" id="modal-addStudent"><div class="modal"><div class="modal-header"><h3 class="modal-title">新增學生</h3><button class="modal-close" onclick="closeModal('addStudent')">&times;</button></div><div class="modal-body"><div class="alert alert-info">💡 學生也可以透過 LINE Bot 自行註冊</div><div class="form-group"><label class="form-label">學號 *</label><input type="text" class="form-input" id="student-id" placeholder="110001"></div><div class="form-group"><label class="form-label">姓名 *</label><input type="text" class="form-input" id="student-name" placeholder="王小明"></div><div class="form-group"><label class="form-label">班級 *</label><select class="form-select" id="student-class"></select></div><div class="form-group"><label class="form-label">電話</label><input type="tel" class="form-input" id="student-phone" placeholder="0912345678"></div><div class="form-group"><label class="form-label">家長電話</label><input type="tel" class="form-input" id="student-parent-phone"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('addStudent')">取消</button><button class="btn btn-primary" onclick="addStudent()">新增</button></div></div></div>
 
@@ -737,6 +737,72 @@
                 document.getElementById('course-lon').value = pos.coords.longitude.toFixed(6);
                 toast('定位成功！');
             }, () => toast('定位失敗', 'danger'), { enableHighAccuracy: true });
+        }
+        
+        // === Google Maps 座標解析 ===
+        function parseGoogleMapsUrl() {
+            const url = prompt('請貼上 Google Maps 連結或座標：\n\n例如：\n• 22.6267, 120.3565\n• https://www.google.com/maps/@22.6267,120.3565,17z\n• https://goo.gl/maps/...');
+            if (!url) return;
+            
+            const coords = extractCoordinates(url);
+            if (coords) {
+                document.getElementById('course-lat').value = coords.lat;
+                document.getElementById('course-lon').value = coords.lon;
+                toast(`已設定座標：${coords.lat}, ${coords.lon}`);
+            } else {
+                toast('無法解析座標，請確認格式', 'danger');
+            }
+        }
+        function parseGoogleMapsUrlForEdit() {
+            const url = prompt('請貼上 Google Maps 連結或座標：\n\n例如：\n• 22.6267, 120.3565\n• https://www.google.com/maps/@22.6267,120.3565,17z');
+            if (!url) return;
+            
+            const coords = extractCoordinates(url);
+            if (coords) {
+                document.getElementById('edit-course-lat').value = coords.lat;
+                document.getElementById('edit-course-lon').value = coords.lon;
+                toast(`已設定座標：${coords.lat}, ${coords.lon}`);
+            } else {
+                toast('無法解析座標，請確認格式', 'danger');
+            }
+        }
+        function extractCoordinates(input) {
+            // 嘗試解析各種格式
+            let lat, lon;
+            
+            // 格式1: 純座標 "22.6267, 120.3565" 或 "22.6267,120.3565"
+            const simpleMatch = input.match(/(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/);
+            if (simpleMatch) {
+                lat = parseFloat(simpleMatch[1]);
+                lon = parseFloat(simpleMatch[2]);
+            }
+            
+            // 格式2: Google Maps URL /@lat,lon,zoom
+            const urlMatch = input.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+            if (urlMatch) {
+                lat = parseFloat(urlMatch[1]);
+                lon = parseFloat(urlMatch[2]);
+            }
+            
+            // 格式3: Google Maps place URL /place/.../@lat,lon
+            const placeMatch = input.match(/place\/[^/]+\/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+            if (placeMatch) {
+                lat = parseFloat(placeMatch[1]);
+                lon = parseFloat(placeMatch[2]);
+            }
+            
+            // 格式4: Google Maps !3d lat !4d lon
+            const embedMatch = input.match(/!3d(-?\d+\.?\d*).*?!4d(-?\d+\.?\d*)/);
+            if (embedMatch) {
+                lat = parseFloat(embedMatch[1]);
+                lon = parseFloat(embedMatch[2]);
+            }
+            
+            // 驗證座標範圍
+            if (lat && lon && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+                return { lat: lat.toFixed(6), lon: lon.toFixed(6) };
+            }
+            return null;
         }
 
         // === 學生管理 ===
