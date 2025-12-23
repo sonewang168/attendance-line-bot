@@ -624,9 +624,10 @@
             document.getElementById('courses-list').innerHTML = courses.length ? courses.map(c => {
                 const dayName = DAY_NAMES[c.day] || '?';
                 const period = c.period || '?';
+                const radiusText = c.radius === -1 ? '📱現場' : c.radius === 0 ? '🌐線上' : `📍${c.radius}m`;
                 return '<div class="item-card" onclick="editCourse(\'' + c.id + '\')">' +
                     '<div class="icon" style="background:var(--success)">📖</div>' +
-                    '<div class="info"><h5>' + (c.name || c.subject || '未命名') + '</h5><span>班級 ' + c.classCode + ' · 週' + dayName + ' 第' + period + '節 · ' + (c.room || '教室未設定') + '</span></div></div>';
+                    '<div class="info"><h5>' + (c.name || c.subject || '未命名') + '</h5><span>班級 ' + c.classCode + ' · 週' + dayName + ' 第' + period + '節 · ' + (c.room || '教室未設定') + ' · ' + radiusText + '</span></div></div>';
             }).join('') : '<div class="empty">尚無課程</div>';
         }
         function showView(view) {
@@ -676,6 +677,7 @@
         function editCourse(id) {
             currentCourse = courses.find(c => c.id === id);
             if (!currentCourse) return;
+            console.log('編輯課程:', currentCourse);
             document.getElementById('edit-course-name').value = currentCourse.name || currentCourse.subject || '';
             document.getElementById('edit-course-class').value = currentCourse.classCode || '';
             document.getElementById('edit-course-day').value = currentCourse.day || 1;
@@ -683,7 +685,10 @@
             document.getElementById('edit-course-room').value = currentCourse.room || '';
             document.getElementById('edit-course-lat').value = currentCourse.lat || '';
             document.getElementById('edit-course-lon').value = currentCourse.lon || '';
-            document.getElementById('edit-course-radius').value = currentCourse.radius || 100;
+            // 確保 radius 正確設定（轉為字串比對 select option）
+            const radiusValue = String(currentCourse.radius !== undefined ? currentCourse.radius : 100);
+            document.getElementById('edit-course-radius').value = radiusValue;
+            console.log('設定 radius:', radiusValue, '目前選擇:', document.getElementById('edit-course-radius').value);
             openModal('editCourse');
         }
         async function saveCourse() {
@@ -694,15 +699,16 @@
             const room = document.getElementById('edit-course-room').value.trim();
             const lat = document.getElementById('edit-course-lat').value;
             const lon = document.getElementById('edit-course-lon').value;
-            const radius = parseInt(document.getElementById('edit-course-radius').value) || 100;
+            const radius = parseInt(document.getElementById('edit-course-radius').value);
             const p = ((sem.periods && sem.periods.length > 0 ? sem.periods : PERIODS[sem.div || "day"])).find(x => x.n == period) || {};
             console.log('儲存課程:', currentCourse.id, { subject, classCode, day, period, room, lat, lon, radius });
             const r = await api('/api/courses/' + currentCourse.id, { method: 'PUT', body: JSON.stringify({ subject, classCode, day, period, time: p.s + '-' + p.e, room, lat: lat ? +lat : 0, lon: lon ? +lon : 0, radius }) });
             console.log('API 回應:', r);
             if (r?.success) { 
-                toast('課程已更新！'); 
+                const radiusText = radius === -1 ? '現場簽到' : radius === 0 ? '不限制' : `GPS ${radius}公尺`;
+                toast(`課程已更新！簽到方式：${radiusText}`); 
                 closeModal('editCourse'); 
-                loadCourses(); 
+                await loadCourses(); 
             } else {
                 toast(r?.message || '更新失敗', 'danger');
             }
