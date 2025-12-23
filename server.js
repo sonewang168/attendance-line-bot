@@ -196,9 +196,9 @@ async function checkExistingAttendance(sessionId, studentId) {
 }
 
 /**
- * 記錄簽到
+ * 記錄簽到並發送通知
  */
-async function recordAttendance(sessionId, studentId, status, lateMinutes = 0, gpsLat = '', gpsLon = '') {
+async function recordAttendance(sessionId, studentId, status, lateMinutes = 0, gpsLat = '', gpsLon = '', sendNotification = true) {
     const sheet = await getOrCreateSheet('簽到紀錄', [
         '活動ID', '學號', '簽到時間', '狀態', '遲到分鐘', 'GPS緯度', 'GPS經度', '備註'
     ]);
@@ -227,6 +227,51 @@ async function recordAttendance(sessionId, studentId, status, lateMinutes = 0, g
     
     // 更新統計
     await updateStatistics(studentId, status);
+    
+    // 發送簽到狀態通知（準時、遲到、缺席都發送）
+    if (sendNotification) {
+        try {
+            const studentSheet = doc.sheetsByTitle['學生名單'];
+            if (studentSheet) {
+                const students = await studentSheet.getRows();
+                const student = students.find(s => s.get('學號') === studentId);
+                
+                if (student && student.get('LINE_ID')) {
+                    // 取得課程資訊
+                    const sessionSheet = doc.sheetsByTitle['簽到活動'];
+                    const sessions = await sessionSheet.getRows();
+                    const session = sessions.find(s => s.get('活動ID') === sessionId);
+                    
+                    if (session) {
+                        const courseSheet = doc.sheetsByTitle['課程列表'];
+                        const courses = await courseSheet.getRows();
+                        const course = courses.find(c => c.get('課程ID') === session.get('課程ID'));
+                        
+                        if (course) {
+                            let notifyText = '';
+                            if (status === '已報到') {
+                                notifyText = `✅ 簽到成功\n\n📚 課程：${course.get('科目')}\n📅 日期：${session.get('日期')}\n✨ 狀態：準時報到\n\n繼續保持！💪`;
+                            } else if (status === '遲到') {
+                                notifyText = `⚠️ 遲到通知\n\n📚 課程：${course.get('科目')}\n📅 日期：${session.get('日期')}\n⏰ 遲到：${lateMinutes} 分鐘\n\n請下次準時出席！`;
+                            } else if (status === '缺席') {
+                                notifyText = `❌ 缺席通知\n\n📚 課程：${course.get('科目')}\n📅 日期：${session.get('日期')}\n\n如有疑問請聯繫教師。`;
+                            }
+                            
+                            if (notifyText) {
+                                await lineClient.pushMessage(student.get('LINE_ID'), {
+                                    type: 'text',
+                                    text: notifyText
+                                });
+                                console.log(`✉️ 已發送${status}通知給 ${studentId}`);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('發送簽到通知失敗:', e.message);
+        }
+    }
     
     return { success: true, message: '簽到成功！', status };
 }
@@ -371,6 +416,36 @@ async function handleCommand(event, userId, userName, text) {
             userStates.set(userId, { step: 'studentId' });
             return replyText(event, '📝 開始註冊\n\n請輸入您的【學號】：');
         
+        case '解除綁定':
+        case '取消綁定':
+            if (!student) {
+                return replyText(event, '❌ 您尚未綁定帳號！');
+            }
+            // 確認解除綁定
+            userStates.set(userId, { step: 'confirmUnbind', studentId: student.get('學號') });
+            return replyText(event, `⚠️ 確認解除綁定？\n\n學號：${student.get('學號')}\n姓名：${student.get('姓名')}\n\n輸入「確認」解除綁定，或輸入其他文字取消。`);
+        
+        case '確認':
+            const state = userStates.get(userId);
+            if (state && state.step === 'confirmUnbind') {
+                // 執行解除綁定
+                try {
+                    const studentSheet = doc.sheetsByTitle['學生名單'];
+                    const rows = await studentSheet.getRows();
+                    const studentRow = rows.find(r => r.get('學號') === state.studentId);
+                    if (studentRow) {
+                        studentRow.set('LINE_ID', '');
+                        studentRow.set('LINE名稱', '');
+                        await studentRow.save();
+                    }
+                    userStates.delete(userId);
+                    return replyText(event, '✅ 已解除綁定！\n\n感謝您這學期的使用。\n如需重新綁定，請輸入「註冊」。');
+                } catch (e) {
+                    return replyText(event, '❌ 解除綁定失敗，請稍後再試。');
+                }
+            }
+            return replyText(event, '❌ 無效的操作。');
+        
         case '我的資料':
         case '查詢':
             if (!student) {
@@ -394,7 +469,7 @@ async function handleCommand(event, userId, userName, text) {
             if (!student) {
                 return replyText(event, `👋 歡迎 ${userName}！\n\n您尚未註冊，請輸入「註冊」綁定學號後才能使用簽到功能。\n\n輸入「說明」查看更多指令。`);
             }
-            return replyText(event, `👋 ${student.get('姓名')} 同學您好！\n\n📌 可用指令：\n• 我的資料\n• 出席紀錄\n• 說明\n\n📍 簽到請掃描教師提供的 QR Code`);
+            return replyText(event, `👋 ${student.get('姓名')} 同學您好！\n\n📌 可用指令：\n• 我的資料\n• 出席紀錄\n• 解除綁定\n• 說明\n\n📍 簽到請掃描教師提供的 QR Code`);
     }
 }
 
@@ -561,12 +636,19 @@ async function handleGPSCheckin(event, userId, text) {
         return replyText(event, `✅ 您已經簽到過了！\n\n📚 課程：${course.get('科目')}\n⏰ 簽到時間：${existingRecord.get('簽到時間')}`);
     }
     
-    // 檢查是否有設定 GPS
+    // 取得簽到設定
     const classroomLat = parseFloat(course.get('教室緯度')) || 0;
     const classroomLon = parseFloat(course.get('教室經度')) || 0;
-    const checkRadius = parseInt(course.get('簽到範圍')) || 0;
+    const checkRadius = parseInt(course.get('簽到範圍'));
     
-    // 如果有設定 GPS，要求傳送位置
+    // 簽到模式判斷
+    // -1: 現場簽到（只能掃 QR Code，不能用連結）
+    if (checkRadius === -1) {
+        return replyText(event, '📱 此課程設定為「現場簽到」\n\n請到教室掃描老師手機上的 QR Code 簽到。');
+    }
+    
+    // 0 或無設定: 不限制（線上課程），直接簽到
+    // 有設定 GPS 座標且 checkRadius > 0: 需要 GPS 驗證
     if (classroomLat !== 0 && classroomLon !== 0 && checkRadius > 0) {
         userStates.set(userId, { 
             step: 'waitingLocation',
@@ -586,7 +668,7 @@ async function handleGPSCheckin(event, userId, text) {
             template: {
                 type: 'buttons',
                 title: `📍 GPS 簽到 - ${course.get('科目')}`,
-                text: `請傳送位置驗證\n範圍：${checkRadius}m（+50m容錯）`,
+                text: `請傳送位置驗證\n允許範圍：${checkRadius} 公尺`,
                 actions: [
                     {
                         type: 'uri',
@@ -598,7 +680,7 @@ async function handleGPSCheckin(event, userId, text) {
         });
     }
     
-    // 沒有設定 GPS，直接簽到
+    // 不限制 GPS（線上課程），直接簽到
     const startTime = session.get('開始時間');
     const lateMinutes = parseInt(course.get('遲到標準')) || 10;
     const now = new Date();
@@ -720,12 +802,11 @@ async function handleLocation(event, userId) {
         state.classroomLat, state.classroomLon
     );
     
-    // GPS 容錯：手機 GPS 誤差通常 10-50 公尺，加上 50 公尺容錯
-    const GPS_TOLERANCE = 50;
-    const effectiveRadius = state.checkRadius + GPS_TOLERANCE;
+    // 使用設定的範圍（不再有固定容錯）
+    const allowedRadius = state.checkRadius;
     
-    // 檢查是否在範圍內（含容錯）
-    if (distance > effectiveRadius) {
+    // 檢查是否在範圍內
+    if (distance > allowedRadius) {
         // 不刪除狀態，允許重試
         state.retryCount = (state.retryCount || 0) + 1;
         
@@ -733,7 +814,7 @@ async function handleLocation(event, userId) {
         if (state.retryCount >= 3) {
             userStates.delete(userId);
             return replyText(event, 
-                `🚫 簽到失敗！\n\n已重試 ${state.retryCount} 次仍不在範圍內。\n📍 您的位置距離教室：${Math.round(distance)} 公尺\n📏 允許範圍：${state.checkRadius} 公尺（+${GPS_TOLERANCE}m 容錯）\n\n請聯繫老師協助簽到。`
+                `🚫 簽到失敗！\n\n已重試 ${state.retryCount} 次仍不在範圍內。\n📍 您的位置距離：${Math.round(distance)} 公尺\n📏 允許範圍：${allowedRadius} 公尺\n\n💡 建議：\n1. 到戶外或窗邊重新定位\n2. 聯繫老師使用現場 QR Code 簽到`
             );
         }
         
@@ -743,8 +824,8 @@ async function handleLocation(event, userId) {
             altText: '📍 位置驗證失敗，請重試',
             template: {
                 type: 'buttons',
-                title: '📍 位置似乎不準確',
-                text: `距離教室 ${Math.round(distance)} 公尺\n允許範圍 ${state.checkRadius}+${GPS_TOLERANCE} 公尺\n\n請到戶外或窗邊重試`,
+                title: '📍 位置不在範圍內',
+                text: `您的距離：${Math.round(distance)} 公尺\n允許範圍：${allowedRadius} 公尺\n\n請移動到教室範圍內重試`,
                 actions: [
                     {
                         type: 'uri',
@@ -1030,6 +1111,108 @@ async function checkAbsences() {
 
 // 每 10 分鐘檢查一次（減少干擾）
 cron.schedule('*/10 * * * *', checkAbsences);
+
+// ===== 學期結束通知 =====
+async function checkSemesterEnd() {
+    console.log('📅 檢查學期結束...');
+    
+    try {
+        const settingsSheet = doc.sheetsByTitle['系統設定'];
+        if (!settingsSheet) return;
+        
+        const settings = await settingsSheet.getRows();
+        let semesterEnd = '';
+        for (const s of settings) {
+            if (s.get('設定項目') === '結業日期') {
+                semesterEnd = s.get('設定值');
+                break;
+            }
+        }
+        
+        if (!semesterEnd) return;
+        
+        const now = new Date();
+        const endDate = new Date(semesterEnd);
+        const today = getTodayString();
+        
+        // 檢查是否是學期最後一天
+        if (today !== semesterEnd) return;
+        
+        // 檢查是否已經發送過通知
+        const reminderSheet = await getOrCreateSheet('提醒紀錄', ['課程ID', '日期', '類型', '發送時間']);
+        const reminders = await reminderSheet.getRows();
+        const alreadySent = reminders.some(r => 
+            r.get('日期') === today && 
+            r.get('類型') === '學期結束'
+        );
+        
+        if (alreadySent) return;
+        
+        // 取得最後一堂課的結束時間
+        const courseSheet = doc.sheetsByTitle['課程列表'];
+        const sessionSheet = doc.sheetsByTitle['簽到活動'];
+        
+        if (!courseSheet || !sessionSheet) return;
+        
+        const sessions = await sessionSheet.getRows();
+        const todaySessions = sessions.filter(s => s.get('日期') === today);
+        
+        if (todaySessions.length === 0) return;
+        
+        // 找最後結束的課程
+        let lastEndTime = 0;
+        for (const session of todaySessions) {
+            const endTimeStr = session.get('結束時間');
+            if (endTimeStr) {
+                const [h, m] = endTimeStr.split(':').map(Number);
+                const endMinutes = h * 60 + m;
+                if (endMinutes > lastEndTime) {
+                    lastEndTime = endMinutes;
+                }
+            }
+        }
+        
+        // 檢查現在是否在最後一堂課結束後 30 分鐘
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        if (currentMinutes >= lastEndTime + 30 && currentMinutes <= lastEndTime + 40) {
+            console.log('📢 發送學期結束通知...');
+            
+            // 發送解除綁定說明給所有學生
+            const studentSheet = doc.sheetsByTitle['學生名單'];
+            if (studentSheet) {
+                const students = await studentSheet.getRows();
+                
+                for (const student of students) {
+                    if (student.get('LINE_ID')) {
+                        try {
+                            await lineClient.pushMessage(student.get('LINE_ID'), {
+                                type: 'text',
+                                text: `📚 學期結束通知\n\n親愛的 ${student.get('姓名')} 同學：\n\n本學期課程已全部結束，感謝您這學期的配合！\n\n📌 解除 LINE BOT 綁定方式：\n1. 進入此聊天室\n2. 點右上角「≡」選單\n3. 選擇「封鎖」即可解除\n\n或輸入「解除綁定」由系統處理。\n\n🎉 祝您假期愉快！`
+                            });
+                        } catch (e) {
+                            console.error('發送學期結束通知失敗:', e.message);
+                        }
+                    }
+                }
+                
+                // 記錄已發送
+                await reminderSheet.addRow({
+                    '課程ID': 'SEMESTER_END',
+                    '日期': today,
+                    '類型': '學期結束',
+                    '發送時間': formatDateTime(now)
+                });
+                
+                console.log('✅ 學期結束通知已發送');
+            }
+        }
+    } catch (error) {
+        console.error('學期結束通知錯誤:', error);
+    }
+}
+
+// 每 10 分鐘檢查一次學期結束
+cron.schedule('*/10 * * * *', checkSemesterEnd);
 
 // ===== 自動上課提醒排程 =====
 async function autoClassReminder() {
