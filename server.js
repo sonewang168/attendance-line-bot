@@ -3064,6 +3064,129 @@ app.get('/api/charts/class-comparison', async (req, res) => {
     }
 });
 
+// ===== 測試驗證 API =====
+
+// 測試學期結束通知
+app.post('/api/test/semester-end', async (req, res) => {
+    try {
+        const { classCode } = req.body;
+        if (!classCode) return res.json({ success: false, message: '請選擇班級' });
+        
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        if (!studentSheet) return res.json({ success: false, message: '學生名單不存在' });
+        
+        const students = await studentSheet.getRows();
+        const classStudents = students.filter(s => s.get('班級') === classCode && s.get('LINE_ID'));
+        
+        let count = 0;
+        for (const student of classStudents) {
+            try {
+                await lineClient.pushMessage(student.get('LINE_ID'), {
+                    type: 'text',
+                    text: `📚 【測試】學期結束通知\n\n親愛的 ${student.get('姓名')} 同學：\n\n本學期課程已全部結束，感謝您這學期的配合！\n\n📌 解除 LINE BOT 綁定方式：\n1. 進入此聊天室\n2. 點右上角「≡」選單\n3. 選擇「封鎖」即可解除\n\n或輸入「解除綁定」由系統處理。\n\n🎉 祝您假期愉快！\n\n⚠️ 這是測試訊息`
+                });
+                count++;
+            } catch (e) {
+                console.error('發送測試通知失敗:', e.message);
+            }
+        }
+        
+        res.json({ success: true, count, message: `已發送 ${count} 則通知` });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// 測試簽到狀態通知（準時/遲到/缺席）
+app.post('/api/test/checkin-notify', async (req, res) => {
+    try {
+        const { classCode, status, lateMinutes } = req.body;
+        if (!classCode) return res.json({ success: false, message: '請選擇班級' });
+        
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        if (!studentSheet) return res.json({ success: false, message: '學生名單不存在' });
+        
+        const students = await studentSheet.getRows();
+        const classStudents = students.filter(s => s.get('班級') === classCode && s.get('LINE_ID'));
+        
+        const today = getTodayString();
+        let notifyText = '';
+        
+        if (status === '已報到') {
+            notifyText = `✅ 【測試】簽到成功\n\n📚 課程：測試課程\n📅 日期：${today}\n✨ 狀態：準時報到\n\n繼續保持！💪\n\n⚠️ 這是測試訊息`;
+        } else if (status === '遲到') {
+            notifyText = `⚠️ 【測試】遲到通知\n\n📚 課程：測試課程\n📅 日期：${today}\n⏰ 遲到：${lateMinutes || 15} 分鐘\n\n請下次準時出席！\n\n⚠️ 這是測試訊息`;
+        } else if (status === '缺席') {
+            notifyText = `❌ 【測試】缺席通知\n\n📚 課程：測試課程\n📅 日期：${today}\n\n如有疑問請聯繫教師。\n\n⚠️ 這是測試訊息`;
+        }
+        
+        let count = 0;
+        for (const student of classStudents) {
+            try {
+                await lineClient.pushMessage(student.get('LINE_ID'), {
+                    type: 'text',
+                    text: notifyText
+                });
+                count++;
+            } catch (e) {
+                console.error('發送測試通知失敗:', e.message);
+            }
+        }
+        
+        res.json({ success: true, count, message: `已發送 ${count} 則通知` });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// 測試上課提醒
+app.post('/api/test/reminder', async (req, res) => {
+    try {
+        const { classCode } = req.body;
+        if (!classCode) return res.json({ success: false, message: '請選擇班級' });
+        
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        if (!studentSheet) return res.json({ success: false, message: '學生名單不存在' });
+        
+        const students = await studentSheet.getRows();
+        const classStudents = students.filter(s => s.get('班級') === classCode && s.get('LINE_ID'));
+        
+        // 建立測試簽到連結
+        const botId = process.env.LINE_BOT_ID || '@516bpeih';
+        const testCode = `GPS簽到:TEST|TEST${Date.now()}`;
+        const checkinUrl = `https://line.me/R/oaMessage/${botId}/?${encodeURIComponent(testCode)}`;
+        
+        let count = 0;
+        for (const student of classStudents) {
+            try {
+                await lineClient.pushMessage(student.get('LINE_ID'), {
+                    type: 'template',
+                    altText: '📢 【測試】上課提醒',
+                    template: {
+                        type: 'buttons',
+                        title: '📢 【測試】上課提醒',
+                        text: `⏰ 08:00-09:00\n📍 測試教室\n\n30 分鐘後上課\n\n⚠️ 這是測試訊息`,
+                        actions: [
+                            {
+                                type: 'uri',
+                                label: '📱 點我簽到（測試）',
+                                uri: checkinUrl
+                            }
+                        ]
+                    }
+                });
+                count++;
+            } catch (e) {
+                console.error('發送測試提醒失敗:', e.message);
+            }
+        }
+        
+        res.json({ success: true, count, message: `已發送 ${count} 則提醒` });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // ===== 啟動伺服器 =====
 
 const PORT = process.env.PORT || 3000;
