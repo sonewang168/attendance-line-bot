@@ -1,1319 +1,3209 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📚 簽到系統 Pro</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <style>
-        :root{--primary:#4f46e5;--primary-dark:#3730a3;--success:#10b981;--warning:#f59e0b;--danger:#ef4444;--bg:#f8fafc;--card:#fff;--text:#1e293b;--text-light:#64748b;--border:#e2e8f0}
-        *{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text)}
-        .mobile-header{position:fixed;top:0;left:0;right:0;height:56px;background:linear-gradient(135deg,var(--primary-dark),var(--primary));color:#fff;display:flex;align-items:center;padding:0 15px;z-index:1001}
-        .hamburger{width:44px;height:44px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:5px;background:rgba(255,255,255,.1);border:none;border-radius:10px;cursor:pointer}
-        .hamburger span{display:block;width:20px;height:2px;background:#fff;transition:.3s}.hamburger.active span:nth-child(1){transform:rotate(45deg) translate(5px,5px)}.hamburger.active span:nth-child(2){opacity:0}.hamburger.active span:nth-child(3){transform:rotate(-45deg) translate(5px,-5px)}
-        .mobile-title{flex:1;text-align:center;font-size:18px;font-weight:700}.status-dot{width:10px;height:10px;border-radius:50%;background:var(--danger)}.status-dot.connected{background:var(--success)}
-        .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999}.sidebar-overlay.open{display:block}
-        .sidebar{position:fixed;top:0;left:0;width:280px;height:100vh;background:linear-gradient(180deg,var(--primary-dark),var(--primary));color:#fff;padding:70px 0 20px;z-index:1000;transform:translateX(-100%);transition:.3s;overflow-y:auto}.sidebar.open{transform:translateX(0)}
-        .nav-menu{list-style:none;padding:10px}.nav-section{padding:15px 15px 8px;font-size:11px;text-transform:uppercase;opacity:.6;letter-spacing:1px}
-        .nav-link{display:flex;align-items:center;gap:12px;padding:14px 15px;color:rgba(255,255,255,.8);text-decoration:none;border-radius:12px;margin-bottom:4px;transition:.3s;font-size:15px}.nav-link:hover,.nav-link.active{background:rgba(255,255,255,.2);color:#fff}
-        .nav-badge{background:var(--danger);color:#fff;font-size:11px;padding:2px 8px;border-radius:10px;margin-left:auto}
-        .main{padding:70px 15px 20px}.header{margin-bottom:20px}.page-title{font-size:24px;font-weight:700;margin-bottom:5px}.page-subtitle{font-size:14px;color:var(--text-light);margin-bottom:15px}
-        .stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px}
-        .stat-card{background:var(--card);border-radius:16px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.05);position:relative;overflow:hidden}
-        .stat-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%}.stat-card.primary::before{background:var(--primary)}.stat-card.success::before{background:var(--success)}.stat-card.warning::before{background:var(--warning)}.stat-card.danger::before{background:var(--danger)}
-        .stat-value{font-size:28px;font-weight:700}.stat-card.primary .stat-value{color:var(--primary)}.stat-card.success .stat-value{color:var(--success)}.stat-card.warning .stat-value{color:var(--warning)}.stat-card.danger .stat-value{color:var(--danger)}
-        .stat-label{font-size:13px;color:var(--text-light);margin-top:3px}.stat-icon{position:absolute;top:12px;right:12px;font-size:24px;opacity:.2}
-        .card{background:var(--card);border-radius:16px;padding:18px;margin-bottom:15px;box-shadow:0 2px 8px rgba(0,0,0,.05)}.card-title{font-size:16px;font-weight:600;margin-bottom:15px;display:flex;align-items:center;gap:8px}
-        .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 18px;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;transition:.3s}
-        .btn-primary{background:var(--primary);color:#fff}.btn-success{background:var(--success);color:#fff}.btn-warning{background:var(--warning);color:#fff}.btn-danger{background:var(--danger);color:#fff}.btn-outline{background:#fff;border:2px solid var(--border);color:var(--text)}.btn-block{width:100%}.btn-sm{padding:8px 12px;font-size:13px}
-        .form-group{margin-bottom:18px}.form-label{display:block;margin-bottom:6px;font-weight:500;font-size:14px}
-        .form-input,.form-select,.form-textarea{width:100%;padding:12px 14px;border:2px solid var(--border);border-radius:10px;font-size:16px;font-family:inherit;background:#fff}.form-input:focus,.form-select:focus,.form-textarea:focus{outline:none;border-color:var(--primary)}.form-textarea{min-height:80px;resize:vertical}
-        .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-        .chip-group{display:flex;flex-wrap:wrap;gap:8px}.chip{padding:10px 16px;border:2px solid var(--border);border-radius:25px;cursor:pointer;transition:.3s;font-size:14px;font-weight:500}.chip:hover{border-color:var(--primary)}.chip.active{background:var(--primary);color:#fff;border-color:var(--primary)}
-        .chip.day.active{background:#3b82f6;border-color:#3b82f6}.chip.night.active{background:#8b5cf6;border-color:#8b5cf6}.chip.weekend.active{background:#f59e0b;border-color:#f59e0b}
-        .period-table{width:100%;border-collapse:collapse;margin-top:10px}.period-table th,.period-table td{padding:10px;text-align:center;border:1px solid var(--border);font-size:14px}.period-table th{background:var(--bg);font-weight:600}
-        .table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse}th,td{padding:12px 10px;text-align:left;border-bottom:1px solid var(--border);font-size:14px}th{background:var(--bg);font-weight:600;color:var(--text-light);font-size:12px}
-        tr.clickable{cursor:pointer;transition:.2s}tr.clickable:hover{background:var(--bg)}
-        .badge{padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500}.badge.success{background:rgba(16,185,129,.1);color:var(--success)}.badge.warning{background:rgba(245,158,11,.1);color:var(--warning)}.badge.danger{background:rgba(239,68,68,.1);color:var(--danger)}.badge.primary{background:rgba(79,70,229,.1);color:var(--primary)}.badge.gray{background:#e2e8f0;color:var(--text-light)}
-        .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:2000;opacity:0;visibility:hidden;transition:.3s}.modal-overlay.active{opacity:1;visibility:visible}
-        .modal{background:#fff;border-radius:20px 20px 0 0;width:100%;max-height:90vh;overflow-y:auto;transform:translateY(100%);transition:.3s}.modal-overlay.active .modal{transform:translateY(0)}
-        .modal-header{padding:18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#fff;z-index:1}.modal-title{font-size:18px;font-weight:600}.modal-close{background:none;border:none;font-size:28px;color:var(--text-light);cursor:pointer}
-        .modal-body{padding:18px}.modal-footer{padding:15px 18px;border-top:1px solid var(--border);display:flex;gap:10px}.modal-footer .btn{flex:1}
-        .alert{padding:14px 16px;border-radius:12px;margin-bottom:15px;font-size:14px;display:flex;align-items:flex-start;gap:10px}.alert-info{background:rgba(59,130,246,.1);color:#1d4ed8}.alert-warning{background:rgba(245,158,11,.1);color:#b45309}.alert-danger{background:rgba(239,68,68,.1);color:#b91c1c}.alert-success{background:rgba(16,185,129,.1);color:#047857}
-        .qr-container{text-align:center;padding:20px}.qr-code{background:#fff;padding:15px;border-radius:16px;display:inline-block;box-shadow:0 4px 15px rgba(0,0,0,.1);margin-bottom:15px}.qr-info{color:var(--text-light);font-size:14px}.qr-info strong{color:var(--text);display:block;font-size:16px;margin-bottom:5px}
-        .session-item{padding:15px;border:1px solid var(--border);border-radius:12px;margin-bottom:12px}.session-item.completed{background:#f8fafc;opacity:.7}
-        .session-header{display:flex;align-items:center;gap:12px;margin-bottom:10px}.session-icon{width:44px;height:44px;background:linear-gradient(135deg,#818cf8,var(--primary));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff}
-        .session-info{flex:1}.session-info h4{font-size:15px;margin-bottom:3px}.session-info span{font-size:13px;color:var(--text-light)}.session-actions{display:flex;gap:8px}.session-actions .btn{flex:1}
-        .schedule-grid{display:grid;gap:2px;font-size:11px}.schedule-header{padding:8px 4px;text-align:center;background:var(--primary);color:#fff;font-weight:600;border-radius:6px 6px 0 0}.schedule-time{padding:8px 4px;text-align:center;background:var(--bg);font-weight:500;display:flex;align-items:center;justify-content:center}
-        .schedule-cell{min-height:50px;padding:4px;background:#fff;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s}.schedule-cell:hover{background:var(--bg)}.schedule-cell.has-class{background:rgba(79,70,229,.15)}.schedule-cell .class-tag{font-size:10px;padding:4px 6px;background:var(--primary);color:#fff;border-radius:4px;text-align:center;width:100%}
-        .empty{text-align:center;padding:40px 20px;color:var(--text-light)}.empty .icon{font-size:48px;margin-bottom:12px;opacity:.5}
-        .toast-container{position:fixed;top:70px;left:15px;right:15px;z-index:3000}.toast{background:var(--text);color:#fff;padding:14px 18px;border-radius:12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;animation:slideDown .3s}.toast.success{background:var(--success)}.toast.warning{background:var(--warning)}.toast.danger{background:var(--danger)}@keyframes slideDown{from{transform:translateY(-20px);opacity:0}to{transform:translateY(0);opacity:1}}
-        .page{display:none}.page.active{display:block}
-        .tabs{display:flex;gap:5px;margin-bottom:15px}.tab{flex:1;padding:12px;text-align:center;border:2px solid var(--border);border-radius:10px;cursor:pointer;font-weight:500;font-size:14px}.tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
-        .progress-ring{width:120px;height:120px;margin:0 auto 15px}.progress-ring circle{fill:none;stroke-width:8}.progress-ring .bg{stroke:var(--border)}.progress-ring .fg{stroke:var(--success);stroke-linecap:round;transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke-dashoffset .5s}
-        .big-stat{text-align:center;padding:20px}.big-stat .value{font-size:48px;font-weight:700}.big-stat .label{font-size:14px;color:var(--text-light)}
-        .student-alert{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:12px;margin-bottom:10px}
-        .student-alert.critical{border-color:var(--danger);background:rgba(239,68,68,.05)}.student-alert.warning{border-color:var(--warning);background:rgba(245,158,11,.05)}.student-alert.success{border-color:var(--success);background:rgba(16,185,129,.05)}
-        .student-alert .avatar{width:40px;height:40px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600}
-        .student-alert .info{flex:1}.student-alert .info h5{font-size:14px;margin-bottom:2px}.student-alert .info span{font-size:12px;color:var(--text-light)}
-        .switch{position:relative;width:50px;height:28px}.switch input{opacity:0;width:0;height:0}.switch .slider{position:absolute;inset:0;background:var(--border);border-radius:28px;transition:.3s;cursor:pointer}.switch .slider::before{content:'';position:absolute;width:22px;height:22px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s}.switch input:checked+.slider{background:var(--success)}.switch input:checked+.slider::before{transform:translateX(22px)}
-        .setting-item{display:flex;align-items:center;justify-content:space-between;padding:15px 0;border-bottom:1px solid var(--border)}.setting-item:last-child{border:none}.setting-item .label{font-size:15px}.setting-item .desc{font-size:12px;color:var(--text-light);margin-top:2px}
-        .leave-item{padding:15px;border:1px solid var(--border);border-radius:12px;margin-bottom:10px}.leave-item.pending{border-left:4px solid var(--warning)}.leave-item.approved{border-left:4px solid var(--success)}.leave-item.rejected{border-left:4px solid var(--danger)}
-        .chart-container{position:relative;height:200px;margin:15px 0}
-        .item-card{padding:15px;border:1px solid var(--border);border-radius:12px;margin-bottom:10px;display:flex;align-items:center;gap:12px}
-        .item-card .icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff}
-        .item-card .info{flex:1}.item-card .info h5{font-size:15px;margin-bottom:2px}.item-card .info span{font-size:13px;color:var(--text-light)}
-        .item-card .actions{display:flex;gap:6px}
-        @media(min-width:768px){.mobile-header{display:none}.sidebar{transform:translateX(0);padding-top:20px}.sidebar-overlay{display:none!important}.main{margin-left:280px;padding:30px}.modal{max-width:600px;border-radius:20px;margin:auto}.modal-overlay{align-items:center}.stats-grid{grid-template-columns:repeat(4,1fr)}}
-    </style>
-</head>
-<body>
-    <header class="mobile-header">
-        <button class="hamburger" id="hamburger" onclick="toggleSidebar()"><span></span><span></span><span></span></button>
-        <div class="mobile-title">📚 簽到系統 Pro</div>
-        <div class="status-dot" id="status-dot"></div>
-    </header>
-    <div class="sidebar-overlay" id="overlay" onclick="toggleSidebar()"></div>
-    <aside class="sidebar" id="sidebar">
-        <ul class="nav-menu">
-            <li class="nav-section">總覽</li>
-            <li><a href="#" class="nav-link active" data-page="dashboard"><span>📊</span> 儀表板</a></li>
-            <li class="nav-section">課程管理</li>
-            <li><a href="#" class="nav-link" data-page="semester"><span>📅</span> 學期設定</a></li>
-            <li><a href="#" class="nav-link" data-page="schedule"><span>🗓️</span> 課表管理</a></li>
-            <li><a href="#" class="nav-link" data-page="sessions"><span>📝</span> 今日簽到</a></li>
-            <li class="nav-section">資料管理</li>
-            <li><a href="#" class="nav-link" data-page="classes"><span>🏫</span> 班級管理</a></li>
-            <li><a href="#" class="nav-link" data-page="students"><span>👨‍🎓</span> 學生名單</a></li>
-            <li><a href="#" class="nav-link" data-page="leaves"><span>📋</span> 請假管理<span class="nav-badge" id="leave-badge" style="display:none">0</span></a></li>
-            <li><a href="#" class="nav-link" data-page="records"><span>📜</span> 出缺紀錄</a></li>
-            <li class="nav-section">統計分析</li>
-            <li><a href="#" class="nav-link" data-page="stats"><span>📈</span> 出席統計</a></li>
-            <li><a href="#" class="nav-link" data-page="alerts"><span>⚠️</span> 缺席警示</a></li>
-            <li class="nav-section">系統</li>
-            <li><a href="#" class="nav-link" data-page="notifications"><span>🔔</span> 通知設定</a></li>
-            <li><a href="#" class="nav-link" data-page="linebot"><span>🤖</span> LINE Bot</a></li>
-            <li><a href="#" class="nav-link" data-page="settings"><span>⚙️</span> 系統設定</a></li>
-        </ul>
-    </aside>
-    <main class="main">
-        <!-- Dashboard -->
-        <div class="page active" id="page-dashboard">
-            <div class="header"><h1 class="page-title">儀表板</h1><p class="page-subtitle" id="today-info"></p></div>
-            <div class="stats-grid">
-                <div class="stat-card primary"><div class="stat-value" id="stat-students">-</div><div class="stat-label">註冊學生</div><div class="stat-icon">👨‍🎓</div></div>
-                <div class="stat-card success"><div class="stat-value" id="stat-attended">-</div><div class="stat-label">今日出席</div><div class="stat-icon">✅</div></div>
-                <div class="stat-card warning"><div class="stat-value" id="stat-late">-</div><div class="stat-label">今日遲到</div><div class="stat-icon">⚠️</div></div>
-                <div class="stat-card danger"><div class="stat-value" id="stat-absent">-</div><div class="stat-label">今日缺席</div><div class="stat-icon">❌</div></div>
-            </div>
-            <div class="card"><div class="card-title">📅 今日課程</div><div id="today-classes"></div></div>
-            <div class="card"><div class="card-title">⚠️ 需關注學生</div><div id="dashboard-alerts"></div></div>
-        </div>
-        <!-- Semester -->
-        <div class="page" id="page-semester">
-            <div class="header"><h1 class="page-title">學期設定</h1><p class="page-subtitle">設定學期日期與節次時間</p></div>
-            <div class="card"><div class="card-title">🏫 部別選擇</div><div class="chip-group" id="division-chips"><div class="chip day" data-div="day" onclick="selectDivision('day')">☀️ 日間部</div><div class="chip night" data-div="night" onclick="selectDivision('night')">🌙 夜間部</div><div class="chip weekend" data-div="weekend" onclick="selectDivision('weekend')">📅 進修部</div></div></div>
-            <div class="card"><div class="card-title">📆 學期期間</div><div class="form-row"><div class="form-group"><label class="form-label">開學日期</label><input type="date" class="form-input" id="semester-start" onchange="calcWeeks()"></div><div class="form-group"><label class="form-label">結業日期</label><input type="date" class="form-input" id="semester-end" onchange="calcWeeks()"></div></div><div class="alert alert-info">ℹ️ 自動計算：<strong id="semester-weeks">0</strong> 週 · 目前第 <strong id="current-week">0</strong> 週</div></div>
-            <div class="card"><div class="card-title">🔔 自動提醒設定</div>
-                <div class="form-group" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
-                    <div><strong>自動上課提醒</strong><br><small style="color:var(--text-light)">上課前自動發送 LINE 通知</small></div>
-                    <label class="switch"><input type="checkbox" id="auto-remind" checked><span class="slider"></span></label>
-                </div>
-                <div class="form-group" style="margin-top:15px">
-                    <label class="form-label">提前提醒時間</label>
-                    <select class="form-select" id="remind-minutes">
-                        <option value="10">10 分鐘前</option>
-                        <option value="15">15 分鐘前</option>
-                        <option value="20">20 分鐘前</option>
-                        <option value="30" selected>30 分鐘前</option>
-                        <option value="60">1 小時前</option>
-                    </select>
-                </div>
-                <div class="alert alert-success" style="margin-top:15px">✅ 系統會根據課表自動發送上課提醒與簽到連結給學生</div>
-            </div>
-            <div class="card"><div class="card-title">⏰ 節次時間表</div><div id="period-settings"></div></div>
-            <button class="btn btn-primary btn-block" onclick="saveSemester()">💾 儲存學期設定</button>
-            <button class="btn btn-danger btn-block" style="margin-top:10px" onclick="resetAllSettings()">🗑️ 重設所有設定</button>
-        </div>
-        <!-- Schedule -->
-        <div class="page" id="page-schedule">
-            <div class="header"><h1 class="page-title">課表管理</h1><p class="page-subtitle">管理課程資料</p></div>
-            <div class="card">
-                <div class="tabs"><div class="tab active" onclick="showView('grid')">週課表</div><div class="tab" onclick="showView('list')">課程列表</div></div>
-                <div id="grid-view"><div class="schedule-grid" id="schedule-grid"></div></div>
-                <div id="list-view" style="display:none">
-                    <button class="btn btn-primary btn-block" style="margin-bottom:15px" onclick="openModal('addCourse')">➕ 新增課程</button>
-                    <div id="courses-list"></div>
-                </div>
-            </div>
-        </div>
-        <!-- Sessions -->
-        <div class="page" id="page-sessions">
-            <div class="header"><h1 class="page-title">今日簽到</h1><p class="page-subtitle" id="session-date"></p></div>
-            <div id="sessions-list"></div>
-        </div>
-        <!-- Classes -->
-        <div class="page" id="page-classes">
-            <div class="header"><h1 class="page-title">班級管理</h1></div>
-            <button class="btn btn-primary btn-block" style="margin-bottom:15px" onclick="openModal('addClass')">➕ 新增班級</button>
-            <div id="classes-list"></div>
-        </div>
-        <!-- Students -->
-        <div class="page" id="page-students">
-            <div class="header"><h1 class="page-title">學生名單</h1></div>
-            <button class="btn btn-primary btn-block" style="margin-bottom:15px" onclick="openModal('addStudent')">➕ 新增學生</button>
-            <div class="card"><div class="form-group" style="margin:0"><select class="form-select" id="student-filter" onchange="loadStudents()"><option value="">全部班級</option></select></div></div>
-            <div id="students-list"></div>
-        </div>
-        <!-- Leaves -->
-        <div class="page" id="page-leaves">
-            <div class="header"><h1 class="page-title">請假管理</h1></div>
-            <div class="tabs"><div class="tab active" onclick="filterLeaves('pending')">待審核</div><div class="tab" onclick="filterLeaves('approved')">已核准</div><div class="tab" onclick="filterLeaves('rejected')">已駁回</div><div class="tab" onclick="filterLeaves('all')">全部</div></div>
-            <div id="leaves-list"></div>
-        </div>
-        <!-- Records -->
-        <div class="page" id="page-records">
-            <div class="header"><h1 class="page-title">出缺紀錄</h1></div>
-            <button class="btn btn-primary btn-block" style="margin-bottom:15px" onclick="openModal('addRecord')">➕ 手動新增</button>
-            <div class="card"><div class="table-wrap"><table><thead><tr><th>日期</th><th>學號</th><th>姓名</th><th>狀態</th></tr></thead><tbody id="records-table"></tbody></table></div></div>
-        </div>
-        <!-- Stats -->
-        <div class="page" id="page-stats">
-            <div class="header"><h1 class="page-title">出席統計</h1></div>
-            <div class="card">
-                <div class="big-stat">
-                    <svg class="progress-ring" viewBox="0 0 120 120"><circle class="bg" cx="60" cy="60" r="52"/><circle class="fg" id="progress-circle" cx="60" cy="60" r="52" stroke-dasharray="327" stroke-dashoffset="327"/></svg>
-                    <div class="value" id="overall-rate">--%</div>
-                    <div class="label">整體出席率</div>
-                </div>
-            </div>
-            <div class="stats-grid">
-                <div class="stat-card success"><div class="stat-value" id="stats-attended">-</div><div class="stat-label">出席</div></div>
-                <div class="stat-card warning"><div class="stat-value" id="stats-late">-</div><div class="stat-label">遲到</div></div>
-                <div class="stat-card danger"><div class="stat-value" id="stats-absent">-</div><div class="stat-label">缺席</div></div>
-                <div class="stat-card primary"><div class="stat-value" id="stats-total">-</div><div class="stat-label">總計</div></div>
-            </div>
-            <div class="card"><div class="card-title">📉 低出席率學生</div><div id="low-attendance-list"></div></div>
-        </div>
-        <!-- Alerts -->
-        <div class="page" id="page-alerts">
-            <div class="header"><h1 class="page-title">缺席警示</h1></div>
-            <div class="alert alert-warning">⚠️ 以下學生有連續缺席情形</div>
-            <div id="alert-list"></div>
-            <button class="btn btn-primary btn-block" onclick="sendAllWarnings()">📲 發送全部警告</button>
-        </div>
-        <!-- Notifications -->
-        <div class="page" id="page-notifications">
-            <div class="header"><h1 class="page-title">通知設定</h1></div>
-            <div class="card">
-                <div class="card-title">📱 自動通知</div>
-                <div class="setting-item"><div><div class="label">缺席通知學生</div><div class="desc">缺席時發送 LINE 通知</div></div><label class="switch"><input type="checkbox" id="notify-absent" checked><span class="slider"></span></label></div>
-                <div class="setting-item"><div><div class="label">缺席通知家長</div><div class="desc">同時通知家長</div></div><label class="switch"><input type="checkbox" id="notify-parent"><span class="slider"></span></label></div>
-                <div class="setting-item"><div><div class="label">連續缺席警告</div><div class="desc">連續 3 次缺席發警告</div></div><label class="switch"><input type="checkbox" id="notify-warning" checked><span class="slider"></span></label></div>
-            </div>
-            <button class="btn btn-primary btn-block" onclick="toast('設定已儲存！')">💾 儲存設定</button>
-        </div>
-        <!-- LINE Bot -->
-        <div class="page" id="page-linebot">
-            <div class="header"><h1 class="page-title">LINE Bot 設定</h1><p class="page-subtitle">如何發布與使用</p></div>
-            <div class="card">
-                <div class="card-title">📋 發布步驟</div>
-                <div class="alert alert-info">
-                    <b>Step 1:</b> 前往 <a href="https://developers.line.biz/" target="_blank" style="color:#1d4ed8">LINE Developers</a> 登入
-                </div>
-                <div class="alert alert-info">
-                    <b>Step 2:</b> 建立 Provider → 建立 Messaging API Channel
-                </div>
-                <div class="alert alert-info">
-                    <b>Step 3:</b> 在 Channel 設定中：<br>
-                    • Webhook URL 填入：<br>
-                    <code style="background:#e2e8f0;padding:4px 8px;border-radius:4px;font-size:12px;word-break:break-all">${location.origin}/webhook</code>
-                </div>
-                <div class="alert alert-info">
-                    <b>Step 4:</b> 開啟「Use webhook」
-                </div>
-                <div class="alert alert-info">
-                    <b>Step 5:</b> 複製 Channel Secret 和 Channel Access Token，填入 Render 環境變數
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-title">⚙️ Render 環境變數</div>
-                <div class="alert alert-warning">
-                    在 Render Dashboard → Environment 加入：<br><br>
-                    <code>LINE_CHANNEL_SECRET</code> = 你的 Secret<br>
-                    <code>LINE_CHANNEL_ACCESS_TOKEN</code> = 你的 Token<br>
-                    <code>GOOGLE_SHEETS_ID</code> = 你的試算表 ID<br>
-                    <code>GOOGLE_SERVICE_ACCOUNT_EMAIL</code> = 服務帳戶 Email<br>
-                    <code>GOOGLE_PRIVATE_KEY</code> = 服務帳戶金鑰
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-title">📱 學生如何使用</div>
-                <div class="alert alert-success">
-                    1. 掃描 LINE Bot QR Code 加好友<br>
-                    2. 傳送「註冊 學號 姓名 班級」<br>
-                    3. 上課時掃描老師的簽到 QR Code<br>
-                    4. 傳送「簽到」完成
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-title">🔗 Bot ID</div>
-                <div class="form-group"><input type="text" class="form-input" id="bot-id" placeholder="@xxx"></div>
-                <button class="btn btn-primary btn-block" onclick="saveBotId()">💾 儲存</button>
-            </div>
-        </div>
-        <!-- Settings -->
-        <div class="page" id="page-settings">
-            <div class="header"><h1 class="page-title">系統設定</h1></div>
-            <div class="card"><div class="card-title">🔗 API 連線</div><div class="form-group"><label class="form-label">後端網址</label><input type="text" class="form-input" id="api-url" placeholder="https://your-app.onrender.com"></div><button class="btn btn-primary btn-block" onclick="testConn()">🔍 測試連線</button></div>
-            <div class="card"><div class="card-title">🧪 測試驗證</div>
-                <p style="color:var(--text-light);font-size:13px;margin-bottom:15px">老師可以在這裡測試各項功能，不需要等到實際課堂結束。</p>
-                <div class="form-group">
-                    <label class="form-label">選擇測試班級</label>
-                    <select class="form-select" id="test-class"></select>
-                </div>
-                <div style="display:flex;flex-direction:column;gap:10px">
-                    <button class="btn btn-outline" onclick="testSemesterEndNotify()">📚 測試學期結束通知</button>
-                    <button class="btn btn-outline" onclick="testCheckinNotify()">✅ 測試簽到成功通知</button>
-                    <button class="btn btn-outline" onclick="testLateNotify()">⚠️ 測試遲到通知</button>
-                    <button class="btn btn-outline" onclick="testAbsentNotify()">❌ 測試缺席通知</button>
-                    <button class="btn btn-outline" onclick="testReminderNotify()">📢 測試上課提醒</button>
-                </div>
-                <div class="alert alert-warning" style="margin-top:15px;font-size:12px">⚠️ 測試通知會發送給該班級所有已綁定 LINE 的學生</div>
-            </div>
-            <div class="card"><div class="card-title">🔧 LINE Bot 設定</div>
-                <div class="form-group"><label class="form-label">LINE Bot ID</label><input type="text" class="form-input" id="bot-id" placeholder="@516bpeih"></div>
-                <button class="btn btn-primary btn-block" onclick="saveBotId()">💾 儲存 Bot ID</button>
-            </div>
-        </div>
-    </main>
-    <div class="toast-container" id="toasts"></div>
+/**
+ * 🎓 學生簽到系統 - LINE BOT 後端
+ * 功能：GPS 定位簽到、遲到判定、缺席追蹤、Google Sheets 整合
+ */
 
-    <!-- Modals -->
-    <div class="modal-overlay" id="modal-addClass"><div class="modal"><div class="modal-header"><h3 class="modal-title">新增班級</h3><button class="modal-close" onclick="closeModal('addClass')">&times;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">班級代碼 *</label><input type="text" class="form-input" id="class-code" placeholder="801"></div><div class="form-group"><label class="form-label">班級名稱 *</label><input type="text" class="form-input" id="class-name" placeholder="八年一班"></div><div class="form-group"><label class="form-label">部別</label><select class="form-select" id="class-division"><option value="day">日間部</option><option value="night">夜間部</option><option value="weekend">進修部</option></select></div><div class="form-group"><label class="form-label">導師</label><input type="text" class="form-input" id="class-teacher"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('addClass')">取消</button><button class="btn btn-primary" onclick="addClass()">新增</button></div></div></div>
+const express = require('express');
+const path = require('path');
+const line = require('@line/bot-sdk');
+const { GoogleSpreadsheet } = require('google-spreadsheet');
+const { JWT } = require('google-auth-library');
+const cron = require('node-cron');
+require('dotenv').config();
+
+const app = express();
+
+// ===== LINE Bot 設定 =====
+const lineConfig = {
+    channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+    channelSecret: process.env.LINE_CHANNEL_SECRET
+};
+
+const lineClient = new line.Client(lineConfig);
+
+// ===== Google Sheets 設定 =====
+let doc;
+const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
+
+async function initGoogleSheets() {
+    const serviceAccountAuth = new JWT({
+        email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+        key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        scopes: SCOPES,
+    });
     
-    <div class="modal-overlay" id="modal-editClass"><div class="modal"><div class="modal-header"><h3 class="modal-title">編輯班級</h3><button class="modal-close" onclick="closeModal('editClass')">&times;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">班級代碼</label><input type="text" class="form-input" id="edit-class-code" readonly></div><div class="form-group"><label class="form-label">班級名稱</label><input type="text" class="form-input" id="edit-class-name"></div><div class="form-group"><label class="form-label">部別</label><select class="form-select" id="edit-class-division"><option value="day">日間部</option><option value="night">夜間部</option><option value="weekend">進修部</option></select></div><div class="form-group"><label class="form-label">導師</label><input type="text" class="form-input" id="edit-class-teacher"></div></div><div class="modal-footer"><button class="btn btn-danger" onclick="deleteClass()">🗑️ 刪除</button><button class="btn btn-primary" onclick="saveClass()">💾 儲存</button></div></div></div>
+    doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, serviceAccountAuth);
+    await doc.loadInfo();
+    console.log('📊 Google Sheets 連線成功:', doc.title);
+}
 
-    <div class="modal-overlay" id="modal-addCourse"><div class="modal"><div class="modal-header"><h3 class="modal-title">新增課程</h3><button class="modal-close" onclick="closeModal('addCourse')">&times;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">課程名稱 *</label><input type="text" class="form-input" id="course-name" placeholder="物理"></div><div class="form-group"><label class="form-label">班級 *</label><select class="form-select" id="course-class"></select></div><div class="form-row"><div class="form-group"><label class="form-label">星期 *</label><select class="form-select" id="course-day"><option value="1">週一</option><option value="2">週二</option><option value="3">週三</option><option value="4">週四</option><option value="5">週五</option><option value="6">週六</option><option value="0">週日</option></select></div><div class="form-group"><label class="form-label">節次 *</label><select class="form-select" id="course-period"></select></div></div><div class="form-group"><label class="form-label">教室</label><input type="text" class="form-input" id="course-room" placeholder="致遠樓 301"></div><div class="form-group"><label class="form-label">簽到方式</label><select class="form-select" id="course-radius"><option value="-1">📱 現場簽到（掃QR Code）</option><option value="10">📍 GPS 10 公尺（精準）</option><option value="50">📍 GPS 50 公尺（教室）</option><option value="100" selected>📍 GPS 100 公尺（樓層）</option><option value="150">📍 GPS 150 公尺（建築）</option><option value="200">📍 GPS 200 公尺（校園）</option><option value="0">🌐 不限制（線上課程）</option></select></div><div class="alert alert-info" style="font-size:12px;margin-bottom:10px">💡 <b>GPS 座標取得方式：</b><br>1. 點「📍 取得目前位置」自動定位<br>2. 或從 <a href="https://www.google.com/maps" target="_blank">Google Maps</a> 右鍵點擊位置複製座標<br>3. 室內定位不準時，建議使用較大範圍（100-200m）</div><div class="form-row"><div class="form-group"><label class="form-label">GPS 緯度</label><input type="number" step="any" class="form-input" id="course-lat" placeholder="22.6267"></div><div class="form-group"><label class="form-label">GPS 經度</label><input type="number" step="any" class="form-input" id="course-lon" placeholder="120.3565"></div></div><div style="display:flex;gap:8px"><button type="button" class="btn btn-outline" style="flex:1" onclick="getLocation()">📍 取得目前位置</button><button type="button" class="btn btn-outline" style="flex:1" onclick="parseGoogleMapsUrl()">🗺️ 貼上 Google Maps 連結</button></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('addCourse')">取消</button><button class="btn btn-primary" onclick="addCourse()">新增</button></div></div></div>
+// ===== 工具函數 =====
 
-    <div class="modal-overlay" id="modal-editCourse"><div class="modal"><div class="modal-header"><h3 class="modal-title">編輯課程</h3><button class="modal-close" onclick="closeModal('editCourse')">&times;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">課程名稱</label><input type="text" class="form-input" id="edit-course-name"></div><div class="form-group"><label class="form-label">班級</label><select class="form-select" id="edit-course-class"></select></div><div class="form-row"><div class="form-group"><label class="form-label">星期</label><select class="form-select" id="edit-course-day"><option value="1">週一</option><option value="2">週二</option><option value="3">週三</option><option value="4">週四</option><option value="5">週五</option><option value="6">週六</option><option value="0">週日</option></select></div><div class="form-group"><label class="form-label">節次</label><select class="form-select" id="edit-course-period"></select></div></div><div class="form-group"><label class="form-label">教室</label><input type="text" class="form-input" id="edit-course-room"></div><div class="form-group"><label class="form-label">簽到方式</label><select class="form-select" id="edit-course-radius"><option value="-1">📱 現場簽到（掃QR Code）</option><option value="10">📍 GPS 10 公尺（精準）</option><option value="50">📍 GPS 50 公尺（教室）</option><option value="100">📍 GPS 100 公尺（樓層）</option><option value="150">📍 GPS 150 公尺（建築）</option><option value="200">📍 GPS 200 公尺（校園）</option><option value="0">🌐 不限制（線上課程）</option></select></div><div class="alert alert-info" style="font-size:12px;margin-bottom:10px">💡 室內定位不準時，可從 <a href="https://www.google.com/maps" target="_blank">Google Maps</a> 搜尋學校，右鍵點擊建築物位置複製座標</div><div class="form-row"><div class="form-group"><label class="form-label">GPS 緯度</label><input type="number" step="any" class="form-input" id="edit-course-lat" placeholder="22.6267"></div><div class="form-group"><label class="form-label">GPS 經度</label><input type="number" step="any" class="form-input" id="edit-course-lon" placeholder="120.3565"></div></div><div style="display:flex;gap:8px"><button type="button" class="btn btn-outline" style="flex:1" onclick="getLocationForEdit()">📍 取得目前位置</button><button type="button" class="btn btn-outline" style="flex:1" onclick="parseGoogleMapsUrlForEdit()">🗺️ 貼上 Google Maps 連結</button></div></div><div class="modal-footer"><button class="btn btn-danger" onclick="deleteCourse()">🗑️ 刪除</button><button class="btn btn-primary" onclick="saveCourse()">💾 儲存</button></div></div></div>
+/**
+ * 計算兩點間的距離（公尺）- Haversine 公式
+ */
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371000; // 地球半徑（公尺）
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+}
 
-    <div class="modal-overlay" id="modal-addStudent"><div class="modal"><div class="modal-header"><h3 class="modal-title">新增學生</h3><button class="modal-close" onclick="closeModal('addStudent')">&times;</button></div><div class="modal-body"><div class="alert alert-info">💡 學生也可以透過 LINE Bot 自行註冊</div><div class="form-group"><label class="form-label">學號 *</label><input type="text" class="form-input" id="student-id" placeholder="110001"></div><div class="form-group"><label class="form-label">姓名 *</label><input type="text" class="form-input" id="student-name" placeholder="王小明"></div><div class="form-group"><label class="form-label">班級 *</label><select class="form-select" id="student-class"></select></div><div class="form-group"><label class="form-label">電話</label><input type="tel" class="form-input" id="student-phone" placeholder="0912345678"></div><div class="form-group"><label class="form-label">家長電話</label><input type="tel" class="form-input" id="student-parent-phone"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('addStudent')">取消</button><button class="btn btn-primary" onclick="addStudent()">新增</button></div></div></div>
+/**
+ * 格式化日期時間
+ */
+function formatDateTime(date) {
+    return date.toLocaleString('zh-TW', { 
+        timeZone: 'Asia/Taipei',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+}
 
-    <div class="modal-overlay" id="modal-editStudent"><div class="modal"><div class="modal-header"><h3 class="modal-title">編輯學生</h3><button class="modal-close" onclick="closeModal('editStudent')">&times;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">學號</label><input type="text" class="form-input" id="edit-student-id" readonly></div><div class="form-group"><label class="form-label">姓名</label><input type="text" class="form-input" id="edit-student-name"></div><div class="form-group"><label class="form-label">班級</label><select class="form-select" id="edit-student-class"></select></div><div class="form-group"><label class="form-label">電話</label><input type="tel" class="form-input" id="edit-student-phone"></div><div class="form-group"><label class="form-label">家長電話</label><input type="tel" class="form-input" id="edit-student-parent-phone"></div></div><div class="modal-footer"><button class="btn btn-danger" onclick="deleteStudent()">🗑️ 刪除</button><button class="btn btn-primary" onclick="saveStudent()">💾 儲存</button></div></div></div>
+/**
+ * 取得今天日期字串
+ */
+function getTodayString() {
+    // 統一使用 YYYY-MM-DD 格式
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
 
-    <div class="modal-overlay" id="modal-addRecord"><div class="modal"><div class="modal-header"><h3 class="modal-title">手動新增紀錄</h3><button class="modal-close" onclick="closeModal('addRecord')">&times;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">學號 *</label><input type="text" class="form-input" id="record-student"></div><div class="form-group"><label class="form-label">日期 *</label><input type="date" class="form-input" id="record-date"></div><div class="form-group"><label class="form-label">狀態</label><select class="form-select" id="record-status"><option value="已報到">已報到</option><option value="遲到">遲到</option><option value="缺席">缺席</option></select></div><div class="form-group"><label class="form-label">備註</label><input type="text" class="form-input" id="record-note"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('addRecord')">取消</button><button class="btn btn-primary" onclick="addRecord()">新增</button></div></div></div>
+// ===== Google Sheets 操作 =====
 
-    <div class="modal-overlay" id="modal-reviewLeave"><div class="modal"><div class="modal-header"><h3 class="modal-title">審核請假</h3><button class="modal-close" onclick="closeModal('reviewLeave')">&times;</button></div><div class="modal-body"><div id="leave-detail"></div><div class="form-group"><label class="form-label">備註</label><textarea class="form-textarea" id="review-note"></textarea></div></div><div class="modal-footer"><button class="btn btn-danger" onclick="reviewLeave('已駁回')">❌ 駁回</button><button class="btn btn-success" onclick="reviewLeave('已核准')">✅ 核准</button></div></div></div>
+/**
+ * 取得或建立工作表
+ */
+async function getOrCreateSheet(title, headers) {
+    let sheet = doc.sheetsByTitle[title];
+    if (!sheet) {
+        sheet = await doc.addSheet({ title, headerValues: headers });
+    }
+    return sheet;
+}
 
-    <div class="modal-overlay" id="modal-qr"><div class="modal"><div class="modal-header"><h3 class="modal-title">📱 簽到 QR Code</h3><button class="modal-close" onclick="closeModal('qr')">&times;</button></div><div class="modal-body"><div class="qr-container"><div class="qr-code" id="qr-container"></div><div class="qr-info"><strong id="qr-name"></strong><span id="qr-time"></span></div><div class="alert alert-success" style="margin-top:10px;font-size:12px">👆 學生掃此 QR Code → 直接簽到成功</div><div id="qr-link-box" style="margin-top:15px;padding:10px;background:#fff3cd;border-radius:10px"><p style="font-size:12px;color:#856404;margin-bottom:8px">📤 學生自己手機簽到連結（需 GPS 驗證）：</p><input type="text" id="qr-link" readonly style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:11px" onclick="this.select()"><button class="btn btn-outline btn-sm" style="margin-top:8px;width:100%" onclick="copyQRLink()">📋 複製連結分享給學生</button></div></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('qr')">關閉</button><button class="btn btn-success" onclick="sendReminderFromQR()">📢 發送通知</button><button class="btn btn-primary" onclick="downloadQR()">📥 下載</button></div></div></div>
+/**
+ * 取得學生資料
+ */
+async function getStudent(lineUserId) {
+    const sheet = await getOrCreateSheet('學生名單', [
+        '學號', '姓名', '班級', 'LINE_ID', 'LINE名稱', '註冊時間', '狀態'
+    ]);
+    const rows = await sheet.getRows();
+    return rows.find(row => row.get('LINE_ID') === lineUserId);
+}
 
-    <script>
-        // === 全域變數 ===
-        let API = localStorage.getItem('apiUrl') || '';
-        let BOT = localStorage.getItem('botId') || '@bot';
-        let sem = JSON.parse(localStorage.getItem('semester') || 'null') || { div: 'day', start: '', end: '', periods: [] };
-        let classes = [], courses = [], students = [], leaves = [];
-        let currentClass = null, currentCourse = null, currentStudent = null, currentLeave = null;
-        let leaveFilter = 'pending';
+/**
+ * 註冊學生
+ */
+async function registerStudent(lineUserId, lineName, studentId, studentName, className) {
+    const sheet = await getOrCreateSheet('學生名單', [
+        '學號', '姓名', '班級', 'LINE_ID', 'LINE名稱', '註冊時間', '狀態'
+    ]);
+    
+    // 檢查學號是否已被使用
+    const rows = await sheet.getRows();
+    const existing = rows.find(row => row.get('學號') === studentId);
+    if (existing) {
+        if (existing.get('LINE_ID') === lineUserId) {
+            return { success: false, message: '您已經註冊過了！' };
+        }
+        return { success: false, message: '此學號已被其他帳號綁定！' };
+    }
+    
+    await sheet.addRow({
+        '學號': studentId,
+        '姓名': studentName,
+        '班級': className,
+        'LINE_ID': lineUserId,
+        'LINE名稱': lineName,
+        '註冊時間': formatDateTime(new Date()),
+        '狀態': '正常'
+    });
+    
+    return { success: true, message: '註冊成功！' };
+}
+
+/**
+ * 取得課程資料
+ */
+async function getCourse(courseId) {
+    const sheet = await getOrCreateSheet('課程列表', [
+        '課程ID', '科目', '班級', '教師', '星期', '節次', '上課時間', '教室', 
+        '教室緯度', '教室經度', '簽到範圍', '遲到標準', '狀態', '建立時間'
+    ]);
+    const rows = await sheet.getRows();
+    return rows.find(row => row.get('課程ID') === courseId);
+}
+
+/**
+ * 取得今日課程活動
+ */
+async function getTodaySession(courseId) {
+    const today = getTodayString();
+    const sheet = await getOrCreateSheet('簽到活動', [
+        '活動ID', '課程ID', '日期', '開始時間', '結束時間', 'QR碼內容', '狀態'
+    ]);
+    const rows = await sheet.getRows();
+    
+    // 找今天的活動（不限制狀態，只要不是「已結束」）
+    const session = rows.find(row => {
+        const rowCourseId = row.get('課程ID');
+        const rowDate = row.get('日期');
+        const rowStatus = row.get('狀態');
         
-        const PERIODS = {
-            day: [{n:1,s:'08:00',e:'08:50'},{n:2,s:'09:00',e:'09:50'},{n:3,s:'10:00',e:'10:50'},{n:4,s:'11:00',e:'11:50'},{n:5,s:'13:00',e:'13:50'},{n:6,s:'14:00',e:'14:50'},{n:7,s:'15:00',e:'15:50'},{n:8,s:'16:00',e:'17:00'}],
-            night: [{n:1,s:'18:00',e:'18:50'},{n:2,s:'19:00',e:'19:50'},{n:3,s:'20:00',e:'20:50'},{n:4,s:'21:00',e:'22:00'}],
-            weekend: [{n:1,s:'08:00',e:'08:50'},{n:2,s:'09:00',e:'09:50'},{n:3,s:'10:00',e:'10:50'},{n:4,s:'11:00',e:'11:50'},{n:5,s:'13:00',e:'13:50'},{n:6,s:'14:00',e:'14:50'},{n:7,s:'15:00',e:'15:50'},{n:8,s:'16:00',e:'17:00'}]
-        };
-        const DAY_NAMES = ['日', '一', '二', '三', '四', '五', '六'];
-        const DIV_NAMES = { day: '日間部', night: '夜間部', weekend: '進修部' };
+        // 日期可能是不同格式，都嘗試匹配
+        const dateMatch = rowDate === today || 
+                         rowDate === today.replace(/-/g, '/') ||
+                         rowDate?.includes(today.split('-')[1] + '/' + today.split('-')[2]);
+        
+        return rowCourseId === courseId && 
+               dateMatch && 
+               rowStatus !== '已結束';
+    });
+    
+    return session;
+}
 
-        // === API ===
-        async function api(path, opts = {}) {
-            if (!API) {
-                console.log('API 未設定');
-                return null;
-            }
-            try {
-                console.log('API 請求:', API + path, opts.method || 'GET');
-                const res = await fetch(API + path, { ...opts, headers: { 'Content-Type': 'application/json' } });
-                const data = await res.json();
-                console.log('API 回應:', res.status, data);
+/**
+ * 檢查是否已簽到
+ */
+async function checkExistingAttendance(sessionId, studentId) {
+    try {
+        const sheet = doc.sheetsByTitle['簽到紀錄'];
+        if (!sheet) return null;
+        
+        const rows = await sheet.getRows();
+        return rows.find(row => 
+            row.get('活動ID') === sessionId && 
+            row.get('學號') === studentId
+        );
+    } catch (e) {
+        console.error('檢查簽到錯誤:', e);
+        return null;
+    }
+}
+
+/**
+ * 記錄簽到並發送通知
+ */
+async function recordAttendance(sessionId, studentId, status, lateMinutes = 0, gpsLat = '', gpsLon = '', sendNotification = true) {
+    const sheet = await getOrCreateSheet('簽到紀錄', [
+        '活動ID', '學號', '簽到時間', '狀態', '遲到分鐘', 'GPS緯度', 'GPS經度', '備註'
+    ]);
+    
+    // 檢查是否已簽到
+    const rows = await sheet.getRows();
+    const existing = rows.find(row => 
+        row.get('活動ID') === sessionId && 
+        row.get('學號') === studentId
+    );
+    
+    if (existing) {
+        return { success: false, message: '您已經簽到過了！', status: existing.get('狀態') };
+    }
+    
+    await sheet.addRow({
+        '活動ID': sessionId,
+        '學號': studentId,
+        '簽到時間': formatDateTime(new Date()),
+        '狀態': status,
+        '遲到分鐘': lateMinutes,
+        'GPS緯度': gpsLat,
+        'GPS經度': gpsLon,
+        '備註': ''
+    });
+    
+    // 更新統計
+    await updateStatistics(studentId, status);
+    
+    // 發送簽到狀態通知（準時、遲到、缺席都發送）
+    if (sendNotification) {
+        try {
+            const studentSheet = doc.sheetsByTitle['學生名單'];
+            if (studentSheet) {
+                const students = await studentSheet.getRows();
+                const student = students.find(s => s.get('學號') === studentId);
                 
-                if (!res.ok) {
-                    console.error('API 錯誤:', res.status, data);
-                    return data;
-                }
-                document.getElementById('status-dot').classList.add('connected');
-                return data;
-            } catch (e) {
-                console.error('API 例外:', e);
-                document.getElementById('status-dot').classList.remove('connected');
-                return null;
-            }
-        }
-
-        // === UI ===
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('open');
-            document.getElementById('overlay').classList.toggle('open');
-            document.getElementById('hamburger').classList.toggle('active');
-        }
-        function showPage(page) {
-            document.querySelectorAll('.nav-link').forEach(l => l.classList.toggle('active', l.dataset.page === page));
-            document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + page));
-        }
-        document.querySelectorAll('.nav-link').forEach(link => {
-            link.addEventListener('click', e => {
-                e.preventDefault();
-                showPage(link.dataset.page);
-                if (innerWidth < 768) toggleSidebar();
-                loadPage(link.dataset.page);
-            });
-        });
-        function openModal(id) { document.getElementById('modal-' + id).classList.add('active'); }
-        function closeModal(id) { document.getElementById('modal-' + id).classList.remove('active'); }
-        function toast(msg, type = 'success') {
-            const el = document.createElement('div');
-            el.className = 'toast ' + type;
-            el.textContent = (type === 'success' ? '✅ ' : type === 'warning' ? '⏳ ' : '❌ ') + msg;
-            document.getElementById('toasts').appendChild(el);
-            setTimeout(() => el.remove(), 3000);
-        }
-
-        // === 學期設定 ===
-        function selectDivision(div) {
-            console.log('切換部別:', div);
-            
-            // 更新變數
-            sem.div = div;
-            sem.periods = JSON.parse(JSON.stringify(PERIODS[div]));
-            
-            // 更新所有 chip 的樣式
-            const chips = document.querySelectorAll('#division-chips .chip');
-            chips.forEach(c => {
-                // 移除所有 active 和顏色 class
-                c.classList.remove('active', 'day', 'night', 'weekend');
-            });
-            
-            // 為選中的 chip 加上樣式
-            const selectedChip = document.querySelector('#division-chips .chip[data-div="' + div + '"]');
-            if (selectedChip) {
-                selectedChip.classList.add('active');
-                selectedChip.classList.add(div);
-            }
-            
-            // 儲存到 localStorage
-            localStorage.setItem('semester', JSON.stringify(sem));
-            console.log('已儲存:', JSON.stringify(sem));
-            
-            // 更新節次顯示
-            renderPeriods();
-            
-            // 顯示提示
-            toast('已切換至' + (div === 'day' ? '日間部' : div === 'night' ? '夜間部' : '進修部'));
-        }
-        
-        function resetAllSettings() {
-            if (!confirm('確定要重設所有設定嗎？這會清除學期設定、部別選擇等。')) return;
-            
-            // 清除 localStorage
-            localStorage.removeItem('semester');
-            
-            // 重設變數
-            sem = { div: 'day', start: '', end: '', periods: JSON.parse(JSON.stringify(PERIODS.day)) };
-            
-            // 重新初始化 UI
-            initSemesterUI();
-            
-            toast('設定已重設！');
-        }
-        
-        function saveSemesterToStorage() {
-            localStorage.setItem('semester', JSON.stringify(sem));
-        }
-        
-        function loadSemesterFromStorage() {
-            const saved = localStorage.getItem('semester');
-            console.log('從 localStorage 讀取:', saved);
-            if (saved) {
-                try {
-                    const parsed = JSON.parse(saved);
-                    sem.div = parsed.div || 'day';
-                    sem.start = parsed.start || '';
-                    sem.end = parsed.end || '';
-                    sem.periods = parsed.periods && parsed.periods.length > 0 ? parsed.periods : JSON.parse(JSON.stringify(PERIODS[sem.div]));
-                    console.log('解析成功:', sem);
-                } catch (e) {
-                    console.log('解析失敗，使用預設');
-                    sem = { div: 'day', start: '', end: '', periods: JSON.parse(JSON.stringify(PERIODS.day)) };
-                }
-            }
-        }
-        
-        function initSemesterUI() {
-            console.log('初始化 UI, sem.div =', sem.div);
-            
-            // 更新部別 chips
-            const chips = document.querySelectorAll('#division-chips .chip');
-            chips.forEach(c => {
-                c.classList.remove('active', 'day', 'night', 'weekend');
-                if (c.dataset.div === sem.div) {
-                    c.classList.add('active');
-                    c.classList.add(sem.div);
-                }
-            });
-            
-            // 更新日期
-            document.getElementById('semester-start').value = sem.start || '';
-            document.getElementById('semester-end').value = sem.end || '';
-            calcWeeks();
-            
-            // 更新節次表
-            renderPeriods();
-        }
-        function renderPeriods() {
-            const ps = sem.periods && sem.periods.length > 0 ? sem.periods : PERIODS[sem.div || 'day'];
-            document.getElementById('period-settings').innerHTML = '<table class="period-table"><thead><tr><th>節次</th><th>開始</th><th>結束</th></tr></thead><tbody>' + ps.map((p, i) => '<tr><td>第' + p.n + '節</td><td><input type="time" class="form-input" value="' + p.s + '" onchange="updatePeriod(' + i + ',\'s\',this.value)" style="padding:8px"></td><td><input type="time" class="form-input" value="' + p.e + '" onchange="updatePeriod(' + i + ',\'e\',this.value)" style="padding:8px"></td></tr>').join('') + '</tbody></table>';
-            updatePeriodDropdowns();
-        }
-        function updatePeriod(idx, key, val) {
-            sem.periods[idx][key] = val;
-            saveSemesterToStorage();
-        }
-        function calcWeeks() {
-            const s = document.getElementById('semester-start').value;
-            const e = document.getElementById('semester-end').value;
-            if (s && e) {
-                const startDate = new Date(s);
-                const endDate = new Date(e);
-                const weeks = Math.ceil((endDate - startDate) / (7 * 24 * 60 * 60 * 1000));
-                document.getElementById('semester-weeks').textContent = weeks;
-                
-                // 計算目前第幾週
-                const now = new Date();
-                if (now >= startDate && now <= endDate) {
-                    const currentWeek = Math.ceil((now - startDate) / (7 * 24 * 60 * 60 * 1000));
-                    document.getElementById('current-week').textContent = currentWeek;
-                } else if (now < startDate) {
-                    document.getElementById('current-week').textContent = '尚未開學';
-                } else {
-                    document.getElementById('current-week').textContent = '已結業';
-                }
-                
-                sem.start = s;
-                sem.end = e;
-                sem.weeks = weeks;
-            }
-        }
-        async function saveSemester() {
-            calcWeeks();
-            saveSemesterToStorage();
-            
-            // 儲存自動提醒設定到伺服器
-            const autoRemind = document.getElementById('auto-remind').checked;
-            const remindMinutes = document.getElementById('remind-minutes').value;
-            
-            await api('/api/settings', { 
-                method: 'POST', 
-                body: JSON.stringify({
-                    remindBeforeClass: autoRemind,
-                    remindMinutes: parseInt(remindMinutes),
-                    semesterStart: sem.start,
-                    semesterEnd: sem.end
-                })
-            });
-            
-            toast('學期設定已儲存！');
-        }
-        async function loadReminderSettings() {
-            const r = await api('/api/settings');
-            if (r) {
-                document.getElementById('auto-remind').checked = r.remindBeforeClass !== false;
-                document.getElementById('remind-minutes').value = r.remindMinutes || 30;
-            }
-        }
-        function updatePeriodDropdowns() {
-            const ps = sem.periods && sem.periods.length > 0 ? sem.periods : PERIODS[sem.div || 'day'];
-            const opts = ps.map(p => '<option value="' + p.n + '">第' + p.n + '節 (' + p.s + '-' + p.e + ')</option>').join('');
-            document.getElementById('course-period').innerHTML = opts;
-            document.getElementById('edit-course-period').innerHTML = opts;
-        }
-
-        // === 班級管理 ===
-        async function loadClasses() {
-            const data = await api('/api/classes');
-            if (data) {
-                classes = data;
-                renderClasses();
-                updateClassDropdowns();
-            }
-        }
-        function renderClasses() {
-            document.getElementById('classes-list').innerHTML = classes.length ? classes.map(c => 
-                '<div class="item-card" onclick="editClass(\'' + c.code + '\')">' +
-                '<div class="icon" style="background:var(--primary)">🏫</div>' +
-                '<div class="info"><h5>' + c.code + ' - ' + c.name + '</h5><span>' + (DIV_NAMES[c.division] || '日間部') + (c.teacher ? ' · ' + c.teacher : '') + '</span></div>' +
-                '<div class="actions"><span class="badge primary">' + (c.count || 0) + ' 人</span></div></div>'
-            ).join('') : '<div class="empty">尚無班級，請點擊上方按鈕新增</div>';
-        }
-        async function addClass() {
-            const code = document.getElementById('class-code').value.trim();
-            const name = document.getElementById('class-name').value.trim();
-            const division = document.getElementById('class-division').value;
-            const teacher = document.getElementById('class-teacher').value.trim();
-            if (!code || !name) { toast('請填寫班級代碼和名稱', 'danger'); return; }
-            const r = await api('/api/classes', { method: 'POST', body: JSON.stringify({ code, name, division, teacher }) });
-            if (r?.success) { toast('班級已新增！'); closeModal('addClass'); loadClasses(); document.getElementById('class-code').value = ''; document.getElementById('class-name').value = ''; document.getElementById('class-teacher').value = ''; }
-            else { toast(r?.message || '新增失敗', 'danger'); }
-        }
-        function editClass(code) {
-            currentClass = classes.find(c => c.code === code);
-            if (!currentClass) return;
-            document.getElementById('edit-class-code').value = currentClass.code;
-            document.getElementById('edit-class-name').value = currentClass.name;
-            document.getElementById('edit-class-division').value = currentClass.division || 'day';
-            document.getElementById('edit-class-teacher').value = currentClass.teacher || '';
-            openModal('editClass');
-        }
-        async function saveClass() {
-            const name = document.getElementById('edit-class-name').value.trim();
-            const division = document.getElementById('edit-class-division').value;
-            const teacher = document.getElementById('edit-class-teacher').value.trim();
-            console.log('儲存班級:', currentClass.code, { name, division, teacher });
-            const r = await api('/api/classes/' + currentClass.code, { method: 'PUT', body: JSON.stringify({ name, division, teacher }) });
-            console.log('API 回應:', r);
-            if (r?.success) { 
-                toast('班級已更新！'); 
-                closeModal('editClass'); 
-                loadClasses(); 
-            } else {
-                toast(r?.message || '更新失敗', 'danger');
-            }
-        }
-        async function deleteClass() {
-            if (!confirm('確定刪除班級 ' + currentClass.code + '？')) return;
-            const r = await api('/api/classes/' + currentClass.code, { method: 'DELETE' });
-            if (r?.success) {
-                toast('班級已刪除！'); 
-                closeModal('editClass'); 
-                loadClasses();
-            } else {
-                toast('刪除失敗', 'danger');
-            }
-        }
-        function updateClassDropdowns() {
-            const opts = '<option value="">選擇班級</option>' + classes.map(c => '<option value="' + c.code + '">' + c.code + ' - ' + c.name + '</option>').join('');
-            document.getElementById('course-class').innerHTML = opts;
-            document.getElementById('edit-course-class').innerHTML = opts;
-            document.getElementById('student-class').innerHTML = opts;
-            document.getElementById('edit-student-class').innerHTML = opts;
-            document.getElementById('student-filter').innerHTML = '<option value="">全部班級</option>' + classes.map(c => '<option value="' + c.code + '">' + c.name + '</option>').join('');
-        }
-
-        // === 課程管理 ===
-        async function loadCourses() {
-            const data = await api('/api/courses');
-            console.log('載入課程:', data);
-            if (data) {
-                courses = data;
-                console.log('課程資料:', courses.map(c => ({ id: c.id, name: c.name || c.subject, day: c.day, period: c.period })));
-                renderCourses();
-                renderScheduleGrid();
-            }
-        }
-        function renderCourses() {
-            document.getElementById('courses-list').innerHTML = courses.length ? courses.map(c => {
-                const dayName = DAY_NAMES[c.day] || '?';
-                const period = c.period || '?';
-                return '<div class="item-card" onclick="editCourse(\'' + c.id + '\')">' +
-                    '<div class="icon" style="background:var(--success)">📖</div>' +
-                    '<div class="info"><h5>' + (c.name || c.subject || '未命名') + '</h5><span>班級 ' + c.classCode + ' · 週' + dayName + ' 第' + period + '節 · ' + (c.room || '教室未設定') + '</span></div></div>';
-            }).join('') : '<div class="empty">尚無課程</div>';
-        }
-        function showView(view) {
-            document.querySelectorAll('.tabs .tab').forEach((t, i) => t.classList.toggle('active', i === (view === 'grid' ? 0 : 1)));
-            document.getElementById('grid-view').style.display = view === 'grid' ? 'block' : 'none';
-            document.getElementById('list-view').style.display = view === 'list' ? 'block' : 'none';
-        }
-        function renderScheduleGrid() {
-            const div = sem.div || 'day';
-            const ps = sem.periods && sem.periods.length > 0 ? sem.periods : PERIODS[div];
-            const days = div === 'weekend' ? ['', '六', '日'] : ['', '一', '二', '三', '四', '五'];
-            let html = days.map(d => '<div class="schedule-header">' + (d || '節次') + '</div>').join('');
-            ps.forEach(p => {
-                html += '<div class="schedule-time">' + p.n + '<br><small>' + p.s + '</small></div>';
-                for (let i = 1; i < days.length; i++) {
-                    const dayNum = div === 'weekend' ? (i === 1 ? 6 : 0) : i;
-                    const c = courses.find(x => x.day == dayNum && x.period == p.n);
-                    if (c) {
-                        html += '<div class="schedule-cell has-class" onclick="editCourse(\'' + c.id + '\')"><div class="class-tag">' + (c.name || c.subject) + '<br>' + c.classCode + '</div></div>';
-                    } else {
-                        html += '<div class="schedule-cell" onclick="quickAddCourse(' + dayNum + ',' + p.n + ')"></div>';
+                if (student && student.get('LINE_ID')) {
+                    // 取得課程資訊
+                    const sessionSheet = doc.sheetsByTitle['簽到活動'];
+                    const sessions = await sessionSheet.getRows();
+                    const session = sessions.find(s => s.get('活動ID') === sessionId);
+                    
+                    if (session) {
+                        const courseSheet = doc.sheetsByTitle['課程列表'];
+                        const courses = await courseSheet.getRows();
+                        const course = courses.find(c => c.get('課程ID') === session.get('課程ID'));
+                        
+                        if (course) {
+                            let notifyText = '';
+                            if (status === '已報到') {
+                                notifyText = `✅ 簽到成功\n\n📚 課程：${course.get('科目')}\n📅 日期：${session.get('日期')}\n✨ 狀態：準時報到\n\n繼續保持！💪`;
+                            } else if (status === '遲到') {
+                                notifyText = `⚠️ 遲到通知\n\n📚 課程：${course.get('科目')}\n📅 日期：${session.get('日期')}\n⏰ 遲到：${lateMinutes} 分鐘\n\n請下次準時出席！`;
+                            } else if (status === '缺席') {
+                                notifyText = `❌ 缺席通知\n\n📚 課程：${course.get('科目')}\n📅 日期：${session.get('日期')}\n\n如有疑問請聯繫教師。`;
+                            }
+                            
+                            if (notifyText) {
+                                await lineClient.pushMessage(student.get('LINE_ID'), {
+                                    type: 'text',
+                                    text: notifyText
+                                });
+                                console.log(`✉️ 已發送${status}通知給 ${studentId}`);
+                            }
+                        }
                     }
                 }
-            });
-            document.getElementById('schedule-grid').innerHTML = html;
-            document.getElementById('schedule-grid').style.gridTemplateColumns = '60px repeat(' + (days.length - 1) + ', 1fr)';
-        }
-        function quickAddCourse(day, period) {
-            document.getElementById('course-day').value = day;
-            document.getElementById('course-period').value = period;
-            openModal('addCourse');
-        }
-        async function addCourse() {
-            const name = document.getElementById('course-name').value.trim();
-            const classCode = document.getElementById('course-class').value;
-            const day = parseInt(document.getElementById('course-day').value);
-            const period = parseInt(document.getElementById('course-period').value);
-            const room = document.getElementById('course-room').value.trim();
-            const lat = document.getElementById('course-lat').value;
-            const lon = document.getElementById('course-lon').value;
-            const radius = parseInt(document.getElementById('course-radius').value) || 100;
-            if (!name || !classCode) { toast('請填寫課程名稱和班級', 'danger'); return; }
-            const p = ((sem.periods && sem.periods.length > 0 ? sem.periods : PERIODS[sem.div || "day"])).find(x => x.n == period) || {};
-            const r = await api('/api/courses', { method: 'POST', body: JSON.stringify({ subject: name, name, classCode, day, period, time: p.s + '-' + p.e, room, lat: lat ? +lat : 0, lon: lon ? +lon : 0, radius: radius }) });
-            if (r?.success) { toast('課程已新增！'); closeModal('addCourse'); loadCourses(); document.getElementById('course-name').value = ''; document.getElementById('course-room').value = ''; }
-        }
-        function editCourse(id) {
-            currentCourse = courses.find(c => c.id === id);
-            if (!currentCourse) return;
-            document.getElementById('edit-course-name').value = currentCourse.name || currentCourse.subject || '';
-            document.getElementById('edit-course-class').value = currentCourse.classCode || '';
-            document.getElementById('edit-course-day').value = currentCourse.day || 1;
-            document.getElementById('edit-course-period').value = currentCourse.period || 1;
-            document.getElementById('edit-course-room').value = currentCourse.room || '';
-            document.getElementById('edit-course-lat').value = currentCourse.lat || '';
-            document.getElementById('edit-course-lon').value = currentCourse.lon || '';
-            document.getElementById('edit-course-radius').value = currentCourse.radius || 100;
-            openModal('editCourse');
-        }
-        async function saveCourse() {
-            const subject = document.getElementById('edit-course-name').value.trim();
-            const classCode = document.getElementById('edit-course-class').value;
-            const day = parseInt(document.getElementById('edit-course-day').value);
-            const period = parseInt(document.getElementById('edit-course-period').value);
-            const room = document.getElementById('edit-course-room').value.trim();
-            const lat = document.getElementById('edit-course-lat').value;
-            const lon = document.getElementById('edit-course-lon').value;
-            const radius = parseInt(document.getElementById('edit-course-radius').value) || 100;
-            const p = ((sem.periods && sem.periods.length > 0 ? sem.periods : PERIODS[sem.div || "day"])).find(x => x.n == period) || {};
-            console.log('儲存課程:', currentCourse.id, { subject, classCode, day, period, room, lat, lon, radius });
-            const r = await api('/api/courses/' + currentCourse.id, { method: 'PUT', body: JSON.stringify({ subject, classCode, day, period, time: p.s + '-' + p.e, room, lat: lat ? +lat : 0, lon: lon ? +lon : 0, radius }) });
-            console.log('API 回應:', r);
-            if (r?.success) { 
-                toast('課程已更新！'); 
-                closeModal('editCourse'); 
-                loadCourses(); 
-            } else {
-                toast(r?.message || '更新失敗', 'danger');
             }
+        } catch (e) {
+            console.error('發送簽到通知失敗:', e.message);
         }
-        function getLocationForEdit() {
-            if (!navigator.geolocation) { toast('瀏覽器不支援定位', 'danger'); return; }
-            toast('定位中...', 'warning');
-            navigator.geolocation.getCurrentPosition(pos => {
-                document.getElementById('edit-course-lat').value = pos.coords.latitude.toFixed(6);
-                document.getElementById('edit-course-lon').value = pos.coords.longitude.toFixed(6);
-                toast('已取得位置！精度約 ' + Math.round(pos.coords.accuracy) + ' 公尺');
-            }, err => {
-                toast('定位失敗: ' + err.message, 'danger');
-            }, { enableHighAccuracy: true, timeout: 10000 });
-        }
-        async function deleteCourse() {
-            if (!confirm('確定刪除此課程？')) return;
-            const r = await api('/api/courses/' + currentCourse.id, { method: 'DELETE' });
-            if (r?.success) {
-                toast('課程已刪除！'); 
-                closeModal('editCourse'); 
-                loadCourses();
-            } else {
-                toast('刪除失敗', 'danger');
-            }
-        }
-        function getLocation() {
-            if (!navigator.geolocation) { toast('瀏覽器不支援定位', 'danger'); return; }
-            toast('定位中...', 'warning');
-            navigator.geolocation.getCurrentPosition(pos => {
-                document.getElementById('course-lat').value = pos.coords.latitude.toFixed(6);
-                document.getElementById('course-lon').value = pos.coords.longitude.toFixed(6);
-                toast('定位成功！');
-            }, () => toast('定位失敗', 'danger'), { enableHighAccuracy: true });
-        }
-        
-        // === Google Maps 座標解析 ===
-        function parseGoogleMapsUrl() {
-            const url = prompt('請貼上 Google Maps 連結或座標：\n\n例如：\n• 22.6267, 120.3565\n• https://www.google.com/maps/@22.6267,120.3565,17z\n• https://goo.gl/maps/...');
-            if (!url) return;
-            
-            const coords = extractCoordinates(url);
-            if (coords) {
-                document.getElementById('course-lat').value = coords.lat;
-                document.getElementById('course-lon').value = coords.lon;
-                toast(`已設定座標：${coords.lat}, ${coords.lon}`);
-            } else {
-                toast('無法解析座標，請確認格式', 'danger');
-            }
-        }
-        function parseGoogleMapsUrlForEdit() {
-            const url = prompt('請貼上 Google Maps 連結或座標：\n\n例如：\n• 22.6267, 120.3565\n• https://www.google.com/maps/@22.6267,120.3565,17z');
-            if (!url) return;
-            
-            const coords = extractCoordinates(url);
-            if (coords) {
-                document.getElementById('edit-course-lat').value = coords.lat;
-                document.getElementById('edit-course-lon').value = coords.lon;
-                toast(`已設定座標：${coords.lat}, ${coords.lon}`);
-            } else {
-                toast('無法解析座標，請確認格式', 'danger');
-            }
-        }
-        function extractCoordinates(input) {
-            // 嘗試解析各種格式
-            let lat, lon;
-            
-            // 格式1: 純座標 "22.6267, 120.3565" 或 "22.6267,120.3565"
-            const simpleMatch = input.match(/(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/);
-            if (simpleMatch) {
-                lat = parseFloat(simpleMatch[1]);
-                lon = parseFloat(simpleMatch[2]);
-            }
-            
-            // 格式2: Google Maps URL /@lat,lon,zoom
-            const urlMatch = input.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
-            if (urlMatch) {
-                lat = parseFloat(urlMatch[1]);
-                lon = parseFloat(urlMatch[2]);
-            }
-            
-            // 格式3: Google Maps place URL /place/.../@lat,lon
-            const placeMatch = input.match(/place\/[^/]+\/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
-            if (placeMatch) {
-                lat = parseFloat(placeMatch[1]);
-                lon = parseFloat(placeMatch[2]);
-            }
-            
-            // 格式4: Google Maps !3d lat !4d lon
-            const embedMatch = input.match(/!3d(-?\d+\.?\d*).*?!4d(-?\d+\.?\d*)/);
-            if (embedMatch) {
-                lat = parseFloat(embedMatch[1]);
-                lon = parseFloat(embedMatch[2]);
-            }
-            
-            // 驗證座標範圍
-            if (lat && lon && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
-                return { lat: lat.toFixed(6), lon: lon.toFixed(6) };
-            }
-            return null;
-        }
+    }
+    
+    return { success: true, message: '簽到成功！', status };
+}
 
-        // === 學生管理 ===
-        async function loadStudents() {
-            const filter = document.getElementById('student-filter')?.value || '';
-            const data = await api('/api/students');
-            if (data) {
-                students = filter ? data.filter(s => s.classCode === filter) : data;
-                renderStudents();
-            }
-        }
-        function renderStudents() {
-            document.getElementById('students-list').innerHTML = students.length ? students.map(s =>
-                '<div class="item-card" onclick="editStudent(\'' + s.studentId + '\')">' +
-                '<div class="icon" style="background:var(--primary)">' + (s.name ? s.name.charAt(0) : '?') + '</div>' +
-                '<div class="info"><h5>' + s.studentId + ' - ' + s.name + '</h5><span>' + s.classCode + (s.lineId ? ' · LINE 已綁定' : '') + '</span></div></div>'
-            ).join('') : '<div class="empty">尚無學生</div>';
-        }
-        async function addStudent() {
-            const studentId = document.getElementById('student-id').value.trim();
-            const name = document.getElementById('student-name').value.trim();
-            const classCode = document.getElementById('student-class').value;
-            const phone = document.getElementById('student-phone').value.trim();
-            const parentPhone = document.getElementById('student-parent-phone').value.trim();
-            if (!studentId || !name || !classCode) { toast('請填寫學號、姓名和班級', 'danger'); return; }
-            const r = await api('/api/students', { method: 'POST', body: JSON.stringify({ studentId, name, classCode, phone, parentPhone }) });
-            if (r?.success) { toast('學生已新增！'); closeModal('addStudent'); loadStudents(); document.getElementById('student-id').value = ''; document.getElementById('student-name').value = ''; document.getElementById('student-phone').value = ''; document.getElementById('student-parent-phone').value = ''; }
-            else { toast(r?.message || '新增失敗', 'danger'); }
-        }
-        function editStudent(id) {
-            currentStudent = students.find(s => s.studentId === id);
-            if (!currentStudent) return;
-            document.getElementById('edit-student-id').value = currentStudent.studentId;
-            document.getElementById('edit-student-name').value = currentStudent.name;
-            document.getElementById('edit-student-class').value = currentStudent.classCode;
-            document.getElementById('edit-student-phone').value = currentStudent.phone || '';
-            document.getElementById('edit-student-parent-phone').value = currentStudent.parentPhone || '';
-            openModal('editStudent');
-        }
-        async function saveStudent() {
-            const name = document.getElementById('edit-student-name').value.trim();
-            const classCode = document.getElementById('edit-student-class').value;
-            const phone = document.getElementById('edit-student-phone').value.trim();
-            const parentPhone = document.getElementById('edit-student-parent-phone').value.trim();
-            const r = await api('/api/students/' + currentStudent.studentId, { method: 'PUT', body: JSON.stringify({ name, classCode, phone, parentPhone }) });
-            if (r?.success) { toast('學生已更新！'); closeModal('editStudent'); loadStudents(); }
-        }
-        async function deleteStudent() {
-            if (!confirm('確定刪除學生 ' + currentStudent.name + '？')) return;
-            await api('/api/students/' + currentStudent.studentId, { method: 'DELETE' });
-            toast('學生已刪除！'); closeModal('editStudent'); loadStudents();
-        }
+/**
+ * 更新統計資料
+ */
+async function updateStatistics(studentId, status) {
+    const sheet = await getOrCreateSheet('出席統計', [
+        '學號', '姓名', '班級', '出席次數', '遲到次數', '缺席次數', '出席率', '最後更新'
+    ]);
+    
+    const rows = await sheet.getRows();
+    let statRow = rows.find(row => row.get('學號') === studentId);
+    
+    // 取得學生資料
+    const studentSheet = doc.sheetsByTitle['學生名單'];
+    const studentRows = await studentSheet.getRows();
+    const student = studentRows.find(row => row.get('學號') === studentId);
+    
+    if (!statRow) {
+        // 建立新統計
+        statRow = await sheet.addRow({
+            '學號': studentId,
+            '姓名': student ? student.get('姓名') : '',
+            '班級': student ? student.get('班級') : '',
+            '出席次數': 0,
+            '遲到次數': 0,
+            '缺席次數': 0,
+            '出席率': '0%',
+            '最後更新': formatDateTime(new Date())
+        });
+    }
+    
+    // 更新計數
+    let attended = parseInt(statRow.get('出席次數')) || 0;
+    let late = parseInt(statRow.get('遲到次數')) || 0;
+    let absent = parseInt(statRow.get('缺席次數')) || 0;
+    
+    if (status === '已報到') attended++;
+    else if (status === '遲到') { attended++; late++; }
+    else if (status === '缺席') absent++;
+    
+    const total = attended + absent;
+    const rate = total > 0 ? Math.round((attended / total) * 100) : 0;
+    
+    statRow.set('出席次數', attended);
+    statRow.set('遲到次數', late);
+    statRow.set('缺席次數', absent);
+    statRow.set('出席率', `${rate}%`);
+    statRow.set('最後更新', formatDateTime(new Date()));
+    await statRow.save();
+}
 
-        // === 簽到管理 ===
-        async function loadSessions() {
-            const now = new Date();
-            document.getElementById('session-date').textContent = now.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
-            const dow = now.getDay();
-            console.log('今天星期:', dow, '課程數:', courses.length);
-            const today = courses.filter(c => {
-                console.log('檢查課程:', c.name || c.subject, '星期:', c.day, '匹配:', c.day == dow);
-                return c.day == dow;
-            });
-            console.log('今日課程:', today);
-            if (!today.length) {
-                document.getElementById('sessions-list').innerHTML = '<div class="empty"><div class="icon">📅</div><h3>今日無課程</h3><p style="color:var(--text-light);margin-top:10px">請先在課表管理新增今天（星期' + DAY_NAMES[dow] + '）的課程</p></div>';
-                return;
-            }
-            document.getElementById('sessions-list').innerHTML = today.map(c => {
-                const p = ((sem.periods && sem.periods.length > 0 ? sem.periods : PERIODS[sem.div || "day"])).find(x => x.n == c.period) || { s: '', e: '' };
-                const nowTime = now.getHours() * 60 + now.getMinutes();
-                const endTime = parseInt((p.e || '17:00').split(':')[0]) * 60 + parseInt((p.e || '17:00').split(':')[1] || 0);
-                const completed = nowTime > endTime;
-                return '<div class="session-item' + (completed ? ' completed' : '') + '"><div class="session-header"><div class="session-icon">📖</div><div class="session-info"><h4>' + (c.name || c.subject) + ' - ' + c.classCode + '</h4><span>第' + c.period + '節 · ' + p.s + '-' + p.e + ' · ' + (c.room || '教室') + '</span></div></div><div class="session-actions">' + (completed ? '<button class="btn btn-outline btn-sm" disabled>已結束</button>' : '<button class="btn btn-primary btn-sm" onclick="startSession(\'' + c.id + '\')">📱 簽到</button><button class="btn btn-success btn-sm" onclick="sendReminder(\'' + c.id + '\')">📢 通知</button><button class="btn btn-outline btn-sm" onclick="endSession(\'' + c.id + '\')">⏹️ 結束</button>') + '</div></div>';
-            }).join('');
-        }
-        let currentSessionId = null;
-        let currentSessionCourseId = null;
+/**
+ * 取得班級列表
+ */
+async function getClasses() {
+    const sheet = await getOrCreateSheet('班級列表', [
+        '班級代碼', '班級名稱', '導師', '人數', '建立時間'
+    ]);
+    const rows = await sheet.getRows();
+    return rows.map(row => ({
+        code: row.get('班級代碼'),
+        name: row.get('班級名稱')
+    }));
+}
+
+// ===== LINE Bot 訊息處理 =====
+
+// 用戶狀態暫存（實際應用建議用 Redis）
+const userStates = new Map();
+
+/**
+ * 處理 Webhook 事件
+ */
+async function handleEvent(event) {
+    if (event.type !== 'message' && event.type !== 'postback') {
+        return null;
+    }
+    
+    const userId = event.source.userId;
+    const userProfile = await lineClient.getProfile(userId);
+    const userName = userProfile.displayName;
+    
+    // 處理 Postback（按鈕回應）
+    if (event.type === 'postback') {
+        return handlePostback(event, userId, userName);
+    }
+    
+    // 處理位置訊息（GPS 簽到）
+    if (event.message.type === 'location') {
+        return handleLocation(event, userId);
+    }
+    
+    // 處理文字訊息
+    if (event.message.type === 'text') {
+        const text = event.message.text.trim();
         
-        async function startSession(id) {
-            const c = courses.find(x => x.id === id);
-            if (!c) {
-                toast('找不到課程', 'danger');
-                return;
-            }
-            const today = new Date().toISOString().split('T')[0];
-            const p = ((sem.periods && sem.periods.length > 0 ? sem.periods : PERIODS[sem.div || "day"])).find(x => x.n == c.period) || { s: '08:00', e: '09:00' };
-            console.log('建立簽到:', { courseId: id, date: today, startTime: p.s, endTime: p.e });
-            
-            const r = await api('/api/sessions', { method: 'POST', body: JSON.stringify({ courseId: id, date: today, startTime: p.s, endTime: p.e }) });
-            console.log('API 回應:', r);
-            
-            if (r?.success && r.qrContent) {
-                currentSessionId = r.sessionId;
-                currentSessionCourseId = id;
-                currentGpsCheckinCode = r.gpsCheckinCode;
-                showQR(r.qrContent, r.gpsCheckinCode, (c.name || c.subject) + ' - ' + c.classCode, today + ' ' + p.s);
-                toast('簽到已建立！');
-            } else {
-                toast(r?.error || '建立簽到失敗', 'danger');
-            }
-        }
-        
-        async function sendReminder(courseId) {
-            // 先確保有簽到活動
-            if (!currentSessionId || currentSessionCourseId !== courseId) {
-                // 建立新的簽到活動
-                const c = courses.find(x => x.id === courseId);
-                if (!c) { toast('找不到課程', 'danger'); return; }
-                
-                const today = new Date().toISOString().split('T')[0];
-                const p = ((sem.periods && sem.periods.length > 0 ? sem.periods : PERIODS[sem.div || "day"])).find(x => x.n == c.period) || { s: '08:00', e: '09:00' };
-                
-                const r = await api('/api/sessions', { method: 'POST', body: JSON.stringify({ courseId: courseId, date: today, startTime: p.s, endTime: p.e }) });
-                if (r?.success) {
-                    currentSessionId = r.sessionId;
-                    currentSessionCourseId = courseId;
-                } else {
-                    toast('建立簽到失敗', 'danger');
-                    return;
-                }
-            }
-            
-            // 發送上課提醒（附帶簽到連結）
-            toast('正在發送通知...');
-            const r = await api('/api/notify/remind', { 
-                method: 'POST', 
-                body: JSON.stringify({ 
-                    courseId: courseId, 
-                    sessionId: currentSessionId 
-                }) 
-            });
-            
-            if (r?.success) {
-                toast('已發送 ' + r.sent + ' 則通知！');
-            } else {
-                toast(r?.message || '發送失敗', 'danger');
-            }
+        // 檢查是否為簽到連結
+        if (text.startsWith('直接簽到:')) {
+            // 掃老師手機 QR Code → 直接簽到
+            return handleDirectCheckin(event, userId, text);
         }
         
-        async function endSession(id) {
-            if (!confirm('確定結束？未簽到學生將被標記為缺席。')) return;
-            const r = await api('/api/sessions/' + id + '/complete', { method: 'POST' });
-            if (r?.success) { 
-                toast('已結束，' + (r.marked || 0) + ' 人缺席'); 
-                currentSessionId = null;
-                currentSessionCourseId = null;
-                loadSessions(); 
-            }
-            else { toast('結束失敗', 'danger'); }
+        if (text.startsWith('GPS簽到:')) {
+            // 學生點連結 → GPS 驗證簽到
+            return handleGPSCheckin(event, userId, text);
         }
         
-        let currentQRUrl = '';
-        let currentGpsUrl = '';
-        let currentGpsCheckinCode = '';
+        // 舊版相容
+        if (text.startsWith('簽到:')) {
+            return handleCheckinRequest(event, userId, text);
+        }
         
-        function showQR(directContent, gpsContent, name, time) {
-            console.log('顯示 QR Code:', { directContent, gpsContent, name, time, BOT });
-            
-            // 設定文字
-            document.getElementById('qr-name').textContent = name;
-            document.getElementById('qr-time').textContent = time;
-            
-            // 清空舊的 QR Code
-            const container = document.getElementById('qr-container');
-            container.innerHTML = '';
-            
-            // 建立連結
-            const botId = BOT || '@516bpeih';
-            // 老師手機 QR Code（直接簽到）
-            currentQRUrl = 'https://line.me/R/oaMessage/' + botId + '/?' + encodeURIComponent(directContent);
-            // 學生連結（GPS 簽到）
-            currentGpsUrl = 'https://line.me/R/oaMessage/' + botId + '/?' + encodeURIComponent(gpsContent);
-            
-            // 顯示學生 GPS 簽到連結
-            document.getElementById('qr-link').value = currentGpsUrl;
-            document.getElementById('qr-link-box').style.display = 'block';
-            
-            // 開啟 modal
-            openModal('qr');
-            
-            // 生成 QR Code（老師手機用，直接簽到）
-            setTimeout(() => {
+        // 檢查用戶狀態（是否在註冊流程中）
+        const state = userStates.get(userId);
+        if (state) {
+            return handleRegistrationFlow(event, userId, userName, text, state);
+        }
+        
+        // 一般指令
+        return handleCommand(event, userId, userName, text);
+    }
+    
+    return null;
+}
+
+/**
+ * 處理一般指令
+ */
+async function handleCommand(event, userId, userName, text) {
+    const student = await getStudent(userId);
+    
+    switch(text) {
+        case '註冊':
+        case '綁定':
+            if (student) {
+                return replyText(event, `✅ 您已經註冊過了！\n\n📋 您的資料：\n學號：${student.get('學號')}\n姓名：${student.get('姓名')}\n班級：${student.get('班級')}`);
+            }
+            // 開始註冊流程
+            userStates.set(userId, { step: 'studentId' });
+            return replyText(event, '📝 開始註冊\n\n請輸入您的【學號】：');
+        
+        case '解除綁定':
+        case '取消綁定':
+            if (!student) {
+                return replyText(event, '❌ 您尚未綁定帳號！');
+            }
+            // 確認解除綁定
+            userStates.set(userId, { step: 'confirmUnbind', studentId: student.get('學號') });
+            return replyText(event, `⚠️ 確認解除綁定？\n\n學號：${student.get('學號')}\n姓名：${student.get('姓名')}\n\n輸入「確認」解除綁定，或輸入其他文字取消。`);
+        
+        case '確認':
+            const state = userStates.get(userId);
+            if (state && state.step === 'confirmUnbind') {
+                // 執行解除綁定
                 try {
-                    console.log('QR URL (直接簽到):', currentQRUrl);
-                    console.log('學生連結 (GPS簽到):', currentGpsUrl);
-                    
-                    new QRCode(container, {
-                        text: currentQRUrl,
-                        width: 200,
-                        height: 200,
-                        colorDark: '#000000',
-                        colorLight: '#ffffff',
-                        correctLevel: QRCode.CorrectLevel.H
-                    });
-                    console.log('QR Code 產生成功');
+                    const studentSheet = doc.sheetsByTitle['學生名單'];
+                    const rows = await studentSheet.getRows();
+                    const studentRow = rows.find(r => r.get('學號') === state.studentId);
+                    if (studentRow) {
+                        studentRow.set('LINE_ID', '');
+                        studentRow.set('LINE名稱', '');
+                        await studentRow.save();
+                    }
+                    userStates.delete(userId);
+                    return replyText(event, '✅ 已解除綁定！\n\n感謝您這學期的使用。\n如需重新綁定，請輸入「註冊」。');
                 } catch (e) {
-                    console.error('QR Code 錯誤:', e);
-                    container.innerHTML = '<p style="color:red;text-align:center">QR Code 產生失敗<br>' + e.message + '</p>';
+                    return replyText(event, '❌ 解除綁定失敗，請稍後再試。');
                 }
-            }, 100);
+            }
+            return replyText(event, '❌ 無效的操作。');
+        
+        case '我的資料':
+        case '查詢':
+            if (!student) {
+                return replyText(event, '❌ 您尚未註冊！\n\n請輸入「註冊」開始綁定學號。');
+            }
+            return replyStudentInfo(event, student);
+        
+        case '出席紀錄':
+        case '統計':
+            if (!student) {
+                return replyText(event, '❌ 您尚未註冊！\n\n請輸入「註冊」開始綁定學號。');
+            }
+            return replyAttendanceStats(event, student.get('學號'));
+        
+        case '說明':
+        case '幫助':
+        case 'help':
+            return replyHelp(event);
+        
+        default:
+            if (!student) {
+                return replyText(event, `👋 歡迎 ${userName}！\n\n您尚未註冊，請輸入「註冊」綁定學號後才能使用簽到功能。\n\n輸入「說明」查看更多指令。`);
+            }
+            return replyText(event, `👋 ${student.get('姓名')} 同學您好！\n\n📌 可用指令：\n• 我的資料\n• 出席紀錄\n• 解除綁定\n• 說明\n\n📍 簽到請掃描教師提供的 QR Code`);
+    }
+}
+
+/**
+ * 處理註冊流程
+ */
+async function handleRegistrationFlow(event, userId, userName, text, state) {
+    switch(state.step) {
+        case 'studentId':
+            // 驗證學號格式（可自訂）
+            if (!/^\d{6,10}$/.test(text)) {
+                return replyText(event, '❌ 學號格式不正確！\n\n請輸入 6-10 位數字的學號：');
+            }
+            userStates.set(userId, { ...state, step: 'studentName', studentId: text });
+            return replyText(event, `學號：${text} ✓\n\n請輸入您的【姓名】：`);
+        
+        case 'studentName':
+            if (text.length < 2 || text.length > 10) {
+                return replyText(event, '❌ 姓名長度應為 2-10 個字！\n\n請重新輸入您的【姓名】：');
+            }
+            userStates.set(userId, { ...state, step: 'className', studentName: text });
+            
+            // 顯示班級選擇
+            const classes = await getClasses();
+            if (classes.length > 0) {
+                return replyClassSelection(event, classes, text);
+            }
+            return replyText(event, `姓名：${text} ✓\n\n請輸入您的【班級】（例如：801、802）：`);
+        
+        case 'className':
+            const result = await registerStudent(
+                userId, 
+                userName, 
+                state.studentId, 
+                state.studentName, 
+                text
+            );
+            userStates.delete(userId);
+            
+            if (result.success) {
+                return replyText(event, `🎉 註冊成功！\n\n📋 您的資料：\n學號：${state.studentId}\n姓名：${state.studentName}\n班級：${text}\n\n現在可以使用簽到功能了！`);
+            }
+            return replyText(event, `❌ ${result.message}`);
+    }
+}
+
+/**
+ * 直接簽到（掃老師手機 QR Code）
+ * 不需要 GPS 驗證，直接簽到成功
+ */
+async function handleDirectCheckin(event, userId, text) {
+    const student = await getStudent(userId);
+    if (!student) {
+        return replyText(event, '❌ 您尚未註冊！\n\n請先輸入「註冊」綁定學號。');
+    }
+    
+    const parts = text.replace('直接簽到:', '').split('|');
+    if (parts.length < 2) {
+        return replyText(event, '❌ 無效的簽到碼！');
+    }
+    
+    const [courseId, sessionId] = parts;
+    
+    const course = await getCourse(courseId);
+    if (!course) {
+        return replyText(event, '❌ 找不到此課程！');
+    }
+    
+    // 取得活動
+    let session = await getTodaySession(courseId);
+    if (!session) {
+        const sessionSheet = await getOrCreateSheet('簽到活動', [
+            '活動ID', '課程ID', '日期', '開始時間', '結束時間', 'QR碼內容', '狀態'
+        ]);
+        const rows = await sessionSheet.getRows();
+        session = rows.find(r => r.get('活動ID') === sessionId && r.get('狀態') !== '已結束');
+    }
+    
+    if (!session) {
+        return replyText(event, '❌ 此簽到活動已結束或不存在！');
+    }
+    
+    const actualSessionId = session.get('活動ID');
+    
+    // 檢查是否已簽到
+    const existingRecord = await checkExistingAttendance(actualSessionId, student.get('學號'));
+    if (existingRecord) {
+        return replyText(event, `✅ 您已經簽到過了！\n\n📚 課程：${course.get('科目')}\n⏰ 簽到時間：${existingRecord.get('簽到時間')}`);
+    }
+    
+    // 計算是否遲到
+    const startTime = session.get('開始時間');
+    const lateMinutes = parseInt(course.get('遲到標準')) || 10;
+    const now = new Date();
+    const [startHour, startMin] = (startTime || '08:00').split(':').map(Number);
+    const startDate = new Date();
+    startDate.setHours(startHour, startMin, 0, 0);
+    
+    const diffMinutes = Math.floor((now - startDate) / 60000);
+    const status = diffMinutes > lateMinutes ? '遲到' : '已報到';
+    
+    // 記錄簽到（不記錄 GPS）
+    const result = await recordAttendance(
+        actualSessionId,
+        student.get('學號'),
+        status,
+        diffMinutes > lateMinutes ? diffMinutes : 0,
+        '', ''
+    );
+    
+    if (result.success) {
+        const emoji = status === '已報到' ? '✅' : '⚠️';
+        let msg = `${emoji} 簽到成功！\n\n📚 課程：${course.get('科目')}\n👤 學生：${student.get('姓名')}\n📍 方式：掃描 QR Code\n✨ 狀態：${status}`;
+        if (status === '遲到') {
+            msg += `\n⏰ 遲到 ${diffMinutes} 分鐘`;
+        }
+        return replyText(event, msg);
+    } else {
+        return replyText(event, `❌ 簽到失敗：${result.message}`);
+    }
+}
+
+/**
+ * GPS 簽到（學生點連結自己簽到）
+ * 需要 GPS 驗證
+ */
+async function handleGPSCheckin(event, userId, text) {
+    const student = await getStudent(userId);
+    if (!student) {
+        return replyText(event, '❌ 您尚未註冊！\n\n請先輸入「註冊」綁定學號。');
+    }
+    
+    const parts = text.replace('GPS簽到:', '').split('|');
+    if (parts.length < 2) {
+        return replyText(event, '❌ 無效的簽到碼！');
+    }
+    
+    const [courseId, sessionId] = parts;
+    
+    const course = await getCourse(courseId);
+    if (!course) {
+        return replyText(event, '❌ 找不到此課程！');
+    }
+    
+    // 取得活動
+    let session = await getTodaySession(courseId);
+    if (!session) {
+        const sessionSheet = await getOrCreateSheet('簽到活動', [
+            '活動ID', '課程ID', '日期', '開始時間', '結束時間', 'QR碼內容', '狀態'
+        ]);
+        const rows = await sessionSheet.getRows();
+        session = rows.find(r => r.get('活動ID') === sessionId && r.get('狀態') !== '已結束');
+    }
+    
+    if (!session) {
+        return replyText(event, '❌ 此簽到活動已結束或不存在！');
+    }
+    
+    const actualSessionId = session.get('活動ID');
+    
+    // 檢查是否已簽到
+    const existingRecord = await checkExistingAttendance(actualSessionId, student.get('學號'));
+    if (existingRecord) {
+        return replyText(event, `✅ 您已經簽到過了！\n\n📚 課程：${course.get('科目')}\n⏰ 簽到時間：${existingRecord.get('簽到時間')}`);
+    }
+    
+    // 取得簽到設定
+    const classroomLat = parseFloat(course.get('教室緯度')) || 0;
+    const classroomLon = parseFloat(course.get('教室經度')) || 0;
+    const rawRadius = course.get('簽到範圍');
+    const checkRadius = rawRadius !== '' && rawRadius !== undefined && rawRadius !== null ? parseInt(rawRadius) : 100;
+    
+    console.log('GPS 簽到設定:', { classroomLat, classroomLon, rawRadius, checkRadius });
+    
+    // 簽到模式判斷
+    // -1: 現場簽到（只能掃 QR Code，不能用連結）
+    if (checkRadius === -1) {
+        return replyText(event, '📱 此課程設定為「現場簽到」\n\n請到教室掃描老師手機上的 QR Code 簽到。');
+    }
+    
+    // 0 或無設定: 不限制（線上課程），直接簽到
+    // 有設定 GPS 座標且 checkRadius > 0: 需要 GPS 驗證
+    if (classroomLat !== 0 && classroomLon !== 0 && checkRadius > 0) {
+        userStates.set(userId, { 
+            step: 'waitingLocation',
+            courseId,
+            sessionId: actualSessionId,
+            courseName: course.get('科目'),
+            classroomLat,
+            classroomLon,
+            checkRadius,
+            lateMinutes: parseInt(course.get('遲到標準')) || 10,
+            startTime: session.get('開始時間')
+        });
+        
+        return lineClient.replyMessage(event.replyToken, {
+            type: 'template',
+            altText: '📍 請傳送您的位置以完成簽到',
+            template: {
+                type: 'buttons',
+                title: `📍 GPS 簽到 - ${course.get('科目')}`,
+                text: `請傳送位置驗證\n允許範圍：${checkRadius} 公尺`,
+                actions: [
+                    {
+                        type: 'uri',
+                        label: '📍 傳送我的位置',
+                        uri: 'https://line.me/R/nv/location'
+                    }
+                ]
+            }
+        });
+    }
+    
+    // 不限制 GPS（線上課程），直接簽到
+    const startTime = session.get('開始時間');
+    const lateMinutes = parseInt(course.get('遲到標準')) || 10;
+    const now = new Date();
+    const [startHour, startMin] = (startTime || '08:00').split(':').map(Number);
+    const startDate = new Date();
+    startDate.setHours(startHour, startMin, 0, 0);
+    
+    const diffMinutes = Math.floor((now - startDate) / 60000);
+    const status = diffMinutes > lateMinutes ? '遲到' : '已報到';
+    
+    const result = await recordAttendance(
+        actualSessionId,
+        student.get('學號'),
+        status,
+        diffMinutes > lateMinutes ? diffMinutes : 0,
+        '', ''
+    );
+    
+    if (result.success) {
+        const emoji = status === '已報到' ? '✅' : '⚠️';
+        let msg = `${emoji} 簽到成功！\n\n📚 課程：${course.get('科目')}\n👤 學生：${student.get('姓名')}\n✨ 狀態：${status}`;
+        if (status === '遲到') {
+            msg += `\n⏰ 遲到 ${diffMinutes} 分鐘`;
+        }
+        return replyText(event, msg);
+    } else {
+        return replyText(event, `❌ 簽到失敗：${result.message}`);
+    }
+}
+
+/**
+ * 處理簽到請求（舊版相容 - 直接簽到）
+ */
+async function handleCheckinRequest(event, userId, text) {
+    const student = await getStudent(userId);
+    if (!student) {
+        return replyText(event, '❌ 您尚未註冊！\n\n請先輸入「註冊」綁定學號。');
+    }
+    
+    // 解析簽到碼
+    const parts = text.replace('簽到:', '').split('|');
+    if (parts.length < 2) {
+        return replyText(event, '❌ 無效的簽到碼！');
+    }
+    
+    const [courseId, sessionId] = parts;
+    
+    const course = await getCourse(courseId);
+    if (!course) {
+        return replyText(event, '❌ 找不到此課程！');
+    }
+    
+    let session = await getTodaySession(courseId);
+    if (!session) {
+        const sessionSheet = await getOrCreateSheet('簽到活動', [
+            '活動ID', '課程ID', '日期', '開始時間', '結束時間', 'QR碼內容', '狀態'
+        ]);
+        const rows = await sessionSheet.getRows();
+        session = rows.find(r => r.get('活動ID') === sessionId && r.get('狀態') !== '已結束');
+    }
+    
+    if (!session) {
+        return replyText(event, '❌ 此簽到活動已結束或不存在！');
+    }
+    
+    const actualSessionId = session.get('活動ID');
+    
+    const existingRecord = await checkExistingAttendance(actualSessionId, student.get('學號'));
+    if (existingRecord) {
+        return replyText(event, `✅ 您已經簽到過了！\n\n📚 課程：${course.get('科目')}\n⏰ 簽到時間：${existingRecord.get('簽到時間')}`);
+    }
+    
+    // 舊版直接簽到（不需要 GPS）
+    const startTime = session.get('開始時間');
+    const lateMinutes = parseInt(course.get('遲到標準')) || 10;
+    const now = new Date();
+    const [startHour, startMin] = (startTime || '08:00').split(':').map(Number);
+    const startDate = new Date();
+    startDate.setHours(startHour, startMin, 0, 0);
+    
+    const diffMinutes = Math.floor((now - startDate) / 60000);
+    const status = diffMinutes > lateMinutes ? '遲到' : '已報到';
+    
+    const result = await recordAttendance(
+        actualSessionId,
+        student.get('學號'),
+        status,
+        diffMinutes > lateMinutes ? diffMinutes : 0,
+        '', ''
+    );
+    
+    if (result.success) {
+        const emoji = status === '已報到' ? '✅' : '⚠️';
+        let msg = `${emoji} 簽到成功！\n\n📚 課程：${course.get('科目')}\n👤 學生：${student.get('姓名')}\n✨ 狀態：${status}`;
+        if (status === '遲到') {
+            msg += `\n⏰ 遲到 ${diffMinutes} 分鐘`;
+        }
+        return replyText(event, msg);
+    } else {
+        return replyText(event, `❌ 簽到失敗：${result.message}`);
+    }
+}
+
+/**
+ * 處理位置訊息
+ */
+async function handleLocation(event, userId) {
+    const state = userStates.get(userId);
+    if (!state || state.step !== 'waitingLocation') {
+        return replyText(event, '❌ 請先掃描簽到 QR Code！');
+    }
+    
+    const { latitude, longitude } = event.message;
+    const student = await getStudent(userId);
+    
+    // 計算距離
+    const distance = calculateDistance(
+        latitude, longitude,
+        state.classroomLat, state.classroomLon
+    );
+    
+    // 使用設定的範圍（不再有固定容錯）
+    const allowedRadius = state.checkRadius;
+    
+    // 檢查是否在範圍內
+    if (distance > allowedRadius) {
+        // 不刪除狀態，允許重試
+        state.retryCount = (state.retryCount || 0) + 1;
+        
+        // 最多重試 3 次
+        if (state.retryCount >= 3) {
+            userStates.delete(userId);
+            return replyText(event, 
+                `🚫 簽到失敗！\n\n已重試 ${state.retryCount} 次仍不在範圍內。\n📍 您的位置距離：${Math.round(distance)} 公尺\n📏 允許範圍：${allowedRadius} 公尺\n\n💡 建議：\n1. 到戶外或窗邊重新定位\n2. 聯繫老師使用現場 QR Code 簽到`
+            );
         }
         
-        function copyQRLink() {
-            const input = document.getElementById('qr-link');
-            input.select();
-            document.execCommand('copy');
-            toast('連結已複製！');
+        // 允許重試
+        return lineClient.replyMessage(event.replyToken, {
+            type: 'template',
+            altText: '📍 位置驗證失敗，請重試',
+            template: {
+                type: 'buttons',
+                title: '📍 位置不在範圍內',
+                text: `您的距離：${Math.round(distance)} 公尺\n允許範圍：${allowedRadius} 公尺\n\n請移動到教室範圍內重試`,
+                actions: [
+                    {
+                        type: 'uri',
+                        label: '🔄 重新傳送位置',
+                        uri: 'https://line.me/R/nv/location'
+                    }
+                ]
+            }
+        });
+    }
+    
+    // 計算是否遲到
+    const now = new Date();
+    const [startHour, startMin] = (state.startTime || '08:00').split(':').map(Number);
+    const startDate = new Date();
+    startDate.setHours(startHour, startMin, 0, 0);
+    
+    const diffMinutes = Math.floor((now - startDate) / 60000);
+    let status = '已報到';
+    let lateMinutes = 0;
+    
+    if (diffMinutes > state.lateMinutes) {
+        status = '遲到';
+        lateMinutes = diffMinutes;
+    }
+    
+    // 記錄簽到
+    const result = await recordAttendance(
+        state.sessionId,
+        student.get('學號'),
+        status,
+        lateMinutes,
+        latitude.toString(),
+        longitude.toString()
+    );
+    
+    userStates.delete(userId);
+    
+    if (!result.success) {
+        return replyText(event, `ℹ️ ${result.message}\n\n狀態：${result.status}`);
+    }
+    
+    // 簽到成功訊息
+    let message = '';
+    if (status === '已報到') {
+        message = `✅ 簽到成功！\n\n📚 課程：${state.courseName}\n⏰ 時間：${formatDateTime(now)}\n📍 距離教室：${Math.round(distance)} 公尺\n✨ 狀態：準時報到\n\n繼續保持！💪`;
+    } else {
+        message = `⚠️ 簽到成功（遲到）\n\n📚 課程：${state.courseName}\n⏰ 時間：${formatDateTime(now)}\n📍 距離教室：${Math.round(distance)} 公尺\n⏰ 遲到 ${lateMinutes} 分鐘\n\n下次請準時到達！`;
+    }
+    
+    return replyText(event, message);
+}
+
+/**
+ * 處理 Postback
+ */
+async function handlePostback(event, userId, userName) {
+    const data = event.postback.data;
+    const params = new URLSearchParams(data);
+    const action = params.get('action');
+    
+    if (action === 'selectClass') {
+        const className = params.get('class');
+        const state = userStates.get(userId);
+        if (state && state.step === 'className') {
+            const result = await registerStudent(
+                userId, 
+                userName, 
+                state.studentId, 
+                state.studentName, 
+                className
+            );
+            userStates.delete(userId);
+            
+            if (result.success) {
+                return replyText(event, `🎉 註冊成功！\n\n📋 您的資料：\n學號：${state.studentId}\n姓名：${state.studentName}\n班級：${className}\n\n現在可以使用簽到功能了！`);
+            }
+            return replyText(event, `❌ ${result.message}`);
+        }
+    }
+    
+    return null;
+}
+
+// ===== 回覆訊息函數 =====
+
+function replyText(event, text) {
+    return lineClient.replyMessage(event.replyToken, {
+        type: 'text',
+        text: text
+    });
+}
+
+function replyLocationRequest(event, courseName) {
+    return lineClient.replyMessage(event.replyToken, {
+        type: 'text',
+        text: `📚 準備簽到：${courseName}\n\n請點擊下方「+」按鈕，選擇「位置訊息」分享您的位置來完成簽到。`,
+        quickReply: {
+            items: [{
+                type: 'action',
+                action: {
+                    type: 'location',
+                    label: '📍 分享位置簽到'
+                }
+            }]
+        }
+    });
+}
+
+function replyClassSelection(event, classes, studentName) {
+    const columns = classes.slice(0, 10).map(c => ({
+        type: 'action',
+        action: {
+            type: 'postback',
+            label: c.name || c.code,
+            data: `action=selectClass&class=${c.code}`
+        }
+    }));
+    
+    return lineClient.replyMessage(event.replyToken, {
+        type: 'text',
+        text: `姓名：${studentName} ✓\n\n請選擇您的班級：`,
+        quickReply: { items: columns }
+    });
+}
+
+async function replyStudentInfo(event, student) {
+    const statsSheet = doc.sheetsByTitle['出席統計'];
+    let stats = null;
+    if (statsSheet) {
+        const rows = await statsSheet.getRows();
+        stats = rows.find(row => row.get('學號') === student.get('學號'));
+    }
+    
+    let message = `📋 學生資料\n\n`;
+    message += `👤 姓名：${student.get('姓名')}\n`;
+    message += `🔢 學號：${student.get('學號')}\n`;
+    message += `🏫 班級：${student.get('班級')}\n`;
+    message += `📅 註冊時間：${student.get('註冊時間')}\n`;
+    
+    if (stats) {
+        message += `\n📊 出席統計\n`;
+        message += `✅ 出席：${stats.get('出席次數')} 次\n`;
+        message += `⚠️ 遲到：${stats.get('遲到次數')} 次\n`;
+        message += `❌ 缺席：${stats.get('缺席次數')} 次\n`;
+        message += `📈 出席率：${stats.get('出席率')}`;
+    }
+    
+    return replyText(event, message);
+}
+
+async function replyAttendanceStats(event, studentId) {
+    const sheet = doc.sheetsByTitle['簽到紀錄'];
+    if (!sheet) {
+        return replyText(event, '📊 尚無簽到紀錄');
+    }
+    
+    const rows = await sheet.getRows();
+    const records = rows.filter(row => row.get('學號') === studentId)
+        .slice(-10)
+        .reverse();
+    
+    if (records.length === 0) {
+        return replyText(event, '📊 尚無簽到紀錄');
+    }
+    
+    let message = '📊 最近 10 筆簽到紀錄\n\n';
+    records.forEach((record, index) => {
+        const status = record.get('狀態');
+        const icon = status === '已報到' ? '✅' : status === '遲到' ? '⚠️' : '❌';
+        message += `${icon} ${record.get('簽到時間')}\n`;
+        if (status === '遲到') {
+            message += `   遲到 ${record.get('遲到分鐘')} 分鐘\n`;
+        }
+    });
+    
+    return replyText(event, message);
+}
+
+function replyHelp(event) {
+    const message = `📖 使用說明\n\n` +
+        `【學生指令】\n` +
+        `• 註冊 - 綁定學號\n` +
+        `• 我的資料 - 查看個人資訊\n` +
+        `• 出席紀錄 - 查看簽到記錄\n` +
+        `• 說明 - 顯示此說明\n\n` +
+        `【簽到方式】\n` +
+        `1. 掃描教師提供的 QR Code\n` +
+        `2. 分享您的位置\n` +
+        `3. 系統自動完成簽到\n\n` +
+        `⚠️ 注意：必須在教室範圍內才能簽到！`;
+    
+    return replyText(event, message);
+}
+
+// ===== 缺席檢查排程 =====
+
+async function checkAbsences() {
+    console.log('⏰ 執行缺席檢查...');
+    
+    try {
+        const sessionSheet = doc.sheetsByTitle['簽到活動'];
+        const recordSheet = doc.sheetsByTitle['簽到紀錄'];
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        
+        if (!sessionSheet || !studentSheet) return;
+        
+        const sessions = await sessionSheet.getRows();
+        const now = new Date();
+        
+        for (const session of sessions) {
+            // 只處理「進行中」的活動
+            if (session.get('狀態') !== '進行中') continue;
+            
+            // 檢查是否已結束
+            const endTimeStr = session.get('結束時間');
+            if (!endTimeStr) continue;
+            const [endHour, endMin] = endTimeStr.split(':').map(Number);
+            const endTime = new Date();
+            endTime.setHours(endHour, endMin, 0, 0);
+            
+            if (now > endTime) {
+                console.log('📝 處理結束的活動:', session.get('活動ID'));
+                
+                // 先更新活動狀態為「處理中」避免重複處理
+                session.set('狀態', '處理中');
+                await session.save();
+                
+                // 標記缺席的學生
+                const courseSheet = doc.sheetsByTitle['課程列表'];
+                const courses = await courseSheet.getRows();
+                const course = courses.find(c => c.get('課程ID') === session.get('課程ID'));
+                
+                if (course) {
+                    const className = course.get('班級');
+                    const students = await studentSheet.getRows();
+                    const classStudents = students.filter(s => s.get('班級') === className);
+                    
+                    const records = recordSheet ? await recordSheet.getRows() : [];
+                    
+                    for (const student of classStudents) {
+                        const hasRecord = records.some(r => 
+                            r.get('活動ID') === session.get('活動ID') &&
+                            r.get('學號') === student.get('學號')
+                        );
+                        
+                        if (!hasRecord) {
+                            // 記錄缺席（只會記錄一次）
+                            const result = await recordAttendance(
+                                session.get('活動ID'),
+                                student.get('學號'),
+                                '缺席'
+                            );
+                            
+                            // 只有成功記錄才發送通知（確保只發一次）
+                            if (result.success && student.get('LINE_ID')) {
+                                try {
+                                    await lineClient.pushMessage(student.get('LINE_ID'), {
+                                        type: 'text',
+                                        text: `❌ 缺席通知\n\n您已被標記為缺席：\n📚 課程：${course.get('科目')}\n📅 日期：${session.get('日期')}\n\n如有疑問請聯繫教師。`
+                                    });
+                                    console.log('✉️ 已發送缺席通知給', student.get('學號'));
+                                } catch (e) {
+                                    console.error('發送通知失敗:', e.message);
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // 更新活動狀態為「已結束」
+                session.set('狀態', '已結束');
+                await session.save();
+                console.log('✅ 活動已結束:', session.get('活動ID'));
+            }
         }
         
-        async function sendReminderFromQR() {
-            if (!currentSessionCourseId || !currentSessionId) {
-                toast('請先建立簽到活動', 'danger');
-                return;
+        console.log('✅ 缺席檢查完成');
+    } catch (error) {
+        console.error('缺席檢查錯誤:', error);
+    }
+}
+
+// 每 10 分鐘檢查一次（減少干擾）
+cron.schedule('*/10 * * * *', checkAbsences);
+
+// ===== 學期結束通知 =====
+async function checkSemesterEnd() {
+    console.log('📅 檢查學期結束...');
+    
+    try {
+        const settingsSheet = doc.sheetsByTitle['系統設定'];
+        if (!settingsSheet) return;
+        
+        const settings = await settingsSheet.getRows();
+        let semesterEnd = '';
+        for (const s of settings) {
+            if (s.get('設定項目') === '結業日期') {
+                semesterEnd = s.get('設定值');
+                break;
+            }
+        }
+        
+        if (!semesterEnd) return;
+        
+        const now = new Date();
+        const endDate = new Date(semesterEnd);
+        const today = getTodayString();
+        
+        // 檢查是否是學期最後一天
+        if (today !== semesterEnd) return;
+        
+        // 檢查是否已經發送過通知
+        const reminderSheet = await getOrCreateSheet('提醒紀錄', ['課程ID', '日期', '類型', '發送時間']);
+        const reminders = await reminderSheet.getRows();
+        const alreadySent = reminders.some(r => 
+            r.get('日期') === today && 
+            r.get('類型') === '學期結束'
+        );
+        
+        if (alreadySent) return;
+        
+        // 取得最後一堂課的結束時間
+        const courseSheet = doc.sheetsByTitle['課程列表'];
+        const sessionSheet = doc.sheetsByTitle['簽到活動'];
+        
+        if (!courseSheet || !sessionSheet) return;
+        
+        const sessions = await sessionSheet.getRows();
+        const todaySessions = sessions.filter(s => s.get('日期') === today);
+        
+        if (todaySessions.length === 0) return;
+        
+        // 找最後結束的課程
+        let lastEndTime = 0;
+        for (const session of todaySessions) {
+            const endTimeStr = session.get('結束時間');
+            if (endTimeStr) {
+                const [h, m] = endTimeStr.split(':').map(Number);
+                const endMinutes = h * 60 + m;
+                if (endMinutes > lastEndTime) {
+                    lastEndTime = endMinutes;
+                }
+            }
+        }
+        
+        // 檢查現在是否在最後一堂課結束後 30 分鐘
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        if (currentMinutes >= lastEndTime + 30 && currentMinutes <= lastEndTime + 40) {
+            console.log('📢 發送學期結束通知...');
+            
+            // 發送解除綁定說明給所有學生
+            const studentSheet = doc.sheetsByTitle['學生名單'];
+            if (studentSheet) {
+                const students = await studentSheet.getRows();
+                
+                for (const student of students) {
+                    if (student.get('LINE_ID')) {
+                        try {
+                            await lineClient.pushMessage(student.get('LINE_ID'), {
+                                type: 'text',
+                                text: `📚 學期結束通知\n\n親愛的 ${student.get('姓名')} 同學：\n\n本學期課程已全部結束，感謝您這學期的配合！\n\n📌 解除 LINE BOT 綁定方式：\n1. 進入此聊天室\n2. 點右上角「≡」選單\n3. 選擇「封鎖」即可解除\n\n或輸入「解除綁定」由系統處理。\n\n🎉 祝您假期愉快！`
+                            });
+                        } catch (e) {
+                            console.error('發送學期結束通知失敗:', e.message);
+                        }
+                    }
+                }
+                
+                // 記錄已發送
+                await reminderSheet.addRow({
+                    '課程ID': 'SEMESTER_END',
+                    '日期': today,
+                    '類型': '學期結束',
+                    '發送時間': formatDateTime(now)
+                });
+                
+                console.log('✅ 學期結束通知已發送');
+            }
+        }
+    } catch (error) {
+        console.error('學期結束通知錯誤:', error);
+    }
+}
+
+// 每 10 分鐘檢查一次學期結束
+cron.schedule('*/10 * * * *', checkSemesterEnd);
+
+// ===== 自動上課提醒排程 =====
+async function autoClassReminder() {
+    console.log('⏰ 檢查上課提醒...');
+    
+    try {
+        // 取得學期設定
+        const settingsSheet = doc.sheetsByTitle['系統設定'];
+        let remindMinutes = 30; // 預設提前 30 分鐘提醒
+        let autoRemind = true;
+        
+        if (settingsSheet) {
+            const settings = await settingsSheet.getRows();
+            for (const s of settings) {
+                if (s.get('設定項目') === '上課提醒') autoRemind = s.get('設定值') === 'true';
+                if (s.get('設定項目') === '提醒分鐘') remindMinutes = parseInt(s.get('設定值')) || 30;
+            }
+        }
+        
+        if (!autoRemind) {
+            console.log('自動提醒已關閉');
+            return;
+        }
+        
+        // 取得今天星期幾
+        const now = new Date();
+        const dayOfWeek = now.getDay(); // 0=日, 1=一, ... 6=六
+        const currentHour = now.getHours();
+        const currentMin = now.getMinutes();
+        const currentTotalMin = currentHour * 60 + currentMin;
+        
+        // 取得今天的課程
+        const courseSheet = doc.sheetsByTitle['課程列表'];
+        if (!courseSheet) return;
+        
+        const courses = await courseSheet.getRows();
+        const todayCourses = courses.filter(c => parseInt(c.get('星期')) === dayOfWeek && c.get('狀態') === '啟用');
+        
+        if (todayCourses.length === 0) {
+            console.log('今天沒有課程');
+            return;
+        }
+        
+        // 取得已發送的提醒記錄（避免重複發送）
+        const reminderSheet = await getOrCreateSheet('提醒紀錄', ['課程ID', '日期', '類型', '發送時間']);
+        const reminders = await reminderSheet.getRows();
+        const today = getTodayString();
+        
+        for (const course of todayCourses) {
+            const courseId = course.get('課程ID');
+            const courseTime = course.get('上課時間') || '';
+            const [startTime] = courseTime.split('-');
+            
+            if (!startTime) continue;
+            
+            const [startHour, startMin] = startTime.split(':').map(Number);
+            const startTotalMin = startHour * 60 + startMin;
+            const reminderTime = startTotalMin - remindMinutes;
+            
+            // 檢查是否到了提醒時間（允許 5 分鐘誤差）
+            if (currentTotalMin >= reminderTime && currentTotalMin <= reminderTime + 5) {
+                // 檢查今天是否已發送過提醒
+                const alreadySent = reminders.some(r => 
+                    r.get('課程ID') === courseId && 
+                    r.get('日期') === today && 
+                    r.get('類型') === '上課提醒'
+                );
+                
+                if (alreadySent) {
+                    console.log(`課程 ${courseId} 今日已發送提醒`);
+                    continue;
+                }
+                
+                console.log(`📢 發送上課提醒: ${course.get('科目')}`);
+                
+                // 自動建立簽到活動
+                const sessionSheet = await getOrCreateSheet('簽到活動', [
+                    '活動ID', '課程ID', '日期', '開始時間', '結束時間', 'QR碼內容', '狀態'
+                ]);
+                
+                const sessionId = `S${Date.now()}`;
+                // 老師手機 QR Code 用「直接簽到」，學生連結用「GPS簽到」
+                const qrContent = `直接簽到:${courseId}|${sessionId}`;
+                const gpsCheckinCode = `GPS簽到:${courseId}|${sessionId}`;
+                const [, endTime] = courseTime.split('-');
+                
+                await sessionSheet.addRow({
+                    '活動ID': sessionId,
+                    '課程ID': courseId,
+                    '日期': today,
+                    '開始時間': startTime,
+                    '結束時間': endTime || '',
+                    'QR碼內容': qrContent,
+                    '狀態': '進行中'
+                });
+                
+                // 發送 LINE 通知給學生（使用 GPS 簽到連結）
+                const classCode = course.get('班級');
+                const studentSheet = doc.sheetsByTitle['學生名單'];
+                if (studentSheet) {
+                    const students = await studentSheet.getRows();
+                    const classStudents = students.filter(s => s.get('班級') === classCode && s.get('LINE_ID'));
+                    
+                    const botId = process.env.LINE_BOT_ID || '@516bpeih';
+                    // 學生連結使用 GPS 簽到
+                    const checkinUrl = `https://line.me/R/oaMessage/${botId}/?${encodeURIComponent(gpsCheckinCode)}`;
+                    
+                    for (const student of classStudents) {
+                        try {
+                            await lineClient.pushMessage(student.get('LINE_ID'), {
+                                type: 'template',
+                                altText: `📢 上課提醒 - ${course.get('科目')}`,
+                                template: {
+                                    type: 'buttons',
+                                    title: `📢 ${course.get('科目')} 即將上課`,
+                                    text: `⏰ ${courseTime}\n📍 ${course.get('教室') || '教室'}\n\n${remindMinutes} 分鐘後上課`,
+                                    actions: [
+                                        {
+                                            type: 'uri',
+                                            label: '📱 點我簽到',
+                                            uri: checkinUrl
+                                        }
+                                    ]
+                                }
+                            });
+                        } catch (e) {
+                            console.error(`發送提醒失敗 ${student.get('學號')}:`, e.message);
+                        }
+                    }
+                    
+                    console.log(`✅ 已發送 ${classStudents.length} 則提醒`);
+                }
+                
+                // 記錄已發送
+                await reminderSheet.addRow({
+                    '課程ID': courseId,
+                    '日期': today,
+                    '類型': '上課提醒',
+                    '發送時間': now.toLocaleString('zh-TW')
+                });
+            }
+        }
+        
+        console.log('✅ 上課提醒檢查完成');
+    } catch (error) {
+        console.error('上課提醒錯誤:', error);
+    }
+}
+
+// 每分鐘檢查一次（確保不會錯過提醒時間）
+cron.schedule('* * * * *', autoClassReminder);
+
+
+// 首頁路由
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.use('/webhook', line.middleware(lineConfig));
+
+app.post('/webhook', (req, res) => {
+    Promise.all(req.body.events.map(handleEvent))
+        .then((result) => res.json(result))
+        .catch((err) => {
+            console.error('Webhook Error:', err);
+            res.status(500).end();
+        });
+});
+
+// ===== API 端點 =====
+app.use(express.json());
+
+// CORS 設定
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') return res.sendStatus(200);
+    next();
+});
+
+// === 班級 API ===
+app.get('/api/classes', async (req, res) => {
+    try {
+        const sheet = await getOrCreateSheet('班級列表', ['班級代碼', '班級名稱', '部別', '導師', '人數', '建立時間']);
+        const rows = await sheet.getRows();
+        
+        // 取得學生名單來計算人數
+        let studentCounts = {};
+        try {
+            const studentSheet = doc.sheetsByTitle['學生名單'];
+            if (studentSheet) {
+                const students = await studentSheet.getRows();
+                students.forEach(s => {
+                    const classCode = s.get('班級');
+                    if (classCode) {
+                        studentCounts[classCode] = (studentCounts[classCode] || 0) + 1;
+                    }
+                });
+            }
+        } catch (e) {
+            console.log('計算學生人數失敗:', e.message);
+        }
+        
+        res.json(rows.map(r => ({
+            code: r.get('班級代碼'),
+            name: r.get('班級名稱'),
+            division: r.get('部別') || 'day',
+            teacher: r.get('導師'),
+            count: studentCounts[r.get('班級代碼')] || 0
+        })));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/classes', async (req, res) => {
+    try {
+        const { code, name, division, teacher } = req.body;
+        const sheet = await getOrCreateSheet('班級列表', ['班級代碼', '班級名稱', '部別', '導師', '人數', '建立時間']);
+        await sheet.addRow({
+            '班級代碼': code,
+            '班級名稱': name,
+            '部別': division || 'day',
+            '導師': teacher || '',
+            '人數': 0,
+            '建立時間': new Date().toLocaleString('zh-TW')
+        });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.put('/api/classes/:code', async (req, res) => {
+    try {
+        const { code } = req.params;
+        const { name, division, teacher } = req.body;
+        const sheet = doc.sheetsByTitle['班級列表'];
+        if (!sheet) return res.json({ success: false, message: '資料表不存在' });
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('班級代碼') === code);
+        if (!row) return res.json({ success: false, message: '班級不存在' });
+        
+        if (name) row.set('班級名稱', name);
+        if (division) row.set('部別', division);
+        if (teacher !== undefined) row.set('導師', teacher);
+        await row.save();
+        
+        res.json({ success: true });
+    } catch (error) {
+        console.error('更新班級錯誤:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.delete('/api/classes/:code', async (req, res) => {
+    try {
+        const { code } = req.params;
+        const sheet = doc.sheetsByTitle['班級列表'];
+        if (!sheet) return res.json({ success: true });
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('班級代碼') === code);
+        if (row) await row.delete();
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 取得單一班級的學生
+app.get('/api/classes/:code/students', async (req, res) => {
+    try {
+        const { code } = req.params;
+        const sheet = doc.sheetsByTitle['學生名單'];
+        if (!sheet) return res.json([]);
+        const rows = await sheet.getRows();
+        const students = rows.filter(r => r.get('班級') === code);
+        res.json(students.map(s => ({
+            studentId: s.get('學號'),
+            name: s.get('姓名'),
+            lineName: s.get('LINE名稱'),
+            registeredAt: s.get('註冊時間')
+        })));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// === 課程 API ===
+app.get('/api/courses', async (req, res) => {
+    try {
+        const sheet = await getOrCreateSheet('課程列表', [
+            '課程ID', '科目', '班級', '教師', '星期', '節次', '上課時間', '教室',
+            '教室緯度', '教室經度', '簽到範圍', '遲到標準', '狀態', '建立時間'
+        ]);
+        const rows = await sheet.getRows();
+        res.json(rows.map(r => ({
+            id: r.get('課程ID'),
+            subject: r.get('科目'),
+            name: r.get('科目'),
+            classCode: r.get('班級'),
+            teacher: r.get('教師'),
+            day: parseInt(r.get('星期')) || 1,
+            period: parseInt(r.get('節次')) || 1,
+            time: r.get('上課時間'),
+            room: r.get('教室'),
+            lat: parseFloat(r.get('教室緯度')) || 0,
+            lon: parseFloat(r.get('教室經度')) || 0,
+            radius: r.get('簽到範圍') !== '' && r.get('簽到範圍') !== undefined ? parseInt(r.get('簽到範圍')) : 100,
+            lateMinutes: parseInt(r.get('遲到標準')) || 10,
+            status: r.get('狀態') || '啟用'
+        })));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/courses', async (req, res) => {
+    try {
+        const { subject, name, classCode, teacher, day, period, time, room, lat, lon, radius, lateMinutes } = req.body;
+        const sheet = await getOrCreateSheet('課程列表', [
+            '課程ID', '科目', '班級', '教師', '星期', '節次', '上課時間', '教室',
+            '教室緯度', '教室經度', '簽到範圍', '遲到標準', '狀態', '建立時間'
+        ]);
+        const courseId = 'C' + Date.now();
+        await sheet.addRow({
+            '課程ID': courseId,
+            '科目': subject || name,
+            '班級': classCode,
+            '教師': teacher || '',
+            '星期': day || 1,
+            '節次': period || 1,
+            '上課時間': time || '',
+            '教室': room || '',
+            '教室緯度': lat || 0,
+            '教室經度': lon || 0,
+            '簽到範圍': radius !== undefined ? radius : 100,
+            '遲到標準': lateMinutes || 10,
+            '狀態': '啟用',
+            '建立時間': new Date().toLocaleString('zh-TW')
+        });
+        res.json({ success: true, courseId });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.delete('/api/courses/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const sheet = doc.sheetsByTitle['課程列表'];
+        if (!sheet) return res.json({ success: true });
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('課程ID') === id);
+        if (row) await row.delete();
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 更新課程
+app.put('/api/courses/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { subject, classCode, day, period, time, room, lat, lon, radius } = req.body;
+        console.log('更新課程:', id, { subject, classCode, day, period, time, room, lat, lon, radius });
+        
+        const sheet = doc.sheetsByTitle['課程列表'];
+        if (!sheet) return res.json({ success: false, message: '資料表不存在' });
+        
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('課程ID') === id);
+        if (!row) return res.json({ success: false, message: '課程不存在' });
+        
+        if (subject) row.set('科目', subject);
+        if (classCode) row.set('班級', classCode);
+        if (day !== undefined) row.set('星期', day);
+        if (period !== undefined) row.set('節次', period);
+        if (time) row.set('上課時間', time);
+        if (room !== undefined) row.set('教室', room);
+        if (lat !== undefined) row.set('教室緯度', lat);
+        if (lon !== undefined) row.set('教室經度', lon);
+        if (radius !== undefined) row.set('簽到範圍', radius);
+        await row.save();
+        
+        console.log('課程更新成功，簽到範圍:', radius);
+        res.json({ success: true, radius });
+    } catch (error) {
+        console.error('更新課程錯誤:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// === 學生 API ===
+app.get('/api/students', async (req, res) => {
+    try {
+        const sheet = await getOrCreateSheet('學生名單', [
+            '學號', '姓名', '班級', 'LINE_ID', 'LINE名稱', '註冊時間', '狀態'
+        ]);
+        const rows = await sheet.getRows();
+        res.json(rows.map(r => ({
+            studentId: r.get('學號'),
+            name: r.get('姓名'),
+            classCode: r.get('班級'),
+            lineId: r.get('LINE_ID'),
+            lineName: r.get('LINE名稱'),
+            registeredAt: r.get('註冊時間'),
+            status: r.get('狀態')
+        })));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// === 簽到活動 API ===
+app.get('/api/sessions', async (req, res) => {
+    try {
+        const sheet = await getOrCreateSheet('簽到活動', [
+            '活動ID', '課程ID', '日期', '開始時間', '結束時間', 'QR碼內容', '狀態'
+        ]);
+        const rows = await sheet.getRows();
+        
+        // 取得課程資料以顯示名稱
+        const courseSheet = doc.sheetsByTitle['課程列表'];
+        const courses = courseSheet ? await courseSheet.getRows() : [];
+        const courseMap = {};
+        courses.forEach(c => {
+            courseMap[c.get('課程ID')] = { subject: c.get('科目'), classCode: c.get('班級') };
+        });
+        
+        res.json(rows.map(r => {
+            const courseId = r.get('課程ID');
+            const course = courseMap[courseId] || {};
+            return {
+                id: r.get('活動ID'),
+                courseId: courseId,
+                courseName: course.subject || '未知課程',
+                classCode: course.classCode || '',
+                date: r.get('日期'),
+                startTime: r.get('開始時間'),
+                endTime: r.get('結束時間'),
+                qrContent: r.get('QR碼內容'),
+                status: r.get('狀態')
+            };
+        }));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/sessions', async (req, res) => {
+    try {
+        const { courseId, date, startTime, endTime } = req.body;
+        const sheet = await getOrCreateSheet('簽到活動', [
+            '活動ID', '課程ID', '日期', '開始時間', '結束時間', 'QR碼內容', '狀態'
+        ]);
+        const sessionId = `S${Date.now()}`;
+        // 老師手機 QR Code 用「直接簽到」
+        const qrContent = `直接簽到:${courseId}|${sessionId}`;
+        // 學生連結用「GPS簽到」
+        const gpsCheckinCode = `GPS簽到:${courseId}|${sessionId}`;
+        await sheet.addRow({
+            '活動ID': sessionId,
+            '課程ID': courseId,
+            '日期': date,
+            '開始時間': startTime,
+            '結束時間': endTime,
+            'QR碼內容': qrContent,
+            '狀態': '進行中'
+        });
+        res.json({ success: true, sessionId, qrContent, gpsCheckinCode });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.put('/api/sessions/:id/end', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const sheet = doc.sheetsByTitle['簽到活動'];
+        if (!sheet) return res.json({ success: false });
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('活動ID') === id);
+        if (row) {
+            row.set('狀態', '已結束');
+            await row.save();
+        }
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// === 簽到紀錄 API ===
+app.get('/api/records', async (req, res) => {
+    try {
+        const sheet = await getOrCreateSheet('簽到紀錄', [
+            '活動ID', '學號', '簽到時間', '狀態', '遲到分鐘', 'GPS緯度', 'GPS經度', '備註'
+        ]);
+        const rows = await sheet.getRows();
+        
+        // 取得學生資料
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        const students = studentSheet ? await studentSheet.getRows() : [];
+        const studentMap = {};
+        students.forEach(s => {
+            studentMap[s.get('學號')] = s.get('姓名');
+        });
+        
+        // 取得活動資料
+        const sessionSheet = doc.sheetsByTitle['簽到活動'];
+        const sessions = sessionSheet ? await sessionSheet.getRows() : [];
+        const sessionMap = {};
+        sessions.forEach(s => {
+            sessionMap[s.get('活動ID')] = { courseId: s.get('課程ID'), date: s.get('日期') };
+        });
+        
+        // 取得課程資料
+        const courseSheet = doc.sheetsByTitle['課程列表'];
+        const courses = courseSheet ? await courseSheet.getRows() : [];
+        const courseMap = {};
+        courses.forEach(c => {
+            courseMap[c.get('課程ID')] = c.get('科目');
+        });
+        
+        res.json(rows.map(r => {
+            const sessionId = r.get('活動ID');
+            const session = sessionMap[sessionId] || {};
+            const courseName = courseMap[session.courseId] || '未知';
+            const studentId = r.get('學號');
+            return {
+                sessionId: sessionId,
+                studentId: studentId,
+                studentName: studentMap[studentId] || '未知',
+                courseName: courseName,
+                date: session.date || '',
+                time: r.get('簽到時間'),
+                status: r.get('狀態'),
+                lateMinutes: r.get('遲到分鐘')
+            };
+        }));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// === 儀表板統計 API ===
+app.get('/api/dashboard', async (req, res) => {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        
+        // 學生數
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        const students = studentSheet ? await studentSheet.getRows() : [];
+        
+        // 今日紀錄
+        const recordSheet = doc.sheetsByTitle['簽到紀錄'];
+        const records = recordSheet ? await recordSheet.getRows() : [];
+        
+        const sessionSheet = doc.sheetsByTitle['簽到活動'];
+        const sessions = sessionSheet ? await sessionSheet.getRows() : [];
+        const todaySessionIds = sessions.filter(s => s.get('日期') === today).map(s => s.get('活動ID'));
+        
+        const todayRecords = records.filter(r => todaySessionIds.includes(r.get('活動ID')));
+        
+        const attended = todayRecords.filter(r => r.get('狀態') === '已報到').length;
+        const late = todayRecords.filter(r => r.get('狀態') === '遲到').length;
+        const absent = todayRecords.filter(r => r.get('狀態') === '缺席').length;
+        
+        // 最近紀錄
+        const recentRecords = records.slice(-10).reverse().map(r => ({
+            studentId: r.get('學號'),
+            time: r.get('簽到時間'),
+            status: r.get('狀態')
+        }));
+        
+        res.json({
+            totalStudents: students.length,
+            todayAttended: attended,
+            todayLate: late,
+            todayAbsent: absent,
+            recentRecords: recentRecords
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// === 健康檢查 ===
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', time: new Date().toISOString() });
+});
+
+// === 統計 API ===
+app.get('/api/stats/attendance', async (req, res) => {
+    try {
+        const recordSheet = doc.sheetsByTitle['簽到紀錄'];
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        if (!recordSheet || !studentSheet) {
+            return res.json({ overall: 0, students: [] });
+        }
+        
+        const records = await recordSheet.getRows();
+        const students = await studentSheet.getRows();
+        
+        // 計算整體出席率
+        const total = records.length;
+        const attended = records.filter(r => r.get('狀態') === '已報到').length;
+        const late = records.filter(r => r.get('狀態') === '遲到').length;
+        const absent = records.filter(r => r.get('狀態') === '缺席').length;
+        const overall = total > 0 ? Math.round((attended + late) / total * 100) : 0;
+        
+        // 計算每位學生的出席率
+        const studentStats = [];
+        for (const student of students) {
+            const studentId = student.get('學號');
+            const studentRecords = records.filter(r => r.get('學號') === studentId);
+            const sTotal = studentRecords.length;
+            const sAttended = studentRecords.filter(r => r.get('狀態') === '已報到').length;
+            const sLate = studentRecords.filter(r => r.get('狀態') === '遲到').length;
+            const sAbsent = studentRecords.filter(r => r.get('狀態') === '缺席').length;
+            const rate = sTotal > 0 ? Math.round((sAttended + sLate) / sTotal * 100) : 100;
+            
+            studentStats.push({
+                studentId,
+                name: student.get('姓名'),
+                classCode: student.get('班級'),
+                total: sTotal,
+                attended: sAttended,
+                late: sLate,
+                absent: sAbsent,
+                rate
+            });
+        }
+        
+        // 排序：出席率低的在前
+        studentStats.sort((a, b) => a.rate - b.rate);
+        
+        res.json({
+            overall,
+            totalRecords: total,
+            attended,
+            late,
+            absent,
+            students: studentStats,
+            lowAttendance: studentStats.filter(s => s.rate < 80),
+            warnings: studentStats.filter(s => s.rate < 60)
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 取得學生連續缺席狀況
+app.get('/api/stats/consecutive-absent', async (req, res) => {
+    try {
+        const recordSheet = doc.sheetsByTitle['簽到紀錄'];
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        if (!recordSheet || !studentSheet) {
+            return res.json({ alerts: [] });
+        }
+        
+        const records = await recordSheet.getRows();
+        const students = await studentSheet.getRows();
+        const alerts = [];
+        
+        for (const student of students) {
+            const studentId = student.get('學號');
+            const studentRecords = records
+                .filter(r => r.get('學號') === studentId)
+                .sort((a, b) => new Date(b.get('簽到時間')) - new Date(a.get('簽到時間')));
+            
+            // 計算連續缺席次數
+            let consecutive = 0;
+            for (const r of studentRecords) {
+                if (r.get('狀態') === '缺席') {
+                    consecutive++;
+                } else {
+                    break;
+                }
             }
             
-            toast('正在發送通知...');
-            const r = await api('/api/notify/remind', { 
-                method: 'POST', 
-                body: JSON.stringify({ 
-                    courseId: currentSessionCourseId, 
-                    sessionId: currentSessionId 
-                }) 
+            if (consecutive >= 2) {
+                alerts.push({
+                    studentId,
+                    name: student.get('姓名'),
+                    classCode: student.get('班級'),
+                    lineId: student.get('LINE_ID'),
+                    consecutiveAbsent: consecutive,
+                    level: consecutive >= 5 ? 'critical' : consecutive >= 3 ? 'warning' : 'notice'
+                });
+            }
+        }
+        
+        alerts.sort((a, b) => b.consecutiveAbsent - a.consecutiveAbsent);
+        res.json({ alerts });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// === 通知 API ===
+// 發送上課提醒（附帶簽到連結）
+app.post('/api/notify/remind', async (req, res) => {
+    try {
+        const { courseId, sessionId, message } = req.body;
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        const courseSheet = doc.sheetsByTitle['課程列表'];
+        
+        if (!studentSheet || !courseSheet) {
+            return res.json({ success: false, message: '找不到資料表' });
+        }
+        
+        const courses = await courseSheet.getRows();
+        const course = courses.find(c => c.get('課程ID') === courseId);
+        if (!course) {
+            return res.json({ success: false, message: '找不到課程' });
+        }
+        
+        const classCode = course.get('班級');
+        const students = await studentSheet.getRows();
+        const classStudents = students.filter(s => s.get('班級') === classCode && s.get('LINE_ID'));
+        
+        // 建立簽到連結（學生使用 GPS 簽到）
+        const botId = process.env.LINE_BOT_ID || '@516bpeih';
+        const checkinCode = sessionId ? `GPS簽到:${courseId}|${sessionId}` : '';
+        const checkinUrl = checkinCode ? `https://line.me/R/oaMessage/${botId}/?${encodeURIComponent(checkinCode)}` : '';
+        
+        // 發送 LINE 通知
+        const notifications = [];
+        for (const student of classStudents) {
+            const lineId = student.get('LINE_ID');
+            if (lineId) {
+                try {
+                    // 如果有簽到連結，發送帶按鈕的訊息
+                    if (checkinUrl) {
+                        await lineClient.pushMessage(lineId, {
+                            type: 'template',
+                            altText: `📢 上課提醒 - ${course.get('科目')}`,
+                            template: {
+                                type: 'buttons',
+                                title: `📢 ${course.get('科目')} 上課提醒`,
+                                text: `⏰ ${course.get('上課時間')}\n📍 ${course.get('教室') || '教室'}\n\n請點擊下方按鈕簽到`,
+                                actions: [
+                                    {
+                                        type: 'uri',
+                                        label: '📱 點我簽到',
+                                        uri: checkinUrl
+                                    }
+                                ]
+                            }
+                        });
+                    } else {
+                        await lineClient.pushMessage(lineId, {
+                            type: 'text',
+                            text: message || `📢 上課提醒\n\n${course.get('科目')} 即將開始！\n⏰ ${course.get('上課時間')}\n📍 ${course.get('教室')}\n\n請準時出席！`
+                        });
+                    }
+                    notifications.push({ studentId: student.get('學號'), status: 'sent' });
+                } catch (e) {
+                    notifications.push({ studentId: student.get('學號'), status: 'failed', error: e.message });
+                }
+            }
+        }
+        
+        res.json({ success: true, sent: notifications.filter(n => n.status === 'sent').length, total: classStudents.length, details: notifications });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 發送缺席通知
+app.post('/api/notify/absent', async (req, res) => {
+    try {
+        const { studentId, sessionId, courseName } = req.body;
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        
+        if (!studentSheet) {
+            return res.json({ success: false, message: '找不到學生資料' });
+        }
+        
+        const students = await studentSheet.getRows();
+        const student = students.find(s => s.get('學號') === studentId);
+        
+        if (!student || !student.get('LINE_ID')) {
+            return res.json({ success: false, message: '學生未綁定 LINE' });
+        }
+        
+        await lineClient.pushMessage(student.get('LINE_ID'), {
+            type: 'text',
+            text: `⚠️ 缺席通知\n\n${student.get('姓名')} 同學，您在「${courseName}」課程中被記錄為缺席。\n\n如有疑問請聯繫老師。`
+        });
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 發送連續缺席警告
+app.post('/api/notify/warning', async (req, res) => {
+    try {
+        const { studentId, consecutiveCount } = req.body;
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        
+        if (!studentSheet) {
+            return res.json({ success: false });
+        }
+        
+        const students = await studentSheet.getRows();
+        const student = students.find(s => s.get('學號') === studentId);
+        
+        if (!student || !student.get('LINE_ID')) {
+            return res.json({ success: false, message: '學生未綁定 LINE' });
+        }
+        
+        const level = consecutiveCount >= 5 ? '🚨 嚴重警告' : consecutiveCount >= 3 ? '⚠️ 警告' : '📢 提醒';
+        
+        await lineClient.pushMessage(student.get('LINE_ID'), {
+            type: 'text',
+            text: `${level}\n\n${student.get('姓名')} 同學，您已連續 ${consecutiveCount} 次缺席！\n\n請盡快與老師聯繫說明情況。持續缺席可能影響您的學業成績。`
+        });
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 批次發送通知
+app.post('/api/notify/batch', async (req, res) => {
+    try {
+        const { type, targets, message } = req.body;
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        
+        if (!studentSheet) {
+            return res.json({ success: false });
+        }
+        
+        const students = await studentSheet.getRows();
+        let sent = 0, failed = 0;
+        
+        for (const studentId of targets) {
+            const student = students.find(s => s.get('學號') === studentId);
+            if (student && student.get('LINE_ID')) {
+                try {
+                    await lineClient.pushMessage(student.get('LINE_ID'), {
+                        type: 'text',
+                        text: message
+                    });
+                    sent++;
+                } catch {
+                    failed++;
+                }
+            } else {
+                failed++;
+            }
+        }
+        
+        res.json({ success: true, sent, failed });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 取得通知設定
+// 取得設定（通用）
+app.get('/api/settings', async (req, res) => {
+    try {
+        const sheet = await getOrCreateSheet('系統設定', ['設定項目', '設定值']);
+        const rows = await sheet.getRows();
+        const settings = {};
+        rows.forEach(r => {
+            settings[r.get('設定項目')] = r.get('設定值');
+        });
+        res.json({
+            remindBeforeClass: settings['上課提醒'] !== 'false',
+            remindMinutes: parseInt(settings['提醒分鐘']) || 30,
+            notifyAbsent: settings['缺席通知'] === 'true',
+            notifyParent: settings['通知家長'] === 'true',
+            warningThreshold: parseInt(settings['警告門檻']) || 3,
+            weeklyReport: settings['週報'] === 'true',
+            semesterStart: settings['開學日期'] || '',
+            semesterEnd: settings['結業日期'] || ''
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 儲存設定（通用）
+app.post('/api/settings', async (req, res) => {
+    try {
+        const { remindBeforeClass, remindMinutes, notifyAbsent, notifyParent, warningThreshold, weeklyReport, semesterStart, semesterEnd } = req.body;
+        const sheet = await getOrCreateSheet('系統設定', ['設定項目', '設定值']);
+        
+        // 更新或新增設定
+        const rows = await sheet.getRows();
+        const settingsMap = {};
+        rows.forEach(r => { settingsMap[r.get('設定項目')] = r; });
+        
+        const updateOrAdd = async (key, value) => {
+            if (settingsMap[key]) {
+                settingsMap[key].set('設定值', value);
+                await settingsMap[key].save();
+            } else {
+                await sheet.addRow({ '設定項目': key, '設定值': value });
+            }
+        };
+        
+        if (remindBeforeClass !== undefined) await updateOrAdd('上課提醒', remindBeforeClass ? 'true' : 'false');
+        if (remindMinutes !== undefined) await updateOrAdd('提醒分鐘', remindMinutes);
+        if (notifyAbsent !== undefined) await updateOrAdd('缺席通知', notifyAbsent ? 'true' : 'false');
+        if (notifyParent !== undefined) await updateOrAdd('通知家長', notifyParent ? 'true' : 'false');
+        if (warningThreshold !== undefined) await updateOrAdd('警告門檻', warningThreshold);
+        if (weeklyReport !== undefined) await updateOrAdd('週報', weeklyReport ? 'true' : 'false');
+        if (semesterStart !== undefined) await updateOrAdd('開學日期', semesterStart);
+        if (semesterEnd !== undefined) await updateOrAdd('結業日期', semesterEnd);
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/settings/notifications', async (req, res) => {
+    try {
+        const sheet = await getOrCreateSheet('系統設定', ['設定項目', '設定值']);
+        const rows = await sheet.getRows();
+        const settings = {};
+        rows.forEach(r => {
+            settings[r.get('設定項目')] = r.get('設定值');
+        });
+        res.json({
+            remindBeforeClass: settings['上課提醒'] === 'true',
+            remindMinutes: parseInt(settings['提醒分鐘']) || 10,
+            notifyAbsent: settings['缺席通知'] === 'true',
+            notifyParent: settings['通知家長'] === 'true',
+            warningThreshold: parseInt(settings['警告門檻']) || 3,
+            weeklyReport: settings['週報'] === 'true'
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 儲存通知設定
+app.post('/api/settings/notifications', async (req, res) => {
+    try {
+        const { remindBeforeClass, remindMinutes, notifyAbsent, notifyParent, warningThreshold, weeklyReport } = req.body;
+        const sheet = await getOrCreateSheet('系統設定', ['設定項目', '設定值']);
+        
+        // 清空舊設定
+        const rows = await sheet.getRows();
+        for (const row of rows) {
+            await row.delete();
+        }
+        
+        // 寫入新設定
+        await sheet.addRows([
+            { '設定項目': '上課提醒', '設定值': remindBeforeClass ? 'true' : 'false' },
+            { '設定項目': '提醒分鐘', '設定值': remindMinutes || 10 },
+            { '設定項目': '缺席通知', '設定值': notifyAbsent ? 'true' : 'false' },
+            { '設定項目': '通知家長', '設定值': notifyParent ? 'true' : 'false' },
+            { '設定項目': '警告門檻', '設定值': warningThreshold || 3 },
+            { '設定項目': '週報', '設定值': weeklyReport ? 'true' : 'false' }
+        ]);
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 上課結束自動處理
+app.post('/api/sessions/:id/complete', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const sessionSheet = doc.sheetsByTitle['簽到活動'];
+        const recordSheet = doc.sheetsByTitle['簽到紀錄'];
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        const courseSheet = doc.sheetsByTitle['課程列表'];
+        
+        if (!sessionSheet) return res.json({ success: false });
+        
+        // 更新活動狀態
+        const sessions = await sessionSheet.getRows();
+        const session = sessions.find(s => s.get('活動ID') === id);
+        if (!session) return res.json({ success: false, message: '找不到活動' });
+        
+        session.set('狀態', '已結束');
+        await session.save();
+        
+        // 找出未簽到的學生，標記為缺席
+        const courseId = session.get('課程ID');
+        const courses = await courseSheet.getRows();
+        const course = courses.find(c => c.get('課程ID') === courseId);
+        if (!course) return res.json({ success: true, marked: 0 });
+        
+        const classCode = course.get('班級');
+        const students = await studentSheet.getRows();
+        const classStudents = students.filter(s => s.get('班級') === classCode);
+        
+        const records = await recordSheet.getRows();
+        const sessionRecords = records.filter(r => r.get('活動ID') === id);
+        const checkedInIds = sessionRecords.map(r => r.get('學號'));
+        
+        let marked = 0;
+        const absentStudents = [];
+        
+        for (const student of classStudents) {
+            const studentId = student.get('學號');
+            if (!checkedInIds.includes(studentId)) {
+                // 標記缺席
+                await recordSheet.addRow({
+                    '活動ID': id,
+                    '學號': studentId,
+                    '簽到時間': new Date().toLocaleString('zh-TW'),
+                    '狀態': '缺席',
+                    '遲到分鐘': 0,
+                    'GPS緯度': '',
+                    'GPS經度': '',
+                    '備註': '系統自動標記'
+                });
+                marked++;
+                absentStudents.push({
+                    studentId,
+                    name: student.get('姓名'),
+                    lineId: student.get('LINE_ID')
+                });
+            }
+        }
+        
+        res.json({ 
+            success: true, 
+            marked, 
+            absentStudents,
+            courseName: course.get('科目')
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// === 請假系統 API ===
+// 取得請假列表
+app.get('/api/leaves', async (req, res) => {
+    try {
+        const sheet = await getOrCreateSheet('請假紀錄', ['請假ID', '學號', '姓名', '班級', '日期', '節次', '請假類型', '原因', '狀態', '申請時間', '審核時間', '審核備註']);
+        const rows = await sheet.getRows();
+        res.json(rows.map(r => ({
+            id: r.get('請假ID'),
+            studentId: r.get('學號'),
+            name: r.get('姓名'),
+            classCode: r.get('班級'),
+            date: r.get('日期'),
+            periods: r.get('節次'),
+            type: r.get('請假類型'),
+            reason: r.get('原因'),
+            status: r.get('狀態'),
+            appliedAt: r.get('申請時間'),
+            reviewedAt: r.get('審核時間'),
+            reviewNote: r.get('審核備註')
+        })));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 學生申請請假
+app.post('/api/leaves', async (req, res) => {
+    try {
+        const { studentId, date, periods, type, reason } = req.body;
+        const sheet = await getOrCreateSheet('請假紀錄', ['請假ID', '學號', '姓名', '班級', '日期', '節次', '請假類型', '原因', '狀態', '申請時間', '審核時間', '審核備註']);
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        
+        if (!studentSheet) return res.json({ success: false, message: '找不到學生資料' });
+        
+        const students = await studentSheet.getRows();
+        const student = students.find(s => s.get('學號') === studentId);
+        if (!student) return res.json({ success: false, message: '學生不存在' });
+        
+        const leaveId = 'L' + Date.now();
+        await sheet.addRow({
+            '請假ID': leaveId,
+            '學號': studentId,
+            '姓名': student.get('姓名'),
+            '班級': student.get('班級'),
+            '日期': date,
+            '節次': periods,
+            '請假類型': type || '事假',
+            '原因': reason || '',
+            '狀態': '待審核',
+            '申請時間': new Date().toLocaleString('zh-TW'),
+            '審核時間': '',
+            '審核備註': ''
+        });
+        
+        res.json({ success: true, leaveId });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 審核請假
+app.put('/api/leaves/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status, note } = req.body;
+        const sheet = doc.sheetsByTitle['請假紀錄'];
+        if (!sheet) return res.json({ success: false });
+        
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('請假ID') === id);
+        if (!row) return res.json({ success: false, message: '找不到請假單' });
+        
+        row.set('狀態', status);
+        row.set('審核時間', new Date().toLocaleString('zh-TW'));
+        row.set('審核備註', note || '');
+        await row.save();
+        
+        // 發送通知給學生
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        if (studentSheet) {
+            const students = await studentSheet.getRows();
+            const student = students.find(s => s.get('學號') === row.get('學號'));
+            if (student && student.get('LINE_ID')) {
+                const statusText = status === '已核准' ? '✅ 已核准' : '❌ 已駁回';
+                try {
+                    await lineClient.pushMessage(student.get('LINE_ID'), {
+                        type: 'text',
+                        text: `📋 請假審核結果\n\n${statusText}\n日期：${row.get('日期')}\n節次：${row.get('節次')}\n${note ? '備註：' + note : ''}`
+                    });
+                } catch (e) { console.log('LINE 通知失敗:', e.message); }
+            }
+        }
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 刪除請假
+app.delete('/api/leaves/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const sheet = doc.sheetsByTitle['請假紀錄'];
+        if (!sheet) return res.json({ success: true });
+        
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('請假ID') === id);
+        if (row) await row.delete();
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// === 家長管理 API ===
+// 綁定家長 LINE
+app.post('/api/students/:id/parent', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { parentLineId, parentName } = req.body;
+        const sheet = doc.sheetsByTitle['學生名單'];
+        if (!sheet) return res.json({ success: false });
+        
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('學號') === id);
+        if (!row) return res.json({ success: false, message: '學生不存在' });
+        
+        row.set('家長LINE_ID', parentLineId);
+        row.set('家長姓名', parentName || '');
+        await row.save();
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 發送通知給家長
+app.post('/api/notify/parent', async (req, res) => {
+    try {
+        const { studentId, message, type } = req.body;
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        if (!studentSheet) return res.json({ success: false });
+        
+        const students = await studentSheet.getRows();
+        const student = students.find(s => s.get('學號') === studentId);
+        
+        if (!student || !student.get('家長LINE_ID')) {
+            return res.json({ success: false, message: '家長未綁定 LINE' });
+        }
+        
+        let text = message;
+        if (!text) {
+            if (type === 'absent') {
+                text = `📢 家長您好\n\n您的孩子 ${student.get('姓名')} 今日有缺席紀錄，請關心了解。\n\n如有疑問請與學校聯繫。`;
+            } else if (type === 'warning') {
+                text = `⚠️ 重要通知\n\n您的孩子 ${student.get('姓名')} 近期出席狀況異常，已連續多次缺席。\n\n請儘速與學校聯繫了解情況。`;
+            }
+        }
+        
+        await lineClient.pushMessage(student.get('家長LINE_ID'), { type: 'text', text });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 批次通知家長
+app.post('/api/notify/parents-batch', async (req, res) => {
+    try {
+        const { studentIds, message, type } = req.body;
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        if (!studentSheet) return res.json({ success: false });
+        
+        const students = await studentSheet.getRows();
+        let sent = 0, failed = 0;
+        
+        for (const studentId of studentIds) {
+            const student = students.find(s => s.get('學號') === studentId);
+            if (student && student.get('家長LINE_ID')) {
+                try {
+                    let text = message || `📢 家長您好\n\n您的孩子 ${student.get('姓名')} 的出席狀況需要您關注。\n\n詳情請與學校聯繫。`;
+                    await lineClient.pushMessage(student.get('家長LINE_ID'), { type: 'text', text });
+                    sent++;
+                } catch { failed++; }
+            } else { failed++; }
+        }
+        
+        res.json({ success: true, sent, failed });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// === 週報 API ===
+// 產生週報
+app.get('/api/reports/weekly', async (req, res) => {
+    try {
+        const { weekStart, weekEnd } = req.query;
+        const recordSheet = doc.sheetsByTitle['簽到紀錄'];
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        const classSheet = doc.sheetsByTitle['班級列表'];
+        
+        if (!recordSheet || !studentSheet) {
+            return res.json({ success: false, message: '資料表不存在' });
+        }
+        
+        const records = await recordSheet.getRows();
+        const students = await studentSheet.getRows();
+        const classes = classSheet ? await classSheet.getRows() : [];
+        
+        // 過濾本週紀錄
+        const weekRecords = records.filter(r => {
+            const date = r.get('簽到時間')?.split(' ')[0];
+            return date >= weekStart && date <= weekEnd;
+        });
+        
+        const total = weekRecords.length;
+        const attended = weekRecords.filter(r => r.get('狀態') === '已報到').length;
+        const late = weekRecords.filter(r => r.get('狀態') === '遲到').length;
+        const absent = weekRecords.filter(r => r.get('狀態') === '缺席').length;
+        const rate = total > 0 ? Math.round((attended + late) / total * 100) : 0;
+        
+        // 各班統計
+        const classSummary = [];
+        for (const cls of classes) {
+            const code = cls.get('班級代碼');
+            const classStudents = students.filter(s => s.get('班級') === code).map(s => s.get('學號'));
+            const classRecords = weekRecords.filter(r => classStudents.includes(r.get('學號')));
+            const cTotal = classRecords.length;
+            const cAttended = classRecords.filter(r => r.get('狀態') === '已報到').length;
+            const cLate = classRecords.filter(r => r.get('狀態') === '遲到').length;
+            const cAbsent = classRecords.filter(r => r.get('狀態') === '缺席').length;
+            
+            classSummary.push({
+                code, name: cls.get('班級名稱'),
+                total: cTotal, attended: cAttended, late: cLate, absent: cAbsent,
+                rate: cTotal > 0 ? Math.round((cAttended + cLate) / cTotal * 100) : 100
+            });
+        }
+        
+        // 問題學生
+        const problemStudents = [];
+        for (const student of students) {
+            const studentId = student.get('學號');
+            const studentRecords = weekRecords.filter(r => r.get('學號') === studentId);
+            const sAbsent = studentRecords.filter(r => r.get('狀態') === '缺席').length;
+            const sLate = studentRecords.filter(r => r.get('狀態') === '遲到').length;
+            
+            if (sAbsent >= 2 || sLate >= 3) {
+                problemStudents.push({ studentId, name: student.get('姓名'), classCode: student.get('班級'), absent: sAbsent, late: sLate });
+            }
+        }
+        
+        res.json({ success: true, weekStart, weekEnd, summary: { total, attended, late, absent, rate }, classSummary, problemStudents });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 發送週報通知
+app.post('/api/reports/weekly/send', async (req, res) => {
+    try {
+        const { report, teacherLineId } = req.body;
+        
+        let text = `📊 週報 (${report.weekStart} ~ ${report.weekEnd})\n\n`;
+        text += `📈 整體統計\n`;
+        text += `• 出席率：${report.summary.rate}%\n`;
+        text += `• 出席：${report.summary.attended} 次\n`;
+        text += `• 遲到：${report.summary.late} 次\n`;
+        text += `• 缺席：${report.summary.absent} 次\n\n`;
+        
+        if (report.problemStudents?.length > 0) {
+            text += `⚠️ 需關注學生\n`;
+            for (const s of report.problemStudents.slice(0, 5)) {
+                text += `• ${s.name} (${s.classCode}): 缺席${s.absent}次, 遲到${s.late}次\n`;
+            }
+        } else {
+            text += `✅ 本週無異常狀況\n`;
+        }
+        
+        if (teacherLineId) {
+            await lineClient.pushMessage(teacherLineId, { type: 'text', text });
+        }
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// === 匯出報表 API ===
+app.get('/api/export/attendance', async (req, res) => {
+    try {
+        const { format, startDate, endDate, classCode } = req.query;
+        const recordSheet = doc.sheetsByTitle['簽到紀錄'];
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        
+        if (!recordSheet || !studentSheet) return res.json({ success: false });
+        
+        const records = await recordSheet.getRows();
+        const students = await studentSheet.getRows();
+        
+        let filtered = records;
+        if (startDate) filtered = filtered.filter(r => r.get('簽到時間')?.split(' ')[0] >= startDate);
+        if (endDate) filtered = filtered.filter(r => r.get('簽到時間')?.split(' ')[0] <= endDate);
+        if (classCode) {
+            const classStudentIds = students.filter(s => s.get('班級') === classCode).map(s => s.get('學號'));
+            filtered = filtered.filter(r => classStudentIds.includes(r.get('學號')));
+        }
+        
+        const data = filtered.map(r => {
+            const student = students.find(s => s.get('學號') === r.get('學號'));
+            return {
+                日期: r.get('簽到時間')?.split(' ')[0] || '',
+                時間: r.get('簽到時間')?.split(' ')[1] || '',
+                學號: r.get('學號'),
+                姓名: student?.get('姓名') || '',
+                班級: student?.get('班級') || '',
+                狀態: r.get('狀態'),
+                遲到分鐘: r.get('遲到分鐘') || 0,
+                備註: r.get('備註') || ''
+            };
+        });
+        
+        res.json({ success: true, data, format });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// === 學生管理 API ===
+// 新增學生（手動）
+app.post('/api/students', async (req, res) => {
+    try {
+        const { studentId, name, classCode, phone, parentPhone, parentLineId } = req.body;
+        const sheet = await getOrCreateSheet('學生名單', ['學號', '姓名', '班級', 'LINE_ID', '電話', '家長電話', '家長LINE_ID', '註冊時間']);
+        
+        // 檢查學號是否已存在
+        const rows = await sheet.getRows();
+        const exists = rows.find(r => r.get('學號') === studentId);
+        if (exists) {
+            return res.json({ success: false, message: '學號已存在' });
+        }
+        
+        await sheet.addRow({
+            '學號': studentId,
+            '姓名': name,
+            '班級': classCode,
+            'LINE_ID': '',
+            '電話': phone || '',
+            '家長電話': parentPhone || '',
+            '家長LINE_ID': parentLineId || '',
+            '註冊時間': new Date().toLocaleString('zh-TW')
+        });
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 更新學生
+app.put('/api/students/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, classCode, phone, parentPhone } = req.body;
+        const sheet = doc.sheetsByTitle['學生名單'];
+        if (!sheet) return res.json({ success: false });
+        
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('學號') === id);
+        if (!row) return res.json({ success: false, message: '學生不存在' });
+        
+        if (name) row.set('姓名', name);
+        if (classCode) row.set('班級', classCode);
+        if (phone !== undefined) row.set('電話', phone);
+        if (parentPhone !== undefined) row.set('家長電話', parentPhone);
+        await row.save();
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 刪除學生
+app.delete('/api/students/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const sheet = doc.sheetsByTitle['學生名單'];
+        if (!sheet) return res.json({ success: true });
+        
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('學號') === id);
+        if (row) await row.delete();
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// === 匯出 Excel ===
+app.get('/api/export/excel', async (req, res) => {
+    try {
+        const { startDate, endDate, classCode, type } = req.query;
+        const recordSheet = doc.sheetsByTitle['簽到紀錄'];
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        const courseSheet = doc.sheetsByTitle['課程列表'];
+        
+        if (!recordSheet || !studentSheet) {
+            return res.status(400).json({ success: false, message: '資料表不存在' });
+        }
+        
+        const records = await recordSheet.getRows();
+        const students = await studentSheet.getRows();
+        const courses = courseSheet ? await courseSheet.getRows() : [];
+        
+        let data = [];
+        
+        if (type === 'summary') {
+            // 學生出席率摘要
+            for (const student of students) {
+                const studentId = student.get('學號');
+                if (classCode && student.get('班級') !== classCode) continue;
+                
+                const studentRecords = records.filter(r => {
+                    const date = r.get('簽到時間')?.split(' ')[0];
+                    const matchDate = (!startDate || date >= startDate) && (!endDate || date <= endDate);
+                    return r.get('學號') === studentId && matchDate;
+                });
+                
+                const total = studentRecords.length;
+                const attended = studentRecords.filter(r => r.get('狀態') === '已報到').length;
+                const late = studentRecords.filter(r => r.get('狀態') === '遲到').length;
+                const absent = studentRecords.filter(r => r.get('狀態') === '缺席').length;
+                const rate = total > 0 ? Math.round((attended + late) / total * 100) : 100;
+                
+                data.push({
+                    學號: studentId,
+                    姓名: student.get('姓名'),
+                    班級: student.get('班級'),
+                    總堂數: total,
+                    出席: attended,
+                    遲到: late,
+                    缺席: absent,
+                    出席率: rate + '%'
+                });
+            }
+        } else {
+            // 詳細出缺紀錄
+            for (const r of records) {
+                const date = r.get('簽到時間')?.split(' ')[0];
+                if (startDate && date < startDate) continue;
+                if (endDate && date > endDate) continue;
+                
+                const student = students.find(s => s.get('學號') === r.get('學號'));
+                if (classCode && student?.get('班級') !== classCode) continue;
+                
+                const course = courses.find(c => c.get('課程ID') === r.get('課程ID'));
+                
+                data.push({
+                    日期: date || '',
+                    時間: r.get('簽到時間')?.split(' ')[1] || '',
+                    學號: r.get('學號'),
+                    姓名: student?.get('姓名') || '',
+                    班級: student?.get('班級') || '',
+                    課程: course?.get('科目') || '',
+                    狀態: r.get('狀態'),
+                    遲到分鐘: r.get('遲到分鐘') || 0,
+                    備註: r.get('備註') || ''
+                });
+            }
+        }
+        
+        // 產生 CSV
+        if (data.length === 0) {
+            return res.json({ success: false, message: '無資料' });
+        }
+        
+        const headers = Object.keys(data[0]);
+        const csv = '\uFEFF' + headers.join(',') + '\n' + 
+            data.map(row => headers.map(h => '"' + (row[h] || '').toString().replace(/"/g, '""') + '"').join(',')).join('\n');
+        
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', 'attachment; filename=attendance_' + new Date().toISOString().split('T')[0] + '.csv');
+        res.send(csv);
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// === 手動調整出席紀錄 ===
+app.put('/api/records/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status, note } = req.body;
+        const sheet = doc.sheetsByTitle['簽到紀錄'];
+        if (!sheet) return res.json({ success: false });
+        
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.rowNumber.toString() === id || r.get('活動ID') + '_' + r.get('學號') === id);
+        if (!row) return res.json({ success: false, message: '找不到紀錄' });
+        
+        if (status) row.set('狀態', status);
+        if (note !== undefined) row.set('備註', note);
+        row.set('修改時間', new Date().toLocaleString('zh-TW'));
+        await row.save();
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 新增手動出席紀錄
+app.post('/api/records/manual', async (req, res) => {
+    try {
+        const { studentId, courseId, date, status, note } = req.body;
+        const sheet = await getOrCreateSheet('簽到紀錄', ['活動ID', '學號', '簽到時間', '狀態', '遲到分鐘', 'GPS緯度', 'GPS經度', '備註', '修改時間']);
+        
+        await sheet.addRow({
+            '活動ID': 'MANUAL_' + Date.now(),
+            '學號': studentId,
+            '簽到時間': date + ' 00:00:00',
+            '狀態': status || '已報到',
+            '遲到分鐘': 0,
+            'GPS緯度': '',
+            'GPS經度': '',
+            '備註': note || '手動新增',
+            '修改時間': new Date().toLocaleString('zh-TW')
+        });
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// === 獎勵系統 ===
+// 取得全勤學生
+app.get('/api/rewards/perfect-attendance', async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+        const recordSheet = doc.sheetsByTitle['簽到紀錄'];
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        
+        if (!recordSheet || !studentSheet) {
+            return res.json({ students: [] });
+        }
+        
+        const records = await recordSheet.getRows();
+        const students = await studentSheet.getRows();
+        const perfectStudents = [];
+        
+        for (const student of students) {
+            const studentId = student.get('學號');
+            const studentRecords = records.filter(r => {
+                const date = r.get('簽到時間')?.split(' ')[0];
+                const matchDate = (!startDate || date >= startDate) && (!endDate || date <= endDate);
+                return r.get('學號') === studentId && matchDate;
             });
             
-            if (r?.success) {
-                toast('已發送 ' + r.sent + ' 則通知！');
-            } else {
-                toast(r?.message || '發送失敗', 'danger');
+            const total = studentRecords.length;
+            if (total === 0) continue;
+            
+            const absent = studentRecords.filter(r => r.get('狀態') === '缺席').length;
+            const late = studentRecords.filter(r => r.get('狀態') === '遲到').length;
+            
+            if (absent === 0 && late === 0) {
+                perfectStudents.push({
+                    studentId,
+                    name: student.get('姓名'),
+                    classCode: student.get('班級'),
+                    lineId: student.get('LINE_ID'),
+                    totalClasses: total
+                });
             }
         }
         
-        function downloadQR() {
-            const container = document.getElementById('qr-container');
-            const img = container.querySelector('img');
-            const canvas = container.querySelector('canvas');
-            
-            if (img) {
-                const link = document.createElement('a');
-                link.download = 'qrcode.png';
-                link.href = img.src;
-                link.click();
-                toast('已下載！');
-            } else if (canvas) {
-                const link = document.createElement('a');
-                link.download = 'qrcode.png';
-                link.href = canvas.toDataURL();
-                link.click();
-                toast('已下載！');
-            } else {
-                toast('找不到 QR Code 圖片', 'danger');
+        res.json({ students: perfectStudents });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 發送獎勵通知
+app.post('/api/rewards/send', async (req, res) => {
+    try {
+        const { studentIds, message } = req.body;
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        if (!studentSheet) return res.json({ success: false });
+        
+        const students = await studentSheet.getRows();
+        let sent = 0;
+        
+        for (const studentId of studentIds) {
+            const student = students.find(s => s.get('學號') === studentId);
+            if (student && student.get('LINE_ID')) {
+                try {
+                    const text = message || `🏆 恭喜！\n\n${student.get('姓名')} 同學，您達成全勤！\n\n感謝您的認真出席，繼續保持！💪`;
+                    await lineClient.pushMessage(student.get('LINE_ID'), { type: 'text', text });
+                    sent++;
+                } catch (e) { console.log('發送失敗:', e.message); }
             }
         }
+        
+        res.json({ success: true, sent });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
 
-        // === 請假管理 ===
-        async function loadLeaves() {
-            const data = await api('/api/leaves');
-            if (data) {
-                leaves = data;
-                const pending = leaves.filter(l => l.status === '待審核').length;
-                const badge = document.getElementById('leave-badge');
-                badge.style.display = pending > 0 ? 'inline' : 'none';
-                badge.textContent = pending;
-                renderLeaves();
-            }
-        }
-        function filterLeaves(filter) {
-            leaveFilter = filter;
-            document.querySelectorAll('#page-leaves .tab').forEach((t, i) => {
-                const filters = ['pending', 'approved', 'rejected', 'all'];
-                t.classList.toggle('active', filters[i] === filter);
-            });
-            renderLeaves();
-        }
-        function renderLeaves() {
-            let filtered = leaves;
-            if (leaveFilter === 'pending') filtered = leaves.filter(l => l.status === '待審核');
-            else if (leaveFilter === 'approved') filtered = leaves.filter(l => l.status === '已核准');
-            else if (leaveFilter === 'rejected') filtered = leaves.filter(l => l.status === '已駁回');
-            document.getElementById('leaves-list').innerHTML = filtered.length ? filtered.map(l => {
-                const badge = l.status === '待審核' ? 'warning' : l.status === '已核准' ? 'success' : 'danger';
-                return '<div class="leave-item ' + l.status.replace('已', '').toLowerCase() + '"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><b>' + l.name + ' (' + l.studentId + ')</b><span class="badge ' + badge + '">' + l.status + '</span></div><div style="font-size:14px;color:var(--text-light);margin-bottom:10px">📅 ' + l.date + ' · 第' + l.periods + '節<br>📝 ' + l.type + '：' + (l.reason || '無說明') + '</div>' + (l.status === '待審核' ? '<button class="btn btn-sm btn-success" onclick="openReviewLeave(\'' + l.id + '\')">審核</button>' : '') + '</div>';
-            }).join('') : '<div class="empty">無請假紀錄</div>';
-        }
-        function openReviewLeave(id) {
-            currentLeave = leaves.find(l => l.id === id);
-            if (!currentLeave) return;
-            document.getElementById('leave-detail').innerHTML = '<div class="alert alert-info"><b>' + currentLeave.name + '</b> (' + currentLeave.studentId + ')<br>📅 ' + currentLeave.date + ' · 第' + currentLeave.periods + '節<br>📝 ' + currentLeave.type + '：' + (currentLeave.reason || '無') + '</div>';
-            document.getElementById('review-note').value = '';
-            openModal('reviewLeave');
-        }
-        async function reviewLeave(status) {
-            if (!currentLeave) return;
-            const note = document.getElementById('review-note').value.trim();
-            const r = await api('/api/leaves/' + currentLeave.id, { method: 'PUT', body: JSON.stringify({ status, note }) });
-            if (r?.success) { toast(status === '已核准' ? '已核准！' : '已駁回！'); closeModal('reviewLeave'); loadLeaves(); }
-        }
+// === 課前提醒排程 ===
+app.post('/api/reminders/schedule', async (req, res) => {
+    try {
+        const { courseId, minutesBefore } = req.body;
+        // 這裡可以整合 node-cron 或其他排程工具
+        // 目前先返回成功，實際排程需要額外設定
+        res.json({ success: true, message: '提醒已排程' });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
 
-        // === 出缺紀錄 ===
-        async function loadRecords() {
-            const data = await api('/api/records');
-            document.getElementById('records-table').innerHTML = data?.length ? data.slice(-50).reverse().map(r => {
-                const badge = r.status === '已報到' ? 'success' : r.status === '遲到' ? 'warning' : 'danger';
-                return '<tr><td>' + (r.date || '-') + '</td><td>' + r.studentId + '</td><td>' + (r.studentName || '-') + '</td><td><span class="badge ' + badge + '">' + r.status + '</span></td></tr>';
-            }).join('') : '<tr><td colspan="4" class="empty">尚無紀錄</td></tr>';
+// 立即發送課前提醒
+app.post('/api/reminders/send-now', async (req, res) => {
+    try {
+        const { courseId } = req.body;
+        const courseSheet = doc.sheetsByTitle['課程列表'];
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        
+        if (!courseSheet || !studentSheet) {
+            return res.json({ success: false });
         }
-        async function addRecord() {
-            const studentId = document.getElementById('record-student').value.trim();
-            const date = document.getElementById('record-date').value;
-            const status = document.getElementById('record-status').value;
-            const note = document.getElementById('record-note').value.trim();
-            if (!studentId || !date) { toast('請填寫學號和日期', 'danger'); return; }
-            const r = await api('/api/records/manual', { method: 'POST', body: JSON.stringify({ studentId, date, status, note }) });
-            if (r?.success) { toast('紀錄已新增！'); closeModal('addRecord'); loadRecords(); }
-        }
-
-        // === 統計 ===
-        async function loadStats() {
-            const data = await api('/api/stats/attendance');
-            if (data) {
-                document.getElementById('overall-rate').textContent = data.overall + '%';
-                document.getElementById('stats-attended').textContent = data.attended || 0;
-                document.getElementById('stats-late').textContent = data.late || 0;
-                document.getElementById('stats-absent').textContent = data.absent || 0;
-                document.getElementById('stats-total').textContent = data.totalRecords || 0;
-                const offset = 327 - 327 * (data.overall / 100);
-                document.getElementById('progress-circle').style.strokeDashoffset = offset;
-                const low = data.lowAttendance || [];
-                document.getElementById('low-attendance-list').innerHTML = low.length ? low.slice(0, 10).map(s => '<div class="student-alert ' + (s.rate < 60 ? 'critical' : 'warning') + '"><div class="avatar">' + s.name.charAt(0) + '</div><div class="info"><h5>' + s.name + ' (' + s.studentId + ')</h5><span>' + s.classCode + ' · 出席率 ' + s.rate + '%</span></div></div>').join('') : '<div class="empty">所有學生出席率良好 👍</div>';
-            }
-        }
-
-        // === 警示 ===
-        async function loadAlerts() {
-            const data = await api('/api/stats/consecutive-absent');
-            if (data?.alerts) {
-                document.getElementById('alert-list').innerHTML = data.alerts.length ? data.alerts.map(s => '<div class="student-alert ' + (s.level === 'critical' ? 'critical' : 'warning') + '"><div class="avatar">' + s.name.charAt(0) + '</div><div class="info"><h5>' + s.name + ' (' + s.studentId + ')</h5><span>' + s.classCode + ' · 連續缺席 <b>' + s.consecutiveAbsent + '</b> 次</span></div><button class="btn btn-sm btn-danger" onclick="sendWarning(\'' + s.studentId + '\',' + s.consecutiveAbsent + ')">📲 通知</button></div>').join('') : '<div class="empty">目前沒有連續缺席的學生 ✨</div>';
-            }
-        }
-        async function sendWarning(id, count) {
-            const r = await api('/api/notify/warning', { method: 'POST', body: JSON.stringify({ studentId: id, consecutiveCount: count }) });
-            toast(r?.success ? '警告已發送！' : '發送失敗', r?.success ? 'success' : 'danger');
-        }
-        async function sendAllWarnings() {
-            const data = await api('/api/stats/consecutive-absent');
-            if (data?.alerts) {
-                for (const s of data.alerts) {
-                    await api('/api/notify/warning', { method: 'POST', body: JSON.stringify({ studentId: s.studentId, consecutiveCount: s.consecutiveAbsent }) });
-                }
-                toast('已發送 ' + data.alerts.length + ' 則警告！');
-            }
-        }
-
-        // === 儀表板 ===
-        async function loadDashboard() {
-            const now = new Date();
-            document.getElementById('today-info').textContent = now.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
-            const data = await api('/api/dashboard');
-            if (data) {
-                document.getElementById('stat-students').textContent = data.totalStudents || 0;
-                document.getElementById('stat-attended').textContent = data.todayAttended || 0;
-                document.getElementById('stat-late').textContent = data.todayLate || 0;
-                document.getElementById('stat-absent').textContent = data.todayAbsent || 0;
-            }
-            const dow = now.getDay();
-            const today = courses.filter(c => c.day == dow);
-            document.getElementById('today-classes').innerHTML = today.length ? today.map(c => {
-                const p = ((sem.periods && sem.periods.length > 0 ? sem.periods : PERIODS[sem.div || "day"])).find(x => x.n == c.period) || { s: '', e: '' };
-                return '<div style="padding:10px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center"><div><b>' + (c.name || c.subject) + '</b> - ' + c.classCode + '<br><small>第' + c.period + '節 ' + p.s + '-' + p.e + '</small></div><button class="btn btn-primary btn-sm" onclick="startSession(\'' + c.id + '\')">📱</button></div>';
-            }).join('') : '<div class="empty">今日無課程</div>';
-            const alerts = await api('/api/stats/consecutive-absent');
-            document.getElementById('dashboard-alerts').innerHTML = alerts?.alerts?.length ? alerts.alerts.slice(0, 3).map(s => '<div style="padding:8px 0;border-bottom:1px solid var(--border)">⚠️ ' + s.name + ' 連續缺席 ' + s.consecutiveAbsent + ' 次</div>').join('') : '<div class="empty">無異常 ✨</div>';
-        }
-
-        // === 設定 ===
-        async function testConn() {
-            const url = document.getElementById('api-url').value.trim();
-            if (!url) { toast('請輸入網址', 'danger'); return; }
-            toast('測試中...', 'warning');
+        
+        const courses = await courseSheet.getRows();
+        const course = courses.find(c => c.get('課程ID') === courseId);
+        if (!course) return res.json({ success: false, message: '找不到課程' });
+        
+        const classCode = course.get('班級');
+        const students = await studentSheet.getRows();
+        const classStudents = students.filter(s => s.get('班級') === classCode && s.get('LINE_ID'));
+        
+        let sent = 0;
+        for (const student of classStudents) {
             try {
-                const res = await fetch(url + '/api/health');
-                if (res.ok) {
-                    API = url;
-                    localStorage.setItem('apiUrl', url);
-                    document.getElementById('status-dot').classList.add('connected');
-                    toast('連線成功！');
-                    loadAll();
-                } else throw new Error();
-            } catch { toast('連線失敗', 'danger'); }
-        }
-        function saveBotId() {
-            BOT = document.getElementById('bot-id').value.trim() || '@bot';
-            localStorage.setItem('botId', BOT);
-            toast('Bot ID 已儲存！');
+                await lineClient.pushMessage(student.get('LINE_ID'), {
+                    type: 'text',
+                    text: `⏰ 上課提醒\n\n${course.get('科目')} 即將開始！\n📍 ${course.get('教室') || '教室'}\n⏰ ${course.get('上課時間')}\n\n請準時出席！`
+                });
+                sent++;
+            } catch (e) { }
         }
         
-        // === 測試驗證功能 ===
-        async function testSemesterEndNotify() {
-            const classCode = document.getElementById('test-class').value;
-            if (!classCode) { toast('請選擇測試班級', 'danger'); return; }
-            if (!confirm('確定發送「學期結束通知」給 ' + classCode + ' 班級所有學生？')) return;
-            toast('發送中...', 'warning');
-            const r = await api('/api/test/semester-end', { method: 'POST', body: JSON.stringify({ classCode }) });
-            if (r?.success) {
-                toast('已發送 ' + r.count + ' 則學期結束通知！');
-            } else {
-                toast(r?.message || '發送失敗', 'danger');
-            }
-        }
-        async function testCheckinNotify() {
-            const classCode = document.getElementById('test-class').value;
-            if (!classCode) { toast('請選擇測試班級', 'danger'); return; }
-            if (!confirm('確定發送「簽到成功通知」給 ' + classCode + ' 班級所有學生？')) return;
-            toast('發送中...', 'warning');
-            const r = await api('/api/test/checkin-notify', { method: 'POST', body: JSON.stringify({ classCode, status: '已報到' }) });
-            if (r?.success) {
-                toast('已發送 ' + r.count + ' 則簽到成功通知！');
-            } else {
-                toast(r?.message || '發送失敗', 'danger');
-            }
-        }
-        async function testLateNotify() {
-            const classCode = document.getElementById('test-class').value;
-            if (!classCode) { toast('請選擇測試班級', 'danger'); return; }
-            if (!confirm('確定發送「遲到通知」給 ' + classCode + ' 班級所有學生？')) return;
-            toast('發送中...', 'warning');
-            const r = await api('/api/test/checkin-notify', { method: 'POST', body: JSON.stringify({ classCode, status: '遲到', lateMinutes: 15 }) });
-            if (r?.success) {
-                toast('已發送 ' + r.count + ' 則遲到通知！');
-            } else {
-                toast(r?.message || '發送失敗', 'danger');
-            }
-        }
-        async function testAbsentNotify() {
-            const classCode = document.getElementById('test-class').value;
-            if (!classCode) { toast('請選擇測試班級', 'danger'); return; }
-            if (!confirm('確定發送「缺席通知」給 ' + classCode + ' 班級所有學生？')) return;
-            toast('發送中...', 'warning');
-            const r = await api('/api/test/checkin-notify', { method: 'POST', body: JSON.stringify({ classCode, status: '缺席' }) });
-            if (r?.success) {
-                toast('已發送 ' + r.count + ' 則缺席通知！');
-            } else {
-                toast(r?.message || '發送失敗', 'danger');
-            }
-        }
-        async function testReminderNotify() {
-            const classCode = document.getElementById('test-class').value;
-            if (!classCode) { toast('請選擇測試班級', 'danger'); return; }
-            if (!confirm('確定發送「上課提醒」給 ' + classCode + ' 班級所有學生？')) return;
-            toast('發送中...', 'warning');
-            const r = await api('/api/test/reminder', { method: 'POST', body: JSON.stringify({ classCode }) });
-            if (r?.success) {
-                toast('已發送 ' + r.count + ' 則上課提醒！');
-            } else {
-                toast(r?.message || '發送失敗', 'danger');
-            }
-        }
-        function updateTestClassDropdown() {
-            const select = document.getElementById('test-class');
-            if (select) {
-                select.innerHTML = '<option value="">-- 選擇班級 --</option>' + classes.map(c => '<option value="' + c.code + '">' + c.code + ' - ' + c.name + '</option>').join('');
-            }
-        }
+        res.json({ success: true, sent });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
 
-        // === 頁面載入 ===
-        function loadPage(page) {
-            if (page === 'dashboard') loadDashboard();
-            if (page === 'semester') { initSemesterUI(); }
-            if (page === 'schedule') { renderScheduleGrid(); renderCourses(); }
-            if (page === 'sessions') loadSessions();
-            if (page === 'classes') loadClasses();
-            if (page === 'students') loadStudents();
-            if (page === 'leaves') loadLeaves();
-            if (page === 'records') { document.getElementById('record-date').value = new Date().toISOString().split('T')[0]; loadRecords(); }
-            if (page === 'stats') loadStats();
-            if (page === 'alerts') loadAlerts();
-            if (page === 'linebot') document.getElementById('bot-id').value = BOT;
-            if (page === 'settings') { updateTestClassDropdown(); document.getElementById('bot-id').value = BOT; }
+// === 多位置 GPS 管理 ===
+app.get('/api/locations', async (req, res) => {
+    try {
+        const sheet = await getOrCreateSheet('GPS位置', ['位置ID', '名稱', '緯度', '經度', '半徑', '備註']);
+        const rows = await sheet.getRows();
+        res.json(rows.map(r => ({
+            id: r.get('位置ID'),
+            name: r.get('名稱'),
+            lat: parseFloat(r.get('緯度')) || 0,
+            lon: parseFloat(r.get('經度')) || 0,
+            radius: parseInt(r.get('半徑')) || 50,
+            note: r.get('備註')
+        })));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/locations', async (req, res) => {
+    try {
+        const { name, lat, lon, radius, note } = req.body;
+        const sheet = await getOrCreateSheet('GPS位置', ['位置ID', '名稱', '緯度', '經度', '半徑', '備註']);
+        
+        const locationId = 'LOC_' + Date.now();
+        await sheet.addRow({
+            '位置ID': locationId,
+            '名稱': name,
+            '緯度': lat,
+            '經度': lon,
+            '半徑': radius || 50,
+            '備註': note || ''
+        });
+        
+        res.json({ success: true, locationId });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.delete('/api/locations/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const sheet = doc.sheetsByTitle['GPS位置'];
+        if (!sheet) return res.json({ success: true });
+        
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('位置ID') === id);
+        if (row) await row.delete();
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// === 圖表數據 API ===
+app.get('/api/charts/attendance-trend', async (req, res) => {
+    try {
+        const { days } = req.query;
+        const numDays = parseInt(days) || 7;
+        const recordSheet = doc.sheetsByTitle['簽到紀錄'];
+        
+        if (!recordSheet) {
+            return res.json({ data: [] });
         }
-        async function loadAll() {
-            await loadClasses();
-            await loadCourses();
-            await loadLeaves();
-            await loadDashboard();
+        
+        const records = await recordSheet.getRows();
+        const today = new Date();
+        const data = [];
+        
+        for (let i = numDays - 1; i >= 0; i--) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            const dateStr = date.toISOString().split('T')[0];
+            
+            const dayRecords = records.filter(r => r.get('簽到時間')?.startsWith(dateStr));
+            const total = dayRecords.length;
+            const attended = dayRecords.filter(r => r.get('狀態') === '已報到').length;
+            const late = dayRecords.filter(r => r.get('狀態') === '遲到').length;
+            const absent = dayRecords.filter(r => r.get('狀態') === '缺席').length;
+            const rate = total > 0 ? Math.round((attended + late) / total * 100) : 0;
+            
+            data.push({
+                date: dateStr,
+                label: (date.getMonth() + 1) + '/' + date.getDate(),
+                total,
+                attended,
+                late,
+                absent,
+                rate
+            });
         }
-        function init() {
-            document.getElementById('api-url').value = API;
-            document.getElementById('bot-id').value = BOT;
+        
+        res.json({ data });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/charts/class-comparison', async (req, res) => {
+    try {
+        const recordSheet = doc.sheetsByTitle['簽到紀錄'];
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        const classSheet = doc.sheetsByTitle['班級列表'];
+        
+        if (!recordSheet || !studentSheet) {
+            return res.json({ data: [] });
+        }
+        
+        const records = await recordSheet.getRows();
+        const students = await studentSheet.getRows();
+        const classes = classSheet ? await classSheet.getRows() : [];
+        const data = [];
+        
+        // 取得所有班級代碼
+        const classCodes = [...new Set(students.map(s => s.get('班級')))];
+        
+        for (const code of classCodes) {
+            const classStudents = students.filter(s => s.get('班級') === code);
+            const studentIds = classStudents.map(s => s.get('學號'));
+            const classRecords = records.filter(r => studentIds.includes(r.get('學號')));
             
-            // 從 localStorage 讀取學期設定
-            loadSemesterFromStorage();
-            console.log('載入的 sem:', sem);
+            const total = classRecords.length;
+            const attended = classRecords.filter(r => r.get('狀態') === '已報到').length;
+            const late = classRecords.filter(r => r.get('狀態') === '遲到').length;
+            const rate = total > 0 ? Math.round((attended + late) / total * 100) : 0;
             
-            // 初始化學期設定 UI
-            initSemesterUI();
+            const classInfo = classes.find(c => c.get('班級代碼') === code);
             
-            // 計算目前週次
-            calcWeeks();
-            
-            // 自動偵測 API
-            if (!API && location.origin.includes('onrender.com')) {
-                API = location.origin;
-                localStorage.setItem('apiUrl', API);
-                document.getElementById('api-url').value = API;
+            data.push({
+                code,
+                name: classInfo?.get('班級名稱') || code,
+                studentCount: classStudents.length,
+                rate
+            });
+        }
+        
+        data.sort((a, b) => b.rate - a.rate);
+        res.json({ data });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ===== 測試驗證 API =====
+
+// 測試學期結束通知
+app.post('/api/test/semester-end', async (req, res) => {
+    try {
+        const { classCode } = req.body;
+        if (!classCode) return res.json({ success: false, message: '請選擇班級' });
+        
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        if (!studentSheet) return res.json({ success: false, message: '學生名單不存在' });
+        
+        const students = await studentSheet.getRows();
+        const classStudents = students.filter(s => s.get('班級') === classCode && s.get('LINE_ID'));
+        
+        let count = 0;
+        for (const student of classStudents) {
+            try {
+                await lineClient.pushMessage(student.get('LINE_ID'), {
+                    type: 'text',
+                    text: `📚 【測試】學期結束通知\n\n親愛的 ${student.get('姓名')} 同學：\n\n本學期課程已全部結束，感謝您這學期的配合！\n\n📌 解除 LINE BOT 綁定方式：\n1. 進入此聊天室\n2. 點右上角「≡」選單\n3. 選擇「封鎖」即可解除\n\n或輸入「解除綁定」由系統處理。\n\n🎉 祝您假期愉快！\n\n⚠️ 這是測試訊息`
+                });
+                count++;
+            } catch (e) {
+                console.error('發送測試通知失敗:', e.message);
             }
-            if (API) {
-                loadAll();
-                loadReminderSettings();
+        }
+        
+        res.json({ success: true, count, message: `已發送 ${count} 則通知` });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// 測試簽到狀態通知（準時/遲到/缺席）
+app.post('/api/test/checkin-notify', async (req, res) => {
+    try {
+        const { classCode, status, lateMinutes } = req.body;
+        if (!classCode) return res.json({ success: false, message: '請選擇班級' });
+        
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        if (!studentSheet) return res.json({ success: false, message: '學生名單不存在' });
+        
+        const students = await studentSheet.getRows();
+        const classStudents = students.filter(s => s.get('班級') === classCode && s.get('LINE_ID'));
+        
+        const today = getTodayString();
+        let notifyText = '';
+        
+        if (status === '已報到') {
+            notifyText = `✅ 【測試】簽到成功\n\n📚 課程：測試課程\n📅 日期：${today}\n✨ 狀態：準時報到\n\n繼續保持！💪\n\n⚠️ 這是測試訊息`;
+        } else if (status === '遲到') {
+            notifyText = `⚠️ 【測試】遲到通知\n\n📚 課程：測試課程\n📅 日期：${today}\n⏰ 遲到：${lateMinutes || 15} 分鐘\n\n請下次準時出席！\n\n⚠️ 這是測試訊息`;
+        } else if (status === '缺席') {
+            notifyText = `❌ 【測試】缺席通知\n\n📚 課程：測試課程\n📅 日期：${today}\n\n如有疑問請聯繫教師。\n\n⚠️ 這是測試訊息`;
+        }
+        
+        let count = 0;
+        for (const student of classStudents) {
+            try {
+                await lineClient.pushMessage(student.get('LINE_ID'), {
+                    type: 'text',
+                    text: notifyText
+                });
+                count++;
+            } catch (e) {
+                console.error('發送測試通知失敗:', e.message);
             }
         }
-        init();
-    </script>
-</body>
-</html>
+        
+        res.json({ success: true, count, message: `已發送 ${count} 則通知` });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// 測試上課提醒
+app.post('/api/test/reminder', async (req, res) => {
+    try {
+        const { classCode } = req.body;
+        if (!classCode) return res.json({ success: false, message: '請選擇班級' });
+        
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        if (!studentSheet) return res.json({ success: false, message: '學生名單不存在' });
+        
+        const students = await studentSheet.getRows();
+        const classStudents = students.filter(s => s.get('班級') === classCode && s.get('LINE_ID'));
+        
+        // 建立測試簽到連結
+        const botId = process.env.LINE_BOT_ID || '@516bpeih';
+        const testCode = `GPS簽到:TEST|TEST${Date.now()}`;
+        const checkinUrl = `https://line.me/R/oaMessage/${botId}/?${encodeURIComponent(testCode)}`;
+        
+        let count = 0;
+        for (const student of classStudents) {
+            try {
+                await lineClient.pushMessage(student.get('LINE_ID'), {
+                    type: 'template',
+                    altText: '📢 【測試】上課提醒',
+                    template: {
+                        type: 'buttons',
+                        title: '📢 【測試】上課提醒',
+                        text: `⏰ 08:00-09:00\n📍 測試教室\n\n30 分鐘後上課\n\n⚠️ 這是測試訊息`,
+                        actions: [
+                            {
+                                type: 'uri',
+                                label: '📱 點我簽到（測試）',
+                                uri: checkinUrl
+                            }
+                        ]
+                    }
+                });
+                count++;
+            } catch (e) {
+                console.error('發送測試提醒失敗:', e.message);
+            }
+        }
+        
+        res.json({ success: true, count, message: `已發送 ${count} 則提醒` });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ===== 啟動伺服器 =====
+
+const PORT = process.env.PORT || 3000;
+
+initGoogleSheets()
+    .then(() => {
+        app.listen(PORT, () => {
+            console.log(`🚀 簽到系統已啟動，埠號 ${PORT}`);
+        });
+    })
+    .catch(err => {
+        console.error('初始化失敗:', err);
+        process.exit(1);
+    });
