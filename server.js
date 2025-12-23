@@ -569,17 +569,45 @@ async function handleLocation(event, userId) {
         state.classroomLat, state.classroomLon
     );
     
-    // 檢查是否在範圍內
-    if (distance > state.checkRadius) {
-        userStates.delete(userId);
-        return replyText(event, 
-            `🚫 簽到失敗！\n\n您不在教室範圍內。\n📍 與教室距離：${Math.round(distance)} 公尺\n📏 允許範圍：${state.checkRadius} 公尺\n\n請到教室後再試一次。`
-        );
+    // GPS 容錯：手機 GPS 誤差通常 10-50 公尺，加上 50 公尺容錯
+    const GPS_TOLERANCE = 50;
+    const effectiveRadius = state.checkRadius + GPS_TOLERANCE;
+    
+    // 檢查是否在範圍內（含容錯）
+    if (distance > effectiveRadius) {
+        // 不刪除狀態，允許重試
+        state.retryCount = (state.retryCount || 0) + 1;
+        
+        // 最多重試 3 次
+        if (state.retryCount >= 3) {
+            userStates.delete(userId);
+            return replyText(event, 
+                `🚫 簽到失敗！\n\n已重試 ${state.retryCount} 次仍不在範圍內。\n📍 您的位置距離教室：${Math.round(distance)} 公尺\n📏 允許範圍：${state.checkRadius} 公尺（+${GPS_TOLERANCE}m 容錯）\n\n請聯繫老師協助簽到。`
+            );
+        }
+        
+        // 允許重試
+        return lineClient.replyMessage(event.replyToken, {
+            type: 'template',
+            altText: '📍 位置驗證失敗，請重試',
+            template: {
+                type: 'buttons',
+                title: '📍 位置似乎不準確',
+                text: `距離教室 ${Math.round(distance)} 公尺\n允許範圍 ${state.checkRadius}+${GPS_TOLERANCE} 公尺\n\n請到戶外或窗邊重試`,
+                actions: [
+                    {
+                        type: 'uri',
+                        label: '🔄 重新傳送位置',
+                        uri: 'https://line.me/R/nv/location'
+                    }
+                ]
+            }
+        });
     }
     
     // 計算是否遲到
     const now = new Date();
-    const [startHour, startMin] = state.startTime.split(':').map(Number);
+    const [startHour, startMin] = (state.startTime || '08:00').split(':').map(Number);
     const startDate = new Date();
     startDate.setHours(startHour, startMin, 0, 0);
     
@@ -611,9 +639,9 @@ async function handleLocation(event, userId) {
     // 簽到成功訊息
     let message = '';
     if (status === '已報到') {
-        message = `✅ 簽到成功！\n\n📚 課程：${state.courseName}\n⏰ 時間：${formatDateTime(now)}\n📍 狀態：準時報到\n\n繼續保持！💪`;
+        message = `✅ 簽到成功！\n\n📚 課程：${state.courseName}\n⏰ 時間：${formatDateTime(now)}\n📍 距離教室：${Math.round(distance)} 公尺\n✨ 狀態：準時報到\n\n繼續保持！💪`;
     } else {
-        message = `⚠️ 簽到成功（遲到）\n\n📚 課程：${state.courseName}\n⏰ 時間：${formatDateTime(now)}\n📍 狀態：遲到 ${lateMinutes} 分鐘\n\n下次請準時到達！`;
+        message = `⚠️ 簽到成功（遲到）\n\n📚 課程：${state.courseName}\n⏰ 時間：${formatDateTime(now)}\n📍 距離教室：${Math.round(distance)} 公尺\n⏰ 遲到 ${lateMinutes} 分鐘\n\n下次請準時到達！`;
     }
     
     return replyText(event, message);
@@ -1214,7 +1242,7 @@ app.delete('/api/courses/:id', async (req, res) => {
 app.put('/api/courses/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { subject, classCode, day, period, time, room, lat, lon } = req.body;
+        const { subject, classCode, day, period, time, room, lat, lon, radius } = req.body;
         const sheet = doc.sheetsByTitle['課程列表'];
         if (!sheet) return res.json({ success: false, message: '資料表不存在' });
         
@@ -1230,6 +1258,7 @@ app.put('/api/courses/:id', async (req, res) => {
         if (room !== undefined) row.set('教室', room);
         if (lat !== undefined) row.set('教室緯度', lat);
         if (lon !== undefined) row.set('教室經度', lon);
+        if (radius !== undefined) row.set('簽到範圍', radius);
         await row.save();
         
         res.json({ success: true });
