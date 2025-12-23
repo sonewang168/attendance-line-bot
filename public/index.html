@@ -114,7 +114,24 @@
         <div class="page" id="page-semester">
             <div class="header"><h1 class="page-title">學期設定</h1><p class="page-subtitle">設定學期日期與節次時間</p></div>
             <div class="card"><div class="card-title">🏫 部別選擇</div><div class="chip-group" id="division-chips"><div class="chip day" data-div="day" onclick="selectDivision('day')">☀️ 日間部</div><div class="chip night" data-div="night" onclick="selectDivision('night')">🌙 夜間部</div><div class="chip weekend" data-div="weekend" onclick="selectDivision('weekend')">📅 進修部</div></div></div>
-            <div class="card"><div class="card-title">📆 學期期間</div><div class="form-row"><div class="form-group"><label class="form-label">開學日期</label><input type="date" class="form-input" id="semester-start" onchange="calcWeeks()"></div><div class="form-group"><label class="form-label">結業日期</label><input type="date" class="form-input" id="semester-end" onchange="calcWeeks()"></div></div><div class="alert alert-info">ℹ️ 自動計算：<strong id="semester-weeks">0</strong> 週</div></div>
+            <div class="card"><div class="card-title">📆 學期期間</div><div class="form-row"><div class="form-group"><label class="form-label">開學日期</label><input type="date" class="form-input" id="semester-start" onchange="calcWeeks()"></div><div class="form-group"><label class="form-label">結業日期</label><input type="date" class="form-input" id="semester-end" onchange="calcWeeks()"></div></div><div class="alert alert-info">ℹ️ 自動計算：<strong id="semester-weeks">0</strong> 週 · 目前第 <strong id="current-week">0</strong> 週</div></div>
+            <div class="card"><div class="card-title">🔔 自動提醒設定</div>
+                <div class="form-group" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+                    <div><strong>自動上課提醒</strong><br><small style="color:var(--text-light)">上課前自動發送 LINE 通知</small></div>
+                    <label class="switch"><input type="checkbox" id="auto-remind" checked><span class="slider"></span></label>
+                </div>
+                <div class="form-group" style="margin-top:15px">
+                    <label class="form-label">提前提醒時間</label>
+                    <select class="form-select" id="remind-minutes">
+                        <option value="10">10 分鐘前</option>
+                        <option value="15">15 分鐘前</option>
+                        <option value="20">20 分鐘前</option>
+                        <option value="30" selected>30 分鐘前</option>
+                        <option value="60">1 小時前</option>
+                    </select>
+                </div>
+                <div class="alert alert-success" style="margin-top:15px">✅ 系統會根據課表自動發送上課提醒與簽到連結給學生</div>
+            </div>
             <div class="card"><div class="card-title">⏰ 節次時間表</div><div id="period-settings"></div></div>
             <button class="btn btn-primary btn-block" onclick="saveSemester()">💾 儲存學期設定</button>
             <button class="btn btn-danger btn-block" style="margin-top:10px" onclick="resetAllSettings()">🗑️ 重設所有設定</button>
@@ -447,17 +464,53 @@
             const s = document.getElementById('semester-start').value;
             const e = document.getElementById('semester-end').value;
             if (s && e) {
-                const weeks = Math.ceil((new Date(e) - new Date(s)) / (7 * 24 * 60 * 60 * 1000));
+                const startDate = new Date(s);
+                const endDate = new Date(e);
+                const weeks = Math.ceil((endDate - startDate) / (7 * 24 * 60 * 60 * 1000));
                 document.getElementById('semester-weeks').textContent = weeks;
+                
+                // 計算目前第幾週
+                const now = new Date();
+                if (now >= startDate && now <= endDate) {
+                    const currentWeek = Math.ceil((now - startDate) / (7 * 24 * 60 * 60 * 1000));
+                    document.getElementById('current-week').textContent = currentWeek;
+                } else if (now < startDate) {
+                    document.getElementById('current-week').textContent = '尚未開學';
+                } else {
+                    document.getElementById('current-week').textContent = '已結業';
+                }
+                
                 sem.start = s;
                 sem.end = e;
                 sem.weeks = weeks;
             }
         }
-        function saveSemester() {
+        async function saveSemester() {
             calcWeeks();
             saveSemesterToStorage();
+            
+            // 儲存自動提醒設定到伺服器
+            const autoRemind = document.getElementById('auto-remind').checked;
+            const remindMinutes = document.getElementById('remind-minutes').value;
+            
+            await api('/api/settings', { 
+                method: 'POST', 
+                body: JSON.stringify({
+                    remindBeforeClass: autoRemind,
+                    remindMinutes: parseInt(remindMinutes),
+                    semesterStart: sem.start,
+                    semesterEnd: sem.end
+                })
+            });
+            
             toast('學期設定已儲存！');
+        }
+        async function loadReminderSettings() {
+            const r = await api('/api/settings');
+            if (r) {
+                document.getElementById('auto-remind').checked = r.remindBeforeClass !== false;
+                document.getElementById('remind-minutes').value = r.remindMinutes || 30;
+            }
         }
         function updatePeriodDropdowns() {
             const ps = sem.periods && sem.periods.length > 0 ? sem.periods : PERIODS[sem.div || 'day'];
@@ -1068,13 +1121,19 @@
             // 初始化學期設定 UI
             initSemesterUI();
             
+            // 計算目前週次
+            calcWeeks();
+            
             // 自動偵測 API
             if (!API && location.origin.includes('onrender.com')) {
                 API = location.origin;
                 localStorage.setItem('apiUrl', API);
                 document.getElementById('api-url').value = API;
             }
-            if (API) loadAll();
+            if (API) {
+                loadAll();
+                loadReminderSettings();
+            }
         }
         init();
     </script>
