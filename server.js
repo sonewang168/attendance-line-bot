@@ -327,6 +327,17 @@ async function handleEvent(event) {
         const text = event.message.text.trim();
         
         // 檢查是否為簽到連結
+        if (text.startsWith('直接簽到:')) {
+            // 掃老師手機 QR Code → 直接簽到
+            return handleDirectCheckin(event, userId, text);
+        }
+        
+        if (text.startsWith('GPS簽到:')) {
+            // 學生點連結 → GPS 驗證簽到
+            return handleGPSCheckin(event, userId, text);
+        }
+        
+        // 舊版相容
         if (text.startsWith('簽到:')) {
             return handleCheckinRequest(event, userId, text);
         }
@@ -431,9 +442,195 @@ async function handleRegistrationFlow(event, userId, userName, text, state) {
 }
 
 /**
- * 處理簽到請求
- * - 如果課程有設定 GPS（座標不為 0 且範圍 > 0），要求學生傳送位置
- * - 如果沒有 GPS 設定，直接簽到
+ * 直接簽到（掃老師手機 QR Code）
+ * 不需要 GPS 驗證，直接簽到成功
+ */
+async function handleDirectCheckin(event, userId, text) {
+    const student = await getStudent(userId);
+    if (!student) {
+        return replyText(event, '❌ 您尚未註冊！\n\n請先輸入「註冊」綁定學號。');
+    }
+    
+    const parts = text.replace('直接簽到:', '').split('|');
+    if (parts.length < 2) {
+        return replyText(event, '❌ 無效的簽到碼！');
+    }
+    
+    const [courseId, sessionId] = parts;
+    
+    const course = await getCourse(courseId);
+    if (!course) {
+        return replyText(event, '❌ 找不到此課程！');
+    }
+    
+    // 取得活動
+    let session = await getTodaySession(courseId);
+    if (!session) {
+        const sessionSheet = await getOrCreateSheet('簽到活動', [
+            '活動ID', '課程ID', '日期', '開始時間', '結束時間', 'QR碼內容', '狀態'
+        ]);
+        const rows = await sessionSheet.getRows();
+        session = rows.find(r => r.get('活動ID') === sessionId && r.get('狀態') !== '已結束');
+    }
+    
+    if (!session) {
+        return replyText(event, '❌ 此簽到活動已結束或不存在！');
+    }
+    
+    const actualSessionId = session.get('活動ID');
+    
+    // 檢查是否已簽到
+    const existingRecord = await checkExistingAttendance(actualSessionId, student.get('學號'));
+    if (existingRecord) {
+        return replyText(event, `✅ 您已經簽到過了！\n\n📚 課程：${course.get('科目')}\n⏰ 簽到時間：${existingRecord.get('簽到時間')}`);
+    }
+    
+    // 計算是否遲到
+    const startTime = session.get('開始時間');
+    const lateMinutes = parseInt(course.get('遲到標準')) || 10;
+    const now = new Date();
+    const [startHour, startMin] = (startTime || '08:00').split(':').map(Number);
+    const startDate = new Date();
+    startDate.setHours(startHour, startMin, 0, 0);
+    
+    const diffMinutes = Math.floor((now - startDate) / 60000);
+    const status = diffMinutes > lateMinutes ? '遲到' : '已報到';
+    
+    // 記錄簽到（不記錄 GPS）
+    const result = await recordAttendance(
+        actualSessionId,
+        student.get('學號'),
+        status,
+        diffMinutes > lateMinutes ? diffMinutes : 0,
+        '', ''
+    );
+    
+    if (result.success) {
+        const emoji = status === '已報到' ? '✅' : '⚠️';
+        let msg = `${emoji} 簽到成功！\n\n📚 課程：${course.get('科目')}\n👤 學生：${student.get('姓名')}\n📍 方式：掃描 QR Code\n✨ 狀態：${status}`;
+        if (status === '遲到') {
+            msg += `\n⏰ 遲到 ${diffMinutes} 分鐘`;
+        }
+        return replyText(event, msg);
+    } else {
+        return replyText(event, `❌ 簽到失敗：${result.message}`);
+    }
+}
+
+/**
+ * GPS 簽到（學生點連結自己簽到）
+ * 需要 GPS 驗證
+ */
+async function handleGPSCheckin(event, userId, text) {
+    const student = await getStudent(userId);
+    if (!student) {
+        return replyText(event, '❌ 您尚未註冊！\n\n請先輸入「註冊」綁定學號。');
+    }
+    
+    const parts = text.replace('GPS簽到:', '').split('|');
+    if (parts.length < 2) {
+        return replyText(event, '❌ 無效的簽到碼！');
+    }
+    
+    const [courseId, sessionId] = parts;
+    
+    const course = await getCourse(courseId);
+    if (!course) {
+        return replyText(event, '❌ 找不到此課程！');
+    }
+    
+    // 取得活動
+    let session = await getTodaySession(courseId);
+    if (!session) {
+        const sessionSheet = await getOrCreateSheet('簽到活動', [
+            '活動ID', '課程ID', '日期', '開始時間', '結束時間', 'QR碼內容', '狀態'
+        ]);
+        const rows = await sessionSheet.getRows();
+        session = rows.find(r => r.get('活動ID') === sessionId && r.get('狀態') !== '已結束');
+    }
+    
+    if (!session) {
+        return replyText(event, '❌ 此簽到活動已結束或不存在！');
+    }
+    
+    const actualSessionId = session.get('活動ID');
+    
+    // 檢查是否已簽到
+    const existingRecord = await checkExistingAttendance(actualSessionId, student.get('學號'));
+    if (existingRecord) {
+        return replyText(event, `✅ 您已經簽到過了！\n\n📚 課程：${course.get('科目')}\n⏰ 簽到時間：${existingRecord.get('簽到時間')}`);
+    }
+    
+    // 檢查是否有設定 GPS
+    const classroomLat = parseFloat(course.get('教室緯度')) || 0;
+    const classroomLon = parseFloat(course.get('教室經度')) || 0;
+    const checkRadius = parseInt(course.get('簽到範圍')) || 0;
+    
+    // 如果有設定 GPS，要求傳送位置
+    if (classroomLat !== 0 && classroomLon !== 0 && checkRadius > 0) {
+        userStates.set(userId, { 
+            step: 'waitingLocation',
+            courseId,
+            sessionId: actualSessionId,
+            courseName: course.get('科目'),
+            classroomLat,
+            classroomLon,
+            checkRadius,
+            lateMinutes: parseInt(course.get('遲到標準')) || 10,
+            startTime: session.get('開始時間')
+        });
+        
+        return lineClient.replyMessage(event.replyToken, {
+            type: 'template',
+            altText: '📍 請傳送您的位置以完成簽到',
+            template: {
+                type: 'buttons',
+                title: `📍 GPS 簽到 - ${course.get('科目')}`,
+                text: `請傳送位置驗證\n範圍：${checkRadius}m（+50m容錯）`,
+                actions: [
+                    {
+                        type: 'uri',
+                        label: '📍 傳送我的位置',
+                        uri: 'https://line.me/R/nv/location'
+                    }
+                ]
+            }
+        });
+    }
+    
+    // 沒有設定 GPS，直接簽到
+    const startTime = session.get('開始時間');
+    const lateMinutes = parseInt(course.get('遲到標準')) || 10;
+    const now = new Date();
+    const [startHour, startMin] = (startTime || '08:00').split(':').map(Number);
+    const startDate = new Date();
+    startDate.setHours(startHour, startMin, 0, 0);
+    
+    const diffMinutes = Math.floor((now - startDate) / 60000);
+    const status = diffMinutes > lateMinutes ? '遲到' : '已報到';
+    
+    const result = await recordAttendance(
+        actualSessionId,
+        student.get('學號'),
+        status,
+        diffMinutes > lateMinutes ? diffMinutes : 0,
+        '', ''
+    );
+    
+    if (result.success) {
+        const emoji = status === '已報到' ? '✅' : '⚠️';
+        let msg = `${emoji} 簽到成功！\n\n📚 課程：${course.get('科目')}\n👤 學生：${student.get('姓名')}\n✨ 狀態：${status}`;
+        if (status === '遲到') {
+            msg += `\n⏰ 遲到 ${diffMinutes} 分鐘`;
+        }
+        return replyText(event, msg);
+    } else {
+        return replyText(event, `❌ 簽到失敗：${result.message}`);
+    }
+}
+
+/**
+ * 處理簽到請求（舊版相容 - 直接簽到）
  */
 async function handleCheckinRequest(event, userId, text) {
     const student = await getStudent(userId);
@@ -449,16 +646,12 @@ async function handleCheckinRequest(event, userId, text) {
     
     const [courseId, sessionId] = parts;
     
-    // 取得課程資訊
     const course = await getCourse(courseId);
     if (!course) {
         return replyText(event, '❌ 找不到此課程！');
     }
     
-    // 取得今日活動（寬鬆匹配）
     let session = await getTodaySession(courseId);
-    
-    // 如果找不到，嘗試直接用 sessionId 查找
     if (!session) {
         const sessionSheet = await getOrCreateSheet('簽到活動', [
             '活動ID', '課程ID', '日期', '開始時間', '結束時間', 'QR碼內容', '狀態'
@@ -468,58 +661,17 @@ async function handleCheckinRequest(event, userId, text) {
     }
     
     if (!session) {
-        return replyText(event, '❌ 此簽到活動已結束或不存在！\n\n請確認：\n1. 老師已開啟簽到\n2. QR Code 是今天的\n3. 課程尚未結束');
+        return replyText(event, '❌ 此簽到活動已結束或不存在！');
     }
     
-    // 使用找到的 session 的活動ID
     const actualSessionId = session.get('活動ID');
     
-    // 檢查是否已簽到
     const existingRecord = await checkExistingAttendance(actualSessionId, student.get('學號'));
     if (existingRecord) {
         return replyText(event, `✅ 您已經簽到過了！\n\n📚 課程：${course.get('科目')}\n⏰ 簽到時間：${existingRecord.get('簽到時間')}`);
     }
     
-    // 檢查是否需要 GPS 驗證
-    const classroomLat = parseFloat(course.get('教室緯度')) || 0;
-    const classroomLon = parseFloat(course.get('教室經度')) || 0;
-    const checkRadius = parseInt(course.get('簽到範圍')) || 0;
-    
-    // 如果有設定 GPS 座標且範圍 > 0，要求傳送位置
-    if (classroomLat !== 0 && classroomLon !== 0 && checkRadius > 0) {
-        // 儲存待簽到資訊
-        userStates.set(userId, { 
-            step: 'waitingLocation',
-            courseId,
-            sessionId: actualSessionId,
-            courseName: course.get('科目'),
-            classroomLat,
-            classroomLon,
-            checkRadius,
-            lateMinutes: parseInt(course.get('遲到標準')) || 10,
-            startTime: session.get('開始時間')
-        });
-        
-        // 請求位置
-        return lineClient.replyMessage(event.replyToken, {
-            type: 'template',
-            altText: '📍 請傳送您的位置以完成簽到',
-            template: {
-                type: 'buttons',
-                title: `📍 GPS 簽到 - ${course.get('科目')}`,
-                text: `簽到範圍：${checkRadius} 公尺\n請點擊下方按鈕傳送您的位置`,
-                actions: [
-                    {
-                        type: 'uri',
-                        label: '📍 傳送位置',
-                        uri: 'https://line.me/R/nv/location'
-                    }
-                ]
-            }
-        });
-    }
-    
-    // 不需要 GPS，直接簽到
+    // 舊版直接簽到（不需要 GPS）
     const startTime = session.get('開始時間');
     const lateMinutes = parseInt(course.get('遲到標準')) || 10;
     const now = new Date();
@@ -530,18 +682,17 @@ async function handleCheckinRequest(event, userId, text) {
     const diffMinutes = Math.floor((now - startDate) / 60000);
     const status = diffMinutes > lateMinutes ? '遲到' : '已報到';
     
-    // 記錄簽到
     const result = await recordAttendance(
         actualSessionId,
         student.get('學號'),
         status,
         diffMinutes > lateMinutes ? diffMinutes : 0,
-        '', ''  // 不記錄 GPS
+        '', ''
     );
     
     if (result.success) {
         const emoji = status === '已報到' ? '✅' : '⚠️';
-        let msg = `${emoji} 簽到成功！\n\n📚 課程：${course.get('科目')}\n👤 學生：${student.get('姓名')}\n📍 狀態：${status}`;
+        let msg = `${emoji} 簽到成功！\n\n📚 課程：${course.get('科目')}\n👤 學生：${student.get('姓名')}\n✨ 狀態：${status}`;
         if (status === '遲到') {
             msg += `\n⏰ 遲到 ${diffMinutes} 分鐘`;
         }
@@ -960,7 +1111,9 @@ async function autoClassReminder() {
                 ]);
                 
                 const sessionId = `S${Date.now()}`;
-                const qrContent = `簽到:${courseId}|${sessionId}`;
+                // 老師手機 QR Code 用「直接簽到」，學生連結用「GPS簽到」
+                const qrContent = `直接簽到:${courseId}|${sessionId}`;
+                const gpsCheckinCode = `GPS簽到:${courseId}|${sessionId}`;
                 const [, endTime] = courseTime.split('-');
                 
                 await sessionSheet.addRow({
@@ -973,7 +1126,7 @@ async function autoClassReminder() {
                     '狀態': '進行中'
                 });
                 
-                // 發送 LINE 通知給學生
+                // 發送 LINE 通知給學生（使用 GPS 簽到連結）
                 const classCode = course.get('班級');
                 const studentSheet = doc.sheetsByTitle['學生名單'];
                 if (studentSheet) {
@@ -981,7 +1134,8 @@ async function autoClassReminder() {
                     const classStudents = students.filter(s => s.get('班級') === classCode && s.get('LINE_ID'));
                     
                     const botId = process.env.LINE_BOT_ID || '@516bpeih';
-                    const checkinUrl = `https://line.me/R/oaMessage/${botId}/?${encodeURIComponent(qrContent)}`;
+                    // 學生連結使用 GPS 簽到
+                    const checkinUrl = `https://line.me/R/oaMessage/${botId}/?${encodeURIComponent(gpsCheckinCode)}`;
                     
                     for (const student of classStudents) {
                         try {
@@ -1332,7 +1486,10 @@ app.post('/api/sessions', async (req, res) => {
             '活動ID', '課程ID', '日期', '開始時間', '結束時間', 'QR碼內容', '狀態'
         ]);
         const sessionId = `S${Date.now()}`;
-        const qrContent = `簽到:${courseId}|${sessionId}`;
+        // 老師手機 QR Code 用「直接簽到」
+        const qrContent = `直接簽到:${courseId}|${sessionId}`;
+        // 學生連結用「GPS簽到」
+        const gpsCheckinCode = `GPS簽到:${courseId}|${sessionId}`;
         await sheet.addRow({
             '活動ID': sessionId,
             '課程ID': courseId,
@@ -1342,7 +1499,7 @@ app.post('/api/sessions', async (req, res) => {
             'QR碼內容': qrContent,
             '狀態': '進行中'
         });
-        res.json({ success: true, sessionId, qrContent });
+        res.json({ success: true, sessionId, qrContent, gpsCheckinCode });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -1595,9 +1752,9 @@ app.post('/api/notify/remind', async (req, res) => {
         const students = await studentSheet.getRows();
         const classStudents = students.filter(s => s.get('班級') === classCode && s.get('LINE_ID'));
         
-        // 建立簽到連結
+        // 建立簽到連結（學生使用 GPS 簽到）
         const botId = process.env.LINE_BOT_ID || '@516bpeih';
-        const checkinCode = sessionId ? `簽到:${courseId}|${sessionId}` : '';
+        const checkinCode = sessionId ? `GPS簽到:${courseId}|${sessionId}` : '';
         const checkinUrl = checkinCode ? `https://line.me/R/oaMessage/${botId}/?${encodeURIComponent(checkinCode)}` : '';
         
         // 發送 LINE 通知
