@@ -1104,6 +1104,23 @@ async function checkAbsences() {
         const sessions = await sessionSheet.getRows();
         const now = new Date();
         
+        // 取得缺席通知設定
+        const settingsSheet = doc.sheetsByTitle['系統設定'];
+        let maxAbsentNotify = 1; // 預設只發送1次
+        if (settingsSheet) {
+            const settings = await settingsSheet.getRows();
+            const setting = settings.find(s => s.get('設定項目') === '缺席通知次數');
+            if (setting) {
+                maxAbsentNotify = parseInt(setting.get('設定值')) || 1;
+            }
+        }
+        
+        // 取得或建立缺席通知記錄表
+        const absentNotifySheet = await getOrCreateSheet('缺席通知記錄', [
+            '活動ID', '學號', '通知次數', '最後通知時間'
+        ]);
+        const absentNotifyRows = await absentNotifySheet.getRows();
+        
         for (const session of sessions) {
             // 只處理「進行中」的活動
             if (session.get('狀態') !== '進行中') continue;
@@ -1141,23 +1158,51 @@ async function checkAbsences() {
                         );
                         
                         if (!hasRecord) {
-                            // 記錄缺席（只會記錄一次）
+                            // 記錄缺席（不發送通知，由下方統一處理）
                             const result = await recordAttendance(
                                 session.get('活動ID'),
                                 student.get('學號'),
-                                '缺席'
+                                '缺席',
+                                0, '', '',
+                                false  // 重要：不在這裡發送通知
                             );
                             
-                            // 只有成功記錄才發送通知（確保只發一次）
+                            // 檢查是否已達到通知次數上限
                             if (result.success && student.get('LINE_ID')) {
-                                try {
-                                    await lineClient.pushMessage(student.get('LINE_ID'), {
-                                        type: 'text',
-                                        text: `❌ 缺席通知\n\n您已被標記為缺席：\n📚 課程：${course.get('科目')}\n📅 日期：${session.get('日期')}\n\n如有疑問請聯繫教師。`
-                                    });
-                                    console.log('✉️ 已發送缺席通知給', student.get('學號'));
-                                } catch (e) {
-                                    console.error('發送通知失敗:', e.message);
+                                const existingNotify = absentNotifyRows.find(r => 
+                                    r.get('活動ID') === session.get('活動ID') &&
+                                    r.get('學號') === student.get('學號')
+                                );
+                                
+                                const currentCount = existingNotify ? parseInt(existingNotify.get('通知次數')) || 0 : 0;
+                                
+                                if (currentCount < maxAbsentNotify) {
+                                    // 發送缺席通知
+                                    try {
+                                        await lineClient.pushMessage(student.get('LINE_ID'), {
+                                            type: 'text',
+                                            text: `❌ 缺席通知\n\n您已被標記為缺席：\n📚 課程：${course.get('科目')}\n📅 日期：${session.get('日期')}\n\n如有疑問請聯繫教師。`
+                                        });
+                                        console.log('✉️ 已發送缺席通知給', student.get('學號'), `(${currentCount + 1}/${maxAbsentNotify})`);
+                                        
+                                        // 更新或新增通知記錄
+                                        if (existingNotify) {
+                                            existingNotify.set('通知次數', currentCount + 1);
+                                            existingNotify.set('最後通知時間', formatDateTime(now));
+                                            await existingNotify.save();
+                                        } else {
+                                            await absentNotifySheet.addRow({
+                                                '活動ID': session.get('活動ID'),
+                                                '學號': student.get('學號'),
+                                                '通知次數': 1,
+                                                '最後通知時間': formatDateTime(now)
+                                            });
+                                        }
+                                    } catch (e) {
+                                        console.error('發送通知失敗:', e.message);
+                                    }
+                                } else {
+                                    console.log(`⏭️ 跳過通知 ${student.get('學號')}（已達上限 ${maxAbsentNotify} 次）`);
                                 }
                             }
                         }
@@ -1189,22 +1234,75 @@ async function checkSemesterEnd() {
         if (!settingsSheet) return;
         
         const settings = await settingsSheet.getRows();
+        let semesterStart = '';
         let semesterEnd = '';
+        let semesterEndNotifyMode = 'end_day'; // 預設：結業日當天
+        let semesterEndWeek = 0; // 最後周次
+        
         for (const s of settings) {
-            if (s.get('設定項目') === '結業日期') {
-                semesterEnd = s.get('設定值');
-                break;
-            }
+            const key = s.get('設定項目');
+            const value = s.get('設定值');
+            if (key === '開學日期') semesterStart = value;
+            if (key === '結業日期') semesterEnd = value;
+            if (key === '學期結束通知模式') semesterEndNotifyMode = value;
+            if (key === '學期結束通知周次') semesterEndWeek = parseInt(value) || 0;
         }
         
         if (!semesterEnd) return;
         
         const now = new Date();
-        const endDate = new Date(semesterEnd);
         const today = getTodayString();
+        const endDate = new Date(semesterEnd);
         
-        // 檢查是否是學期最後一天
-        if (today !== semesterEnd) return;
+        // 計算當前周次
+        let currentWeek = 0;
+        if (semesterStart) {
+            const startDate = new Date(semesterStart);
+            const diffDays = Math.floor((now - startDate) / (24 * 60 * 60 * 1000));
+            currentWeek = Math.ceil((diffDays + 1) / 7);
+        }
+        
+        // 計算總周次
+        let totalWeeks = 0;
+        if (semesterStart && semesterEnd) {
+            const startDate = new Date(semesterStart);
+            totalWeeks = Math.ceil((endDate - startDate) / (7 * 24 * 60 * 60 * 1000));
+        }
+        
+        // 判斷是否應該發送通知
+        let shouldSend = false;
+        let notifyReason = '';
+        
+        if (semesterEndNotifyMode === 'next_day') {
+            // 結業日隔天發送
+            const nextDay = new Date(endDate);
+            nextDay.setDate(nextDay.getDate() + 1);
+            const nextDayStr = nextDay.toISOString().split('T')[0];
+            if (today === nextDayStr) {
+                shouldSend = true;
+                notifyReason = '學期結束隔天';
+            }
+        } else if (semesterEndNotifyMode === 'last_week') {
+            // 最後一周的第一天發送
+            if (currentWeek === totalWeeks && now.getDay() === 1) { // 最後一周的週一
+                shouldSend = true;
+                notifyReason = '最後一周';
+            }
+        } else if (semesterEndNotifyMode === 'specific_week' && semesterEndWeek > 0) {
+            // 指定周次的第一天發送
+            if (currentWeek === semesterEndWeek && now.getDay() === 1) {
+                shouldSend = true;
+                notifyReason = `第 ${semesterEndWeek} 周`;
+            }
+        } else {
+            // 預設：結業日當天
+            if (today === semesterEnd) {
+                shouldSend = true;
+                notifyReason = '結業日當天';
+            }
+        }
+        
+        if (!shouldSend) return;
         
         // 檢查是否已經發送過通知
         const reminderSheet = await getOrCreateSheet('提醒紀錄', ['課程ID', '日期', '類型', '發送時間']);
@@ -1214,65 +1312,42 @@ async function checkSemesterEnd() {
             r.get('類型') === '學期結束'
         );
         
-        if (alreadySent) return;
-        
-        // 取得最後一堂課的結束時間
-        const courseSheet = doc.sheetsByTitle['課程列表'];
-        const sessionSheet = doc.sheetsByTitle['簽到活動'];
-        
-        if (!courseSheet || !sessionSheet) return;
-        
-        const sessions = await sessionSheet.getRows();
-        const todaySessions = sessions.filter(s => s.get('日期') === today);
-        
-        if (todaySessions.length === 0) return;
-        
-        // 找最後結束的課程
-        let lastEndTime = 0;
-        for (const session of todaySessions) {
-            const endTimeStr = session.get('結束時間');
-            if (endTimeStr) {
-                const [h, m] = endTimeStr.split(':').map(Number);
-                const endMinutes = h * 60 + m;
-                if (endMinutes > lastEndTime) {
-                    lastEndTime = endMinutes;
-                }
-            }
+        if (alreadySent) {
+            console.log('📋 今日已發送過學期結束通知');
+            return;
         }
         
-        // 檢查現在是否在最後一堂課結束後 30 分鐘
-        const currentMinutes = now.getHours() * 60 + now.getMinutes();
-        if (currentMinutes >= lastEndTime + 30 && currentMinutes <= lastEndTime + 40) {
-            console.log('📢 發送學期結束通知...');
+        console.log(`📢 發送學期結束通知（${notifyReason}）...`);
+        
+        // 發送解除綁定說明給所有學生
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        if (studentSheet) {
+            const students = await studentSheet.getRows();
+            let sentCount = 0;
             
-            // 發送解除綁定說明給所有學生
-            const studentSheet = doc.sheetsByTitle['學生名單'];
-            if (studentSheet) {
-                const students = await studentSheet.getRows();
-                
-                for (const student of students) {
-                    if (student.get('LINE_ID')) {
-                        try {
-                            await lineClient.pushMessage(student.get('LINE_ID'), {
-                                type: 'text',
-                                text: `📚 學期結束通知\n\n親愛的 ${student.get('姓名')} 同學：\n\n本學期課程已全部結束，感謝您這學期的配合！\n\n📌 解除 LINE BOT 綁定方式：\n1. 進入此聊天室\n2. 點右上角「≡」選單\n3. 選擇「封鎖」即可解除\n\n或輸入「解除綁定」由系統處理。\n\n🎉 祝您假期愉快！`
-                            });
-                        } catch (e) {
-                            console.error('發送學期結束通知失敗:', e.message);
-                        }
+            for (const student of students) {
+                if (student.get('LINE_ID')) {
+                    try {
+                        await lineClient.pushMessage(student.get('LINE_ID'), {
+                            type: 'text',
+                            text: `📚 學期結束通知\n\n親愛的 ${student.get('姓名')} 同學：\n\n本學期課程已全部結束，感謝您這學期的配合！\n\n📌 解除 LINE BOT 綁定方式：\n1. 進入此聊天室\n2. 點右上角「≡」選單\n3. 選擇「封鎖」即可解除\n\n或輸入「解除綁定」由系統處理。\n\n🎉 祝您假期愉快！`
+                        });
+                        sentCount++;
+                    } catch (e) {
+                        console.error('發送學期結束通知失敗:', e.message);
                     }
                 }
-                
-                // 記錄已發送
-                await reminderSheet.addRow({
-                    '課程ID': 'SEMESTER_END',
-                    '日期': today,
-                    '類型': '學期結束',
-                    '發送時間': formatDateTime(now)
-                });
-                
-                console.log('✅ 學期結束通知已發送');
             }
+            
+            // 記錄已發送
+            await reminderSheet.addRow({
+                '課程ID': 'SEMESTER_END',
+                '日期': today,
+                '類型': '學期結束',
+                '發送時間': formatDateTime(now)
+            });
+            
+            console.log(`✅ 學期結束通知已發送給 ${sentCount} 位學生`);
         }
     } catch (error) {
         console.error('學期結束通知錯誤:', error);
@@ -1384,7 +1459,7 @@ async function autoClassReminder() {
                     const students = await studentSheet.getRows();
                     const classStudents = students.filter(s => s.get('班級') === classCode && s.get('LINE_ID'));
                     
-                    const botId = process.env.LINE_BOT_ID || '@516bpeih';
+                    const botId = process.env.LINE_BOT_ID;
                     // 學生連結使用 GPS 簽到
                     const checkinUrl = `https://line.me/R/oaMessage/${botId}/?${encodeURIComponent(gpsCheckinCode)}`;
                     
@@ -2027,7 +2102,7 @@ app.post('/api/notify/remind', async (req, res) => {
         const classStudents = students.filter(s => s.get('班級') === classCode && s.get('LINE_ID'));
         
         // 建立簽到連結（學生使用 GPS 簽到）
-        const botId = process.env.LINE_BOT_ID || '@516bpeih';
+        const botId = process.env.LINE_BOT_ID;
         const checkinCode = sessionId ? `GPS簽到:${courseId}|${sessionId}` : '';
         const checkinUrl = checkinCode ? `https://line.me/R/oaMessage/${botId}/?${encodeURIComponent(checkinCode)}` : '';
         
@@ -2186,7 +2261,10 @@ app.get('/api/settings', async (req, res) => {
             warningThreshold: parseInt(settings['警告門檻']) || 3,
             weeklyReport: settings['週報'] === 'true',
             semesterStart: settings['開學日期'] || '',
-            semesterEnd: settings['結業日期'] || ''
+            semesterEnd: settings['結業日期'] || '',
+            absentNotifyTimes: parseInt(settings['缺席通知次數']) || 1,
+            semesterEndMode: settings['學期結束通知模式'] || 'end_day',
+            semesterEndWeek: parseInt(settings['學期結束通知周次']) || 0
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -2196,7 +2274,7 @@ app.get('/api/settings', async (req, res) => {
 // 儲存設定（通用）
 app.post('/api/settings', async (req, res) => {
     try {
-        const { remindBeforeClass, remindMinutes, notifyAbsent, notifyParent, warningThreshold, weeklyReport, semesterStart, semesterEnd } = req.body;
+        const { remindBeforeClass, remindMinutes, notifyAbsent, notifyParent, warningThreshold, weeklyReport, semesterStart, semesterEnd, absentNotifyTimes, semesterEndMode, semesterEndWeek } = req.body;
         const sheet = await getOrCreateSheet('系統設定', ['設定項目', '設定值']);
         
         // 更新或新增設定
@@ -2221,6 +2299,9 @@ app.post('/api/settings', async (req, res) => {
         if (weeklyReport !== undefined) await updateOrAdd('週報', weeklyReport ? 'true' : 'false');
         if (semesterStart !== undefined) await updateOrAdd('開學日期', semesterStart);
         if (semesterEnd !== undefined) await updateOrAdd('結業日期', semesterEnd);
+        if (absentNotifyTimes !== undefined) await updateOrAdd('缺席通知次數', absentNotifyTimes);
+        if (semesterEndMode !== undefined) await updateOrAdd('學期結束通知模式', semesterEndMode);
+        if (semesterEndWeek !== undefined) await updateOrAdd('學期結束通知周次', semesterEndWeek);
         
         res.json({ success: true });
     } catch (error) {
@@ -3274,7 +3355,7 @@ app.post('/api/test/reminder', async (req, res) => {
         const classStudents = students.filter(s => s.get('班級') === classCode && s.get('LINE_ID'));
         
         // 建立測試簽到連結
-        const botId = process.env.LINE_BOT_ID || '@516bpeih';
+        const botId = process.env.LINE_BOT_ID;
         const testCode = `GPS簽到:TEST|TEST${Date.now()}`;
         const checkinUrl = `https://line.me/R/oaMessage/${botId}/?${encodeURIComponent(testCode)}`;
         
