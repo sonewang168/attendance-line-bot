@@ -1106,7 +1106,7 @@ async function checkAbsences() {
         
         // 取得缺席通知設定
         const settingsSheet = doc.sheetsByTitle['系統設定'];
-        let maxAbsentNotify = 1; // 預設只發送1次
+        let maxAbsentNotify = 1;
         if (settingsSheet) {
             const settings = await settingsSheet.getRows();
             const setting = settings.find(s => s.get('設定項目') === '缺席通知次數');
@@ -1122,10 +1122,8 @@ async function checkAbsences() {
         const absentNotifyRows = await absentNotifySheet.getRows();
         
         for (const session of sessions) {
-            // 只處理「進行中」的活動
             if (session.get('狀態') !== '進行中') continue;
             
-            // 檢查是否已結束
             const endTimeStr = session.get('結束時間');
             if (!endTimeStr) continue;
             const [endHour, endMin] = endTimeStr.split(':').map(Number);
@@ -1135,11 +1133,9 @@ async function checkAbsences() {
             if (now > endTime) {
                 console.log('📝 處理結束的活動:', session.get('活動ID'));
                 
-                // 先更新活動狀態為「處理中」避免重複處理
                 session.set('狀態', '處理中');
                 await session.save();
                 
-                // 標記缺席的學生
                 const courseSheet = doc.sheetsByTitle['課程列表'];
                 const courses = await courseSheet.getRows();
                 const course = courses.find(c => c.get('課程ID') === session.get('課程ID'));
@@ -1158,17 +1154,15 @@ async function checkAbsences() {
                         );
                         
                         if (!hasRecord) {
-                            // 記錄缺席（不發送通知，由下方統一處理）
                             const result = await recordAttendance(
                                 session.get('活動ID'),
                                 student.get('學號'),
                                 '缺席',
                                 0, '', '',
-                                false  // 重要：不在這裡發送通知
+                                false
                             );
                             
-                            // 檢查是否已達到通知次數上限
-                            if (result.success && student.get('LINE_ID')) {
+                            if (result.success && student.get('LINE_ID') && maxAbsentNotify > 0) {
                                 const existingNotify = absentNotifyRows.find(r => 
                                     r.get('活動ID') === session.get('活動ID') &&
                                     r.get('學號') === student.get('學號')
@@ -1177,7 +1171,6 @@ async function checkAbsences() {
                                 const currentCount = existingNotify ? parseInt(existingNotify.get('通知次數')) || 0 : 0;
                                 
                                 if (currentCount < maxAbsentNotify) {
-                                    // 發送缺席通知
                                     try {
                                         await lineClient.pushMessage(student.get('LINE_ID'), {
                                             type: 'text',
@@ -1185,7 +1178,6 @@ async function checkAbsences() {
                                         });
                                         console.log('✉️ 已發送缺席通知給', student.get('學號'), `(${currentCount + 1}/${maxAbsentNotify})`);
                                         
-                                        // 更新或新增通知記錄
                                         if (existingNotify) {
                                             existingNotify.set('通知次數', currentCount + 1);
                                             existingNotify.set('最後通知時間', formatDateTime(now));
@@ -1201,15 +1193,12 @@ async function checkAbsences() {
                                     } catch (e) {
                                         console.error('發送通知失敗:', e.message);
                                     }
-                                } else {
-                                    console.log(`⏭️ 跳過通知 ${student.get('學號')}（已達上限 ${maxAbsentNotify} 次）`);
                                 }
                             }
                         }
                     }
                 }
                 
-                // 更新活動狀態為「已結束」
                 session.set('狀態', '已結束');
                 await session.save();
                 console.log('✅ 活動已結束:', session.get('活動ID'));
@@ -1236,8 +1225,8 @@ async function checkSemesterEnd() {
         const settings = await settingsSheet.getRows();
         let semesterStart = '';
         let semesterEnd = '';
-        let semesterEndNotifyMode = 'end_day'; // 預設：結業日當天
-        let semesterEndWeek = 0; // 最後周次
+        let semesterEndNotifyMode = 'end_day';
+        let semesterEndWeek = 0;
         
         for (const s of settings) {
             const key = s.get('設定項目');
@@ -1254,7 +1243,6 @@ async function checkSemesterEnd() {
         const today = getTodayString();
         const endDate = new Date(semesterEnd);
         
-        // 計算當前周次
         let currentWeek = 0;
         if (semesterStart) {
             const startDate = new Date(semesterStart);
@@ -1262,19 +1250,16 @@ async function checkSemesterEnd() {
             currentWeek = Math.ceil((diffDays + 1) / 7);
         }
         
-        // 計算總周次
         let totalWeeks = 0;
         if (semesterStart && semesterEnd) {
             const startDate = new Date(semesterStart);
             totalWeeks = Math.ceil((endDate - startDate) / (7 * 24 * 60 * 60 * 1000));
         }
         
-        // 判斷是否應該發送通知
         let shouldSend = false;
         let notifyReason = '';
         
         if (semesterEndNotifyMode === 'next_day') {
-            // 結業日隔天發送
             const nextDay = new Date(endDate);
             nextDay.setDate(nextDay.getDate() + 1);
             const nextDayStr = nextDay.toISOString().split('T')[0];
@@ -1283,19 +1268,16 @@ async function checkSemesterEnd() {
                 notifyReason = '學期結束隔天';
             }
         } else if (semesterEndNotifyMode === 'last_week') {
-            // 最後一周的第一天發送
-            if (currentWeek === totalWeeks && now.getDay() === 1) { // 最後一周的週一
+            if (currentWeek === totalWeeks && now.getDay() === 1) {
                 shouldSend = true;
                 notifyReason = '最後一周';
             }
         } else if (semesterEndNotifyMode === 'specific_week' && semesterEndWeek > 0) {
-            // 指定周次的第一天發送
             if (currentWeek === semesterEndWeek && now.getDay() === 1) {
                 shouldSend = true;
-                notifyReason = `第 ${semesterEndWeek} 周`;
+                notifyReason = '第 ' + semesterEndWeek + ' 周';
             }
         } else {
-            // 預設：結業日當天
             if (today === semesterEnd) {
                 shouldSend = true;
                 notifyReason = '結業日當天';
@@ -1304,7 +1286,6 @@ async function checkSemesterEnd() {
         
         if (!shouldSend) return;
         
-        // 檢查是否已經發送過通知
         const reminderSheet = await getOrCreateSheet('提醒紀錄', ['課程ID', '日期', '類型', '發送時間']);
         const reminders = await reminderSheet.getRows();
         const alreadySent = reminders.some(r => 
@@ -1317,9 +1298,8 @@ async function checkSemesterEnd() {
             return;
         }
         
-        console.log(`📢 發送學期結束通知（${notifyReason}）...`);
+        console.log('📢 發送學期結束通知（' + notifyReason + '）...');
         
-        // 發送解除綁定說明給所有學生
         const studentSheet = doc.sheetsByTitle['學生名單'];
         if (studentSheet) {
             const students = await studentSheet.getRows();
@@ -1339,7 +1319,6 @@ async function checkSemesterEnd() {
                 }
             }
             
-            // 記錄已發送
             await reminderSheet.addRow({
                 '課程ID': 'SEMESTER_END',
                 '日期': today,
@@ -1347,7 +1326,7 @@ async function checkSemesterEnd() {
                 '發送時間': formatDateTime(now)
             });
             
-            console.log(`✅ 學期結束通知已發送給 ${sentCount} 位學生`);
+            console.log('✅ 學期結束通知已發送給 ' + sentCount + ' 位學生');
         }
     } catch (error) {
         console.error('學期結束通知錯誤:', error);
@@ -2536,6 +2515,108 @@ app.delete('/api/leaves/:id', async (req, res) => {
         
         const rows = await sheet.getRows();
         const row = rows.find(r => r.get('請假ID') === id);
+        if (row) await row.delete();
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// === 調代課管理 API ===
+
+// 取得所有調代課
+app.get('/api/substitutes', async (req, res) => {
+    try {
+        const sheet = await getOrCreateSheet('調代課紀錄', [
+            '調代課ID', '類型', '課程ID', '異動日期', '代課教師', '新日期', '新節次', '備註', '建立時間'
+        ]);
+        const rows = await sheet.getRows();
+        res.json(rows.map(r => ({
+            id: r.get('調代課ID'),
+            type: r.get('類型'),
+            courseId: r.get('課程ID'),
+            date: r.get('異動日期'),
+            teacher: r.get('代課教師'),
+            newDate: r.get('新日期'),
+            newPeriod: r.get('新節次'),
+            note: r.get('備註'),
+            createdAt: r.get('建立時間')
+        })));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 新增調代課
+app.post('/api/substitutes', async (req, res) => {
+    try {
+        const { type, courseId, date, teacher, newDate, newPeriod, note } = req.body;
+        
+        if (!courseId || !date) {
+            return res.json({ success: false, message: '請填寫課程和日期' });
+        }
+        
+        const sheet = await getOrCreateSheet('調代課紀錄', [
+            '調代課ID', '類型', '課程ID', '異動日期', '代課教師', '新日期', '新節次', '備註', '建立時間'
+        ]);
+        
+        const subId = 'SUB' + Date.now();
+        await sheet.addRow({
+            '調代課ID': subId,
+            '類型': type || 'substitute',
+            '課程ID': courseId,
+            '異動日期': date,
+            '代課教師': teacher || '',
+            '新日期': newDate || '',
+            '新節次': newPeriod || '',
+            '備註': note || '',
+            '建立時間': formatDateTime(new Date())
+        });
+        
+        res.json({ success: true, id: subId });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 更新調代課
+app.put('/api/substitutes/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { type, courseId, date, teacher, newDate, newPeriod, note } = req.body;
+        
+        const sheet = doc.sheetsByTitle['調代課紀錄'];
+        if (!sheet) return res.json({ success: false, message: '找不到調代課資料' });
+        
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('調代課ID') === id);
+        if (!row) return res.json({ success: false, message: '找不到調代課紀錄' });
+        
+        if (type) row.set('類型', type);
+        if (courseId) row.set('課程ID', courseId);
+        if (date) row.set('異動日期', date);
+        row.set('代課教師', teacher || '');
+        row.set('新日期', newDate || '');
+        row.set('新節次', newPeriod || '');
+        row.set('備註', note || '');
+        
+        await row.save();
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 刪除調代課
+app.delete('/api/substitutes/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const sheet = doc.sheetsByTitle['調代課紀錄'];
+        if (!sheet) return res.json({ success: true });
+        
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('調代課ID') === id);
         if (row) await row.delete();
         
         res.json({ success: true });
