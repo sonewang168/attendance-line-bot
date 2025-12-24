@@ -114,7 +114,22 @@
         <div class="page" id="page-semester">
             <div class="header"><h1 class="page-title">學期設定</h1><p class="page-subtitle">設定學期日期與節次時間</p></div>
             <div class="card"><div class="card-title">🏫 部別選擇</div><div class="chip-group" id="division-chips"><div class="chip day" data-div="day" onclick="selectDivision('day')">☀️ 日間部</div><div class="chip night" data-div="night" onclick="selectDivision('night')">🌙 夜間部</div><div class="chip weekend" data-div="weekend" onclick="selectDivision('weekend')">📅 進修部</div></div></div>
-            <div class="card"><div class="card-title">📆 學期期間</div><div class="form-row"><div class="form-group"><label class="form-label">開學日期</label><input type="date" class="form-input" id="semester-start" onchange="calcWeeks()"></div><div class="form-group"><label class="form-label">結業日期</label><input type="date" class="form-input" id="semester-end" onchange="calcWeeks()"></div></div><div class="alert alert-info">ℹ️ 自動計算：<strong id="semester-weeks">0</strong> 週 · 目前第 <strong id="current-week">0</strong> 週</div></div>
+            <div class="card"><div class="card-title">📆 學期期間</div><div class="form-row"><div class="form-group"><label class="form-label">開學日期</label><input type="date" class="form-input" id="semester-start" onchange="calcWeeks()"></div><div class="form-group"><label class="form-label">結業日期</label><input type="date" class="form-input" id="semester-end" onchange="calcWeeks()"></div></div>
+                <div class="alert alert-info" style="margin-top:10px">
+                    ℹ️ 自動計算：<strong id="semester-weeks">0</strong> 週 · 目前第 <strong id="current-week">0</strong> 週
+                    <div id="week-selector-container" style="margin-top:12px;display:none">
+                        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                            <span style="font-size:13px">快速跳轉：</span>
+                            <select class="form-select" id="week-selector" style="width:auto;padding:6px 10px;font-size:13px" onchange="jumpToWeek(this.value)">
+                                <option value="">選擇周次</option>
+                            </select>
+                            <select class="form-select" id="month-selector" style="width:auto;padding:6px 10px;font-size:13px" onchange="jumpToMonth(this.value)">
+                                <option value="">選擇月份</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div class="card"><div class="card-title">🔔 自動提醒設定</div>
                 <div class="form-group" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
                     <div><strong>自動上課提醒</strong><br><small style="color:var(--text-light)">上課前自動發送 LINE 通知</small></div>
@@ -131,6 +146,36 @@
                     </select>
                 </div>
                 <div class="alert alert-success" style="margin-top:15px">✅ 系統會根據課表自動發送上課提醒與簽到連結給學生</div>
+            </div>
+            <div class="card"><div class="card-title">❌ 缺席通知設定</div>
+                <div class="form-group">
+                    <label class="form-label">缺席通知發送次數</label>
+                    <select class="form-select" id="absent-notify-times">
+                        <option value="0">不發送缺席通知</option>
+                        <option value="1" selected>發送 1 次</option>
+                        <option value="2">發送 2 次</option>
+                        <option value="3">發送 3 次</option>
+                    </select>
+                    <small style="color:var(--text-light);display:block;margin-top:5px">課程結束後，系統會自動標記未簽到的學生為缺席並發送通知</small>
+                </div>
+            </div>
+            <div class="card"><div class="card-title">📚 學期結束通知</div>
+                <div class="form-group">
+                    <label class="form-label">發送時機</label>
+                    <select class="form-select" id="semester-end-mode" onchange="toggleSemesterEndWeek()">
+                        <option value="end_day">結業日當天</option>
+                        <option value="next_day">結業日隔天</option>
+                        <option value="last_week">最後一周（週一）</option>
+                        <option value="specific_week">指定周次</option>
+                    </select>
+                </div>
+                <div class="form-group" id="semester-end-week-group" style="display:none;margin-top:10px">
+                    <label class="form-label">指定發送周次</label>
+                    <select class="form-select" id="semester-end-week">
+                        <option value="">請先設定學期期間</option>
+                    </select>
+                </div>
+                <div class="alert alert-info" style="margin-top:10px">💡 學期結束時會自動發送解除 LINE BOT 綁定的說明給所有學生</div>
             </div>
             <div class="card"><div class="card-title">⏰ 節次時間表</div><div id="period-settings"></div></div>
             <button class="btn btn-primary btn-block" onclick="saveSemester()">💾 儲存學期設定</button>
@@ -292,7 +337,7 @@
                 <div id="debug-result" style="margin-top:10px;padding:10px;background:#f5f5f5;border-radius:8px;font-size:12px;font-family:monospace;display:none"></div>
             </div>
             <div class="card"><div class="card-title">🔧 LINE Bot 設定</div>
-                <div class="form-group"><label class="form-label">LINE Bot ID</label><input type="text" class="form-input" id="bot-id" placeholder="@516bpeih"></div>
+                <div class="form-group"><label class="form-label">LINE Bot ID</label><input type="text" class="form-input" id="bot-id" placeholder="@your_bot_id"></div>
                 <button class="btn btn-primary btn-block" onclick="saveBotId()">💾 儲存 Bot ID</button>
             </div>
         </div>
@@ -499,8 +544,9 @@
                 
                 // 計算目前第幾週
                 const now = new Date();
+                let currentWeek = 0;
                 if (now >= startDate && now <= endDate) {
-                    const currentWeek = Math.ceil((now - startDate) / (7 * 24 * 60 * 60 * 1000));
+                    currentWeek = Math.ceil((now - startDate) / (7 * 24 * 60 * 60 * 1000));
                     document.getElementById('current-week').textContent = currentWeek;
                 } else if (now < startDate) {
                     document.getElementById('current-week').textContent = '尚未開學';
@@ -511,7 +557,91 @@
                 sem.start = s;
                 sem.end = e;
                 sem.weeks = weeks;
+                
+                // 更新周次選擇器
+                updateWeekSelector(weeks, currentWeek, startDate);
+                // 更新月份選擇器
+                updateMonthSelector(startDate, endDate);
+                // 更新學期結束周次選擇器
+                updateSemesterEndWeekSelector(weeks);
             }
+        }
+        function updateWeekSelector(weeks, currentWeek, startDate) {
+            const selector = document.getElementById('week-selector');
+            const container = document.getElementById('week-selector-container');
+            if (!selector || weeks <= 0) {
+                if (container) container.style.display = 'none';
+                return;
+            }
+            container.style.display = 'block';
+            
+            let opts = '<option value="">選擇周次</option>';
+            for (let i = 1; i <= weeks; i++) {
+                const weekStart = new Date(startDate);
+                weekStart.setDate(weekStart.getDate() + (i - 1) * 7);
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekEnd.getDate() + 6);
+                const label = `第 ${i} 周 (${weekStart.getMonth()+1}/${weekStart.getDate()}-${weekEnd.getMonth()+1}/${weekEnd.getDate()})`;
+                const selected = i === currentWeek ? ' selected' : '';
+                opts += `<option value="${i}"${selected}>${label}</option>`;
+            }
+            selector.innerHTML = opts;
+        }
+        function updateMonthSelector(startDate, endDate) {
+            const selector = document.getElementById('month-selector');
+            if (!selector) return;
+            
+            let opts = '<option value="">選擇月份</option>';
+            const months = [];
+            const d = new Date(startDate);
+            while (d <= endDate) {
+                const m = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+                if (!months.includes(m)) {
+                    months.push(m);
+                    opts += `<option value="${m}">${d.getFullYear()}年${d.getMonth()+1}月</option>`;
+                }
+                d.setMonth(d.getMonth() + 1);
+            }
+            selector.innerHTML = opts;
+        }
+        function updateSemesterEndWeekSelector(weeks) {
+            const selector = document.getElementById('semester-end-week');
+            if (!selector || weeks <= 0) return;
+            
+            let opts = '';
+            for (let i = 1; i <= weeks; i++) {
+                opts += `<option value="${i}">第 ${i} 周</option>`;
+            }
+            selector.innerHTML = opts;
+            // 預設選擇最後一周
+            selector.value = weeks;
+        }
+        function toggleSemesterEndWeek() {
+            const mode = document.getElementById('semester-end-mode').value;
+            const weekGroup = document.getElementById('semester-end-week-group');
+            if (weekGroup) {
+                weekGroup.style.display = mode === 'specific_week' ? 'block' : 'none';
+            }
+        }
+        function jumpToWeek(week) {
+            if (!week || !sem.start) return;
+            const startDate = new Date(sem.start);
+            const targetDate = new Date(startDate);
+            targetDate.setDate(targetDate.getDate() + (parseInt(week) - 1) * 7);
+            
+            // 顯示該周資訊
+            const weekEnd = new Date(targetDate);
+            weekEnd.setDate(weekEnd.getDate() + 6);
+            toast(`第 ${week} 周：${targetDate.getMonth()+1}/${targetDate.getDate()} - ${weekEnd.getMonth()+1}/${weekEnd.getDate()}`);
+            
+            // 可以在這裡加入跳轉到課表該周的邏輯
+        }
+        function jumpToMonth(month) {
+            if (!month) return;
+            const [year, m] = month.split('-');
+            toast(`已選擇 ${year}年${parseInt(m)}月`);
+            
+            // 可以在這裡加入跳轉到該月課表的邏輯
         }
         async function saveSemester() {
             calcWeeks();
@@ -520,6 +650,9 @@
             // 儲存自動提醒設定到伺服器
             const autoRemind = document.getElementById('auto-remind').checked;
             const remindMinutes = document.getElementById('remind-minutes').value;
+            const absentNotifyTimes = document.getElementById('absent-notify-times').value;
+            const semesterEndMode = document.getElementById('semester-end-mode').value;
+            const semesterEndWeek = document.getElementById('semester-end-week').value;
             
             await api('/api/settings', { 
                 method: 'POST', 
@@ -527,7 +660,10 @@
                     remindBeforeClass: autoRemind,
                     remindMinutes: parseInt(remindMinutes),
                     semesterStart: sem.start,
-                    semesterEnd: sem.end
+                    semesterEnd: sem.end,
+                    absentNotifyTimes: parseInt(absentNotifyTimes),
+                    semesterEndMode: semesterEndMode,
+                    semesterEndWeek: parseInt(semesterEndWeek) || 0
                 })
             });
             
@@ -538,6 +674,16 @@
             if (r) {
                 document.getElementById('auto-remind').checked = r.remindBeforeClass !== false;
                 document.getElementById('remind-minutes').value = r.remindMinutes || 30;
+                if (r.absentNotifyTimes !== undefined) {
+                    document.getElementById('absent-notify-times').value = r.absentNotifyTimes;
+                }
+                if (r.semesterEndMode) {
+                    document.getElementById('semester-end-mode').value = r.semesterEndMode;
+                    toggleSemesterEndWeek();
+                }
+                if (r.semesterEndWeek) {
+                    document.getElementById('semester-end-week').value = r.semesterEndWeek;
+                }
             }
         }
         function updatePeriodDropdowns() {
@@ -1335,7 +1481,7 @@
             container.innerHTML = '';
             
             // 建立連結
-            const botId = BOT || '@516bpeih';
+            const botId = BOT;
             // 老師手機 QR Code（直接簽到）
             currentQRUrl = 'https://line.me/R/oaMessage/' + botId + '/?' + encodeURIComponent(directContent);
             // 學生連結（GPS 簽到）
