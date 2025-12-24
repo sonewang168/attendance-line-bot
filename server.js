@@ -98,56 +98,13 @@ async function getOrCreateSheet(title, headers) {
  */
 async function getStudent(lineUserId) {
     try {
-        console.log('🔍 getStudent 開始查找:', { lineUserId });
-        
         // 重新載入文檔以取得最新資料
         await doc.loadInfo();
-        
-        // 直接使用 sheetsByTitle 取得現有工作表
-        const sheet = doc.sheetsByTitle['學生名單'];
-        if (!sheet) {
-            console.log('❌ 學生名單工作表不存在');
-            return null;
-        }
-        
-        await sheet.loadHeaderRow();
-        const headers = sheet.headerValues;
-        console.log('📋 學生名單欄位:', headers);
-        
-        // 嘗試找出 LINE_ID 欄位（可能有不同的命名）
-        const lineIdFieldNames = ['LINE_ID', 'LineID', 'Line_ID', 'LINEID', 'line_id', 'lineId'];
-        let lineIdField = lineIdFieldNames.find(name => headers.includes(name));
-        
-        if (!lineIdField) {
-            console.log('❌ 找不到 LINE_ID 欄位，現有欄位:', headers);
-            return null;
-        }
-        console.log('✅ 使用 LINE_ID 欄位名稱:', lineIdField);
-        
-        const rows = await sheet.getRows({ limit: 1000 });
-        console.log('📊 學生名單總共:', rows.length, '筆');
-        
-        // 嘗試查找用戶（處理可能的空格問題）
-        const student = rows.find(row => {
-            const storedLineId = (row.get(lineIdField) || '').trim();
-            const inputLineId = (lineUserId || '').trim();
-            const match = storedLineId === inputLineId;
-            return match;
-        });
-        
-        if (student) {
-            console.log('✅ 找到學生:', student.get('姓名'), student.get('學號'));
-        } else {
-            console.log('❌ 找不到學生，LINE_ID:', lineUserId);
-            // 列出前 3 個有 LINE_ID 的學生供除錯
-            const studentsWithLineId = rows.filter(r => r.get(lineIdField)).slice(0, 3);
-            console.log('📋 現有已綁定學生範例:', studentsWithLineId.map(s => ({
-                姓名: s.get('姓名'),
-                LINE_ID: (s.get(lineIdField) || '').substring(0, 15) + '...'
-            })));
-        }
-        
-        return student;
+        const sheet = await getOrCreateSheet('學生名單', [
+            '學號', '姓名', '班級', 'LINE_ID', 'LINE名稱', '註冊時間', '狀態'
+        ]);
+        const rows = await sheet.getRows();
+        return rows.find(row => row.get('LINE_ID') === lineUserId);
     } catch (error) {
         console.error('❌ getStudent 錯誤:', error);
         return null;
@@ -159,16 +116,13 @@ async function getStudent(lineUserId) {
  */
 async function registerStudent(lineUserId, lineName, studentId, studentName, className) {
     try {
-        // 重新載入文檔以取得最新資料
         await doc.loadInfo();
         const sheet = await getOrCreateSheet('學生名單', [
             '學號', '姓名', '班級', 'LINE_ID', 'LINE名稱', '註冊時間', '狀態'
         ]);
         
-        await sheet.loadHeaderRow();
-        
         // 檢查學號是否已被使用
-        const rows = await sheet.getRows({ limit: 1000 });
+        const rows = await sheet.getRows();
         const existing = rows.find(row => row.get('學號') === studentId);
         if (existing) {
             if (existing.get('LINE_ID') === lineUserId) {
@@ -237,13 +191,11 @@ async function getCourse(courseId) {
 async function getTodaySession(courseId) {
     try {
         const today = getTodayString();
-        // 重新載入文檔以取得最新資料
         await doc.loadInfo();
         const sheet = await getOrCreateSheet('簽到活動', [
             '活動ID', '課程ID', '日期', '開始時間', '結束時間', 'QR碼內容', '狀態'
         ]);
-        await sheet.loadHeaderRow();
-        const rows = await sheet.getRows({ limit: 1000 });
+        const rows = await sheet.getRows();
         
         // 找今天的活動（不限制狀態，只要不是「已結束」）
         const session = rows.find(row => {
@@ -273,13 +225,10 @@ async function getTodaySession(courseId) {
  */
 async function checkExistingAttendance(sessionId, studentId) {
     try {
-        // 重新載入文檔以取得最新資料
-        await doc.loadInfo();
         const sheet = doc.sheetsByTitle['簽到紀錄'];
         if (!sheet) return null;
         
-        await sheet.loadHeaderRow();
-        const rows = await sheet.getRows({ limit: 2000 });
+        const rows = await sheet.getRows();
         return rows.find(row => 
             row.get('活動ID') === sessionId && 
             row.get('學號') === studentId
@@ -426,13 +375,11 @@ async function updateStatistics(studentId, status) {
  */
 async function getClasses() {
     try {
-        // 重新載入文檔以取得最新資料
         await doc.loadInfo();
         const sheet = await getOrCreateSheet('班級列表', [
             '班級代碼', '班級名稱', '導師', '人數', '建立時間'
         ]);
-        await sheet.loadHeaderRow();
-        const rows = await sheet.getRows({ limit: 500 });
+        const rows = await sheet.getRows();
         return rows.map(row => ({
             code: row.get('班級代碼'),
             name: row.get('班級名稱')
@@ -457,78 +404,58 @@ async function handleEvent(event) {
     }
     
     const userId = event.source.userId;
-    
-    // 安全取得用戶資料（加入錯誤處理）
     let userName = '同學';
     try {
         const userProfile = await lineClient.getProfile(userId);
         userName = userProfile.displayName || '同學';
-    } catch (profileError) {
-        console.log('⚠️ 無法取得用戶資料:', profileError.message);
-        // 繼續執行，使用預設名稱
+    } catch (e) {
+        // 無法取得用戶資料，使用預設名稱
     }
     
-    try {
-        // 處理 Postback（按鈕回應）
-        if (event.type === 'postback') {
-            return await handlePostback(event, userId, userName);
-        }
-        
-        // 處理位置訊息（GPS 簽到）
-        if (event.message.type === 'location') {
-            return await handleLocation(event, userId);
-        }
-        
-        // 處理文字訊息
-        if (event.message.type === 'text') {
-            const text = event.message.text.trim();
-            
-            // 檢查是否為簽到連結
-            if (text.startsWith('直接簽到:')) {
-                // 掃老師手機 QR Code → 直接簽到
-                return await handleDirectCheckin(event, userId, text);
-            }
-            
-            if (text.startsWith('GPS簽到:')) {
-                // 學生點連結 → GPS 驗證簽到
-                return await handleGPSCheckin(event, userId, text);
-            }
-            
-            // 舊版相容
-            if (text.startsWith('簽到:')) {
-                return await handleCheckinRequest(event, userId, text);
-            }
-            
-            // 檢查用戶狀態（是否在流程中）
-            const state = userStates.get(userId);
-            if (state) {
-                // 處理加入班級流程
-                if (state.step === 'addNewClass') {
-                    return await handleAddNewClass(event, userId, text, state);
-                }
-                // 處理退出班級流程
-                if (state.step === 'removeClass') {
-                    return await handleRemoveClass(event, userId, text, state);
-                }
-                // 處理註冊流程
-                return await handleRegistrationFlow(event, userId, userName, text, state);
-            }
-            
-            // 一般指令
-            return await handleCommand(event, userId, userName, text);
-        }
-        
-        return null;
-    } catch (error) {
-        console.error('❌ handleEvent 錯誤:', error);
-        // 嘗試回覆錯誤訊息
-        try {
-            return await replyText(event, '❌ 系統發生錯誤，請稍後再試。\n\n如持續發生，請聯繫管理員。');
-        } catch (replyError) {
-            console.error('❌ 無法回覆錯誤訊息:', replyError.message);
-            return null;
-        }
+    // 處理 Postback（按鈕回應）
+    if (event.type === 'postback') {
+        return handlePostback(event, userId, userName);
     }
+    
+    // 處理位置訊息（GPS 簽到）
+    if (event.message.type === 'location') {
+        return handleLocation(event, userId);
+    }
+    
+    // 處理文字訊息
+    if (event.message.type === 'text') {
+        const text = event.message.text.trim();
+        
+        // 檢查是否為簽到連結
+        if (text.startsWith('直接簽到:')) {
+            return handleDirectCheckin(event, userId, text);
+        }
+        
+        if (text.startsWith('GPS簽到:')) {
+            return handleGPSCheckin(event, userId, text);
+        }
+        
+        // 舊版相容
+        if (text.startsWith('簽到:')) {
+            return handleCheckinRequest(event, userId, text);
+        }
+        
+        // 檢查用戶狀態（是否在流程中）
+        const state = userStates.get(userId);
+        if (state) {
+            if (state.step === 'addNewClass') {
+                return handleAddNewClass(event, userId, text, state);
+            }
+            if (state.step === 'removeClass') {
+                return handleRemoveClass(event, userId, text, state);
+            }
+            return handleRegistrationFlow(event, userId, userName, text, state);
+        }
+        
+        return handleCommand(event, userId, userName, text);
+    }
+    
+    return null;
 }
 
 /**
@@ -695,16 +622,10 @@ async function handleRegistrationFlow(event, userId, userName, text, state) {
  * 不需要 GPS 驗證，直接簽到成功
  */
 async function handleDirectCheckin(event, userId, text) {
-    console.log('📱 直接簽到請求:', { userId, text });
-    
     const student = await getStudent(userId);
     if (!student) {
-        console.log('❌ 直接簽到失敗: 找不到用戶', userId);
-        const idHint = userId ? userId.substring(0, 8) : 'unknown';
-        return replyText(event, `❌ 找不到您的帳號！\n\n📋 您的識別碼：${idHint}...\n\n可能原因：\n1. 您尚未註冊綁定\n2. 請先輸入「註冊」綁定學號\n\n如已註冊過，請聯繫老師檢查綁定狀態。`);
+        return replyText(event, '❌ 您尚未註冊！\n\n請先輸入「註冊」綁定學號。');
     }
-    
-    console.log('✅ 直接簽到: 找到學生', student.get('姓名'));
     
     const parts = text.replace('直接簽到:', '').split('|');
     if (parts.length < 2) {
@@ -777,17 +698,10 @@ async function handleDirectCheckin(event, userId, text) {
  * 需要 GPS 驗證
  */
 async function handleGPSCheckin(event, userId, text) {
-    console.log('📱 GPS簽到請求:', { userId, text });
-    
     const student = await getStudent(userId);
     if (!student) {
-        console.log('❌ GPS簽到失敗: 找不到用戶', userId);
-        // 提供用戶 ID 的一部分，方便老師查詢
-        const idHint = userId ? userId.substring(0, 8) : 'unknown';
-        return replyText(event, `❌ 找不到您的帳號！\n\n📋 您的識別碼：${idHint}...\n\n可能原因：\n1. 您尚未註冊綁定\n2. 請先輸入「註冊」綁定學號\n\n如已註冊過，請聯繫老師檢查綁定狀態。`);
+        return replyText(event, '❌ 您尚未註冊！\n\n請先輸入「註冊」綁定學號。');
     }
-    
-    console.log('✅ GPS簽到: 找到學生', student.get('姓名'));
     
     const parts = text.replace('GPS簽到:', '').split('|');
     if (parts.length < 2) {
@@ -1011,7 +925,6 @@ async function handleLocation(event, userId) {
     const { latitude, longitude } = event.message;
     const student = await getStudent(userId);
     
-    // 檢查學生資料是否存在
     if (!student) {
         userStates.delete(userId);
         return replyText(event, '❌ 找不到您的學生資料！\n\n請先輸入「註冊」綁定學號。');
@@ -1272,15 +1185,9 @@ async function handleAddNewClass(event, userId, text, state) {
     }
     
     try {
-        // 重新載入文檔以取得最新資料
         await doc.loadInfo();
         const studentSheet = doc.sheetsByTitle['學生名單'];
-        if (!studentSheet) {
-            userStates.delete(userId);
-            return replyText(event, '❌ 系統錯誤：找不到學生名單。');
-        }
-        await studentSheet.loadHeaderRow();
-        const rows = await studentSheet.getRows({ limit: 1000 });
+        const rows = await studentSheet.getRows();
         const studentRow = rows.find(r => r.get('學號') === state.studentId);
         
         if (studentRow) {
@@ -1313,15 +1220,9 @@ async function handleRemoveClass(event, userId, text, state) {
     }
     
     try {
-        // 重新載入文檔以取得最新資料
         await doc.loadInfo();
         const studentSheet = doc.sheetsByTitle['學生名單'];
-        if (!studentSheet) {
-            userStates.delete(userId);
-            return replyText(event, '❌ 系統錯誤：找不到學生名單。');
-        }
-        await studentSheet.loadHeaderRow();
-        const rows = await studentSheet.getRows({ limit: 1000 });
+        const rows = await studentSheet.getRows();
         const studentRow = rows.find(r => r.get('學號') === state.studentId);
         
         if (studentRow) {
