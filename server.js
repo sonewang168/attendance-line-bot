@@ -706,7 +706,7 @@ async function handleDirectCheckin(event, userId, text) {
 async function handleGPSCheckin(event, userId, text) {
     const student = await getStudent(userId);
     if (!student) {
-        return replyText(event, '❌ 您尚未註冊！\n\n請先輸入「註冊」綁定學號。');
+        return replyText(event, `❌ 找不到您的帳號！\n\n📱 收到的 ID：\n${userId}\n\n請輸入「我的ID」比對，或輸入「註冊」重新綁定。`);
     }
     
     const parts = text.replace('GPS簽到:', '').split('|');
