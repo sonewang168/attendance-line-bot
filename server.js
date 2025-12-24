@@ -97,42 +97,59 @@ async function getOrCreateSheet(title, headers) {
  * 取得學生資料
  */
 async function getStudent(lineUserId) {
-    const sheet = await getOrCreateSheet('學生名單', [
-        '學號', '姓名', '班級', 'LINE_ID', 'LINE名稱', '註冊時間', '狀態'
-    ]);
-    const rows = await sheet.getRows();
-    return rows.find(row => row.get('LINE_ID') === lineUserId);
+    try {
+        // 重新載入文檔以取得最新資料
+        await doc.loadInfo();
+        const sheet = await getOrCreateSheet('學生名單', [
+            '學號', '姓名', '班級', 'LINE_ID', 'LINE名稱', '註冊時間', '狀態'
+        ]);
+        await sheet.loadHeaderRow();
+        const rows = await sheet.getRows({ limit: 1000 });
+        return rows.find(row => row.get('LINE_ID') === lineUserId);
+    } catch (error) {
+        console.error('❌ getStudent 錯誤:', error);
+        return null;
+    }
 }
 
 /**
  * 註冊學生
  */
 async function registerStudent(lineUserId, lineName, studentId, studentName, className) {
-    const sheet = await getOrCreateSheet('學生名單', [
-        '學號', '姓名', '班級', 'LINE_ID', 'LINE名稱', '註冊時間', '狀態'
-    ]);
-    
-    // 檢查學號是否已被使用
-    const rows = await sheet.getRows();
-    const existing = rows.find(row => row.get('學號') === studentId);
-    if (existing) {
-        if (existing.get('LINE_ID') === lineUserId) {
-            return { success: false, message: '您已經註冊過了！' };
+    try {
+        // 重新載入文檔以取得最新資料
+        await doc.loadInfo();
+        const sheet = await getOrCreateSheet('學生名單', [
+            '學號', '姓名', '班級', 'LINE_ID', 'LINE名稱', '註冊時間', '狀態'
+        ]);
+        
+        await sheet.loadHeaderRow();
+        
+        // 檢查學號是否已被使用
+        const rows = await sheet.getRows({ limit: 1000 });
+        const existing = rows.find(row => row.get('學號') === studentId);
+        if (existing) {
+            if (existing.get('LINE_ID') === lineUserId) {
+                return { success: false, message: '您已經註冊過了！' };
+            }
+            return { success: false, message: '此學號已被其他帳號綁定！' };
         }
-        return { success: false, message: '此學號已被其他帳號綁定！' };
+        
+        await sheet.addRow({
+            '學號': studentId,
+            '姓名': studentName,
+            '班級': className,
+            'LINE_ID': lineUserId,
+            'LINE名稱': lineName,
+            '註冊時間': formatDateTime(new Date()),
+            '狀態': '正常'
+        });
+        
+        return { success: true, message: '註冊成功！' };
+    } catch (error) {
+        console.error('❌ registerStudent 錯誤:', error);
+        return { success: false, message: '註冊失敗: ' + error.message };
     }
-    
-    await sheet.addRow({
-        '學號': studentId,
-        '姓名': studentName,
-        '班級': className,
-        'LINE_ID': lineUserId,
-        'LINE名稱': lineName,
-        '註冊時間': formatDateTime(new Date()),
-        '狀態': '正常'
-    });
-    
-    return { success: true, message: '註冊成功！' };
 }
 
 /**
@@ -176,29 +193,37 @@ async function getCourse(courseId) {
  * 取得今日課程活動
  */
 async function getTodaySession(courseId) {
-    const today = getTodayString();
-    const sheet = await getOrCreateSheet('簽到活動', [
-        '活動ID', '課程ID', '日期', '開始時間', '結束時間', 'QR碼內容', '狀態'
-    ]);
-    const rows = await sheet.getRows();
-    
-    // 找今天的活動（不限制狀態，只要不是「已結束」）
-    const session = rows.find(row => {
-        const rowCourseId = row.get('課程ID');
-        const rowDate = row.get('日期');
-        const rowStatus = row.get('狀態');
+    try {
+        const today = getTodayString();
+        // 重新載入文檔以取得最新資料
+        await doc.loadInfo();
+        const sheet = await getOrCreateSheet('簽到活動', [
+            '活動ID', '課程ID', '日期', '開始時間', '結束時間', 'QR碼內容', '狀態'
+        ]);
+        await sheet.loadHeaderRow();
+        const rows = await sheet.getRows({ limit: 1000 });
         
-        // 日期可能是不同格式，都嘗試匹配
-        const dateMatch = rowDate === today || 
-                         rowDate === today.replace(/-/g, '/') ||
-                         rowDate?.includes(today.split('-')[1] + '/' + today.split('-')[2]);
+        // 找今天的活動（不限制狀態，只要不是「已結束」）
+        const session = rows.find(row => {
+            const rowCourseId = row.get('課程ID');
+            const rowDate = row.get('日期');
+            const rowStatus = row.get('狀態');
+            
+            // 日期可能是不同格式，都嘗試匹配
+            const dateMatch = rowDate === today || 
+                             rowDate === today.replace(/-/g, '/') ||
+                             rowDate?.includes(today.split('-')[1] + '/' + today.split('-')[2]);
+            
+            return rowCourseId === courseId && 
+                   dateMatch && 
+                   rowStatus !== '已結束';
+        });
         
-        return rowCourseId === courseId && 
-               dateMatch && 
-               rowStatus !== '已結束';
-    });
-    
-    return session;
+        return session;
+    } catch (error) {
+        console.error('❌ getTodaySession 錯誤:', error);
+        return null;
+    }
 }
 
 /**
@@ -206,10 +231,13 @@ async function getTodaySession(courseId) {
  */
 async function checkExistingAttendance(sessionId, studentId) {
     try {
+        // 重新載入文檔以取得最新資料
+        await doc.loadInfo();
         const sheet = doc.sheetsByTitle['簽到紀錄'];
         if (!sheet) return null;
         
-        const rows = await sheet.getRows();
+        await sheet.loadHeaderRow();
+        const rows = await sheet.getRows({ limit: 2000 });
         return rows.find(row => 
             row.get('活動ID') === sessionId && 
             row.get('學號') === studentId
@@ -355,14 +383,22 @@ async function updateStatistics(studentId, status) {
  * 取得班級列表
  */
 async function getClasses() {
-    const sheet = await getOrCreateSheet('班級列表', [
-        '班級代碼', '班級名稱', '導師', '人數', '建立時間'
-    ]);
-    const rows = await sheet.getRows();
-    return rows.map(row => ({
-        code: row.get('班級代碼'),
-        name: row.get('班級名稱')
-    }));
+    try {
+        // 重新載入文檔以取得最新資料
+        await doc.loadInfo();
+        const sheet = await getOrCreateSheet('班級列表', [
+            '班級代碼', '班級名稱', '導師', '人數', '建立時間'
+        ]);
+        await sheet.loadHeaderRow();
+        const rows = await sheet.getRows({ limit: 500 });
+        return rows.map(row => ({
+            code: row.get('班級代碼'),
+            name: row.get('班級名稱')
+        }));
+    } catch (error) {
+        console.error('❌ getClasses 錯誤:', error);
+        return [];
+    }
 }
 
 // ===== LINE Bot 訊息處理 =====
@@ -379,59 +415,78 @@ async function handleEvent(event) {
     }
     
     const userId = event.source.userId;
-    const userProfile = await lineClient.getProfile(userId);
-    const userName = userProfile.displayName;
     
-    // 處理 Postback（按鈕回應）
-    if (event.type === 'postback') {
-        return handlePostback(event, userId, userName);
+    // 安全取得用戶資料（加入錯誤處理）
+    let userName = '同學';
+    try {
+        const userProfile = await lineClient.getProfile(userId);
+        userName = userProfile.displayName || '同學';
+    } catch (profileError) {
+        console.log('⚠️ 無法取得用戶資料:', profileError.message);
+        // 繼續執行，使用預設名稱
     }
     
-    // 處理位置訊息（GPS 簽到）
-    if (event.message.type === 'location') {
-        return handleLocation(event, userId);
-    }
-    
-    // 處理文字訊息
-    if (event.message.type === 'text') {
-        const text = event.message.text.trim();
-        
-        // 檢查是否為簽到連結
-        if (text.startsWith('直接簽到:')) {
-            // 掃老師手機 QR Code → 直接簽到
-            return handleDirectCheckin(event, userId, text);
+    try {
+        // 處理 Postback（按鈕回應）
+        if (event.type === 'postback') {
+            return await handlePostback(event, userId, userName);
         }
         
-        if (text.startsWith('GPS簽到:')) {
-            // 學生點連結 → GPS 驗證簽到
-            return handleGPSCheckin(event, userId, text);
+        // 處理位置訊息（GPS 簽到）
+        if (event.message.type === 'location') {
+            return await handleLocation(event, userId);
         }
         
-        // 舊版相容
-        if (text.startsWith('簽到:')) {
-            return handleCheckinRequest(event, userId, text);
-        }
-        
-        // 檢查用戶狀態（是否在流程中）
-        const state = userStates.get(userId);
-        if (state) {
-            // 處理加入班級流程
-            if (state.step === 'addNewClass') {
-                return handleAddNewClass(event, userId, text, state);
+        // 處理文字訊息
+        if (event.message.type === 'text') {
+            const text = event.message.text.trim();
+            
+            // 檢查是否為簽到連結
+            if (text.startsWith('直接簽到:')) {
+                // 掃老師手機 QR Code → 直接簽到
+                return await handleDirectCheckin(event, userId, text);
             }
-            // 處理退出班級流程
-            if (state.step === 'removeClass') {
-                return handleRemoveClass(event, userId, text, state);
+            
+            if (text.startsWith('GPS簽到:')) {
+                // 學生點連結 → GPS 驗證簽到
+                return await handleGPSCheckin(event, userId, text);
             }
-            // 處理註冊流程
-            return handleRegistrationFlow(event, userId, userName, text, state);
+            
+            // 舊版相容
+            if (text.startsWith('簽到:')) {
+                return await handleCheckinRequest(event, userId, text);
+            }
+            
+            // 檢查用戶狀態（是否在流程中）
+            const state = userStates.get(userId);
+            if (state) {
+                // 處理加入班級流程
+                if (state.step === 'addNewClass') {
+                    return await handleAddNewClass(event, userId, text, state);
+                }
+                // 處理退出班級流程
+                if (state.step === 'removeClass') {
+                    return await handleRemoveClass(event, userId, text, state);
+                }
+                // 處理註冊流程
+                return await handleRegistrationFlow(event, userId, userName, text, state);
+            }
+            
+            // 一般指令
+            return await handleCommand(event, userId, userName, text);
         }
         
-        // 一般指令
-        return handleCommand(event, userId, userName, text);
+        return null;
+    } catch (error) {
+        console.error('❌ handleEvent 錯誤:', error);
+        // 嘗試回覆錯誤訊息
+        try {
+            return await replyText(event, '❌ 系統發生錯誤，請稍後再試。\n\n如持續發生，請聯繫管理員。');
+        } catch (replyError) {
+            console.error('❌ 無法回覆錯誤訊息:', replyError.message);
+            return null;
+        }
     }
-    
-    return null;
 }
 
 /**
@@ -901,6 +956,12 @@ async function handleLocation(event, userId) {
     const { latitude, longitude } = event.message;
     const student = await getStudent(userId);
     
+    // 檢查學生資料是否存在
+    if (!student) {
+        userStates.delete(userId);
+        return replyText(event, '❌ 找不到您的學生資料！\n\n請先輸入「註冊」綁定學號。');
+    }
+    
     // 每次都重新讀取課程設定（確保使用最新的簽到範圍）
     const course = await getCourse(state.courseId);
     if (!course) {
@@ -1156,8 +1217,15 @@ async function handleAddNewClass(event, userId, text, state) {
     }
     
     try {
+        // 重新載入文檔以取得最新資料
+        await doc.loadInfo();
         const studentSheet = doc.sheetsByTitle['學生名單'];
-        const rows = await studentSheet.getRows();
+        if (!studentSheet) {
+            userStates.delete(userId);
+            return replyText(event, '❌ 系統錯誤：找不到學生名單。');
+        }
+        await studentSheet.loadHeaderRow();
+        const rows = await studentSheet.getRows({ limit: 1000 });
         const studentRow = rows.find(r => r.get('學號') === state.studentId);
         
         if (studentRow) {
@@ -1190,8 +1258,15 @@ async function handleRemoveClass(event, userId, text, state) {
     }
     
     try {
+        // 重新載入文檔以取得最新資料
+        await doc.loadInfo();
         const studentSheet = doc.sheetsByTitle['學生名單'];
-        const rows = await studentSheet.getRows();
+        if (!studentSheet) {
+            userStates.delete(userId);
+            return replyText(event, '❌ 系統錯誤：找不到學生名單。');
+        }
+        await studentSheet.loadHeaderRow();
+        const rows = await studentSheet.getRows({ limit: 1000 });
         const studentRow = rows.find(r => r.get('學號') === state.studentId);
         
         if (studentRow) {
