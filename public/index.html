@@ -178,12 +178,40 @@
         <!-- Schedule -->
         <div class="page" id="page-schedule">
             <div class="header"><h1 class="page-title">課表管理</h1><p class="page-subtitle">管理課程資料</p></div>
+            
+            <!-- 周次選擇器 -->
+            <div class="card" id="schedule-week-selector" style="display:none">
+                <div class="card-title">📅 周次選擇</div>
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                    <select class="form-select" id="schedule-year" style="width:auto" onchange="onScheduleYearChange()"></select>
+                    <select class="form-select" id="schedule-month" style="width:auto" onchange="onScheduleMonthChange()"></select>
+                    <select class="form-select" id="schedule-week" style="width:auto;flex:1;min-width:180px" onchange="onScheduleWeekChange()"></select>
+                </div>
+                <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+                    <button class="btn btn-sm btn-outline" onclick="goToPrevWeek()">◀ 上一周</button>
+                    <button class="btn btn-sm btn-primary" onclick="goToCurrentWeek()">📍 本周</button>
+                    <button class="btn btn-sm btn-outline" onclick="goToNextWeek()">下一周 ▶</button>
+                </div>
+                <div id="schedule-week-info" class="alert alert-info" style="margin-top:10px;display:none"></div>
+            </div>
+            
             <div class="card">
-                <div class="tabs"><div class="tab active" onclick="showView('grid')">週課表</div><div class="tab" onclick="showView('list')">課程列表</div></div>
+                <div class="tabs">
+                    <div class="tab active" onclick="showView('grid')">週課表</div>
+                    <div class="tab" onclick="showView('list')">課程列表</div>
+                    <div class="tab" onclick="showView('substitute')">🔄 調代課</div>
+                </div>
                 <div id="grid-view"><div class="schedule-grid" id="schedule-grid"></div></div>
                 <div id="list-view" style="display:none">
                     <button class="btn btn-primary btn-block" style="margin-bottom:15px" onclick="openModal('addCourse')">➕ 新增課程</button>
                     <div id="courses-list"></div>
+                </div>
+                <div id="substitute-view" style="display:none">
+                    <div class="alert alert-info" style="margin-bottom:15px">
+                        💡 調代課功能可處理臨時課程異動，包括調課、代課、停課等情況
+                    </div>
+                    <button class="btn btn-primary btn-block" style="margin-bottom:15px" onclick="openSubstituteModal()">➕ 新增調代課</button>
+                    <div id="substitute-list"></div>
                 </div>
             </div>
         </div>
@@ -376,6 +404,7 @@
                     <button class="btn btn-sm btn-outline" onclick="jumpToCurrentWeek()">📍 本周</button>
                     <button class="btn btn-sm btn-outline" onclick="jumpToFirstWeek()">⏮️ 第一周</button>
                     <button class="btn btn-sm btn-outline" onclick="jumpToLastWeek()">⏭️ 最後一周</button>
+                    <button class="btn btn-sm btn-success" onclick="applyWeekToSchedule()">📋 套用到課表</button>
                 </div>
                 
                 <!-- 周次列表 -->
@@ -392,14 +421,125 @@
         </div>
     </div>
 
+    <!-- 調代課 Modal -->
+    <div class="modal-overlay" id="modal-addSubstitute">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">🔄 新增調代課</h3>
+                <button class="modal-close" onclick="closeModal('addSubstitute')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">異動類型 *</label>
+                    <select class="form-select" id="sub-type" onchange="onSubTypeChange()">
+                        <option value="substitute">代課（他人代上）</option>
+                        <option value="swap">調課（更換時間）</option>
+                        <option value="cancel">停課</option>
+                        <option value="makeup">補課</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">原課程 *</label>
+                    <select class="form-select" id="sub-original-course"></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">異動日期 *</label>
+                    <input type="date" class="form-input" id="sub-date">
+                </div>
+                <div id="sub-substitute-fields">
+                    <div class="form-group">
+                        <label class="form-label">代課教師</label>
+                        <input type="text" class="form-input" id="sub-teacher" placeholder="代課教師姓名">
+                    </div>
+                </div>
+                <div id="sub-swap-fields" style="display:none">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">調至日期</label>
+                            <input type="date" class="form-input" id="sub-new-date">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">調至節次</label>
+                            <select class="form-select" id="sub-new-period"></select>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">備註</label>
+                    <textarea class="form-textarea" id="sub-note" placeholder="填寫異動原因或說明"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal('addSubstitute')">取消</button>
+                <button class="btn btn-primary" onclick="addSubstitute()">確認新增</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 編輯調代課 Modal -->
+    <div class="modal-overlay" id="modal-editSubstitute">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">🔄 編輯調代課</h3>
+                <button class="modal-close" onclick="closeModal('editSubstitute')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">異動類型</label>
+                    <select class="form-select" id="edit-sub-type" onchange="onEditSubTypeChange()">
+                        <option value="substitute">代課（他人代上）</option>
+                        <option value="swap">調課（更換時間）</option>
+                        <option value="cancel">停課</option>
+                        <option value="makeup">補課</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">原課程</label>
+                    <select class="form-select" id="edit-sub-original-course"></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">異動日期</label>
+                    <input type="date" class="form-input" id="edit-sub-date">
+                </div>
+                <div id="edit-sub-substitute-fields">
+                    <div class="form-group">
+                        <label class="form-label">代課教師</label>
+                        <input type="text" class="form-input" id="edit-sub-teacher">
+                    </div>
+                </div>
+                <div id="edit-sub-swap-fields" style="display:none">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">調至日期</label>
+                            <input type="date" class="form-input" id="edit-sub-new-date">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">調至節次</label>
+                            <select class="form-select" id="edit-sub-new-period"></select>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">備註</label>
+                    <textarea class="form-textarea" id="edit-sub-note"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" onclick="deleteSubstitute()">🗑️ 刪除</button>
+                <button class="btn btn-primary" onclick="saveSubstitute()">💾 儲存</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // === 全域變數 ===
         let API = localStorage.getItem('apiUrl') || '';
         let BOT = localStorage.getItem('botId') || '@bot';
         let sem = JSON.parse(localStorage.getItem('semester') || 'null') || { div: 'day', start: '', end: '', periods: [] };
-        let classes = [], courses = [], students = [], leaves = [];
-        let currentClass = null, currentCourse = null, currentStudent = null, currentLeave = null;
+        let classes = [], courses = [], students = [], leaves = [], substitutes = [];
+        let currentClass = null, currentCourse = null, currentStudent = null, currentLeave = null, currentSubstitute = null;
         let leaveFilter = 'pending';
+        let selectedScheduleWeek = 0; // 課表選擇的周次
         
         const PERIODS = {
             day: [{n:1,s:'08:00',e:'08:50'},{n:2,s:'09:00',e:'09:50'},{n:3,s:'10:00',e:'10:50'},{n:4,s:'11:00',e:'11:50'},{n:5,s:'13:00',e:'13:50'},{n:6,s:'14:00',e:'14:50'},{n:7,s:'15:00',e:'15:50'},{n:8,s:'16:00',e:'17:00'}],
@@ -981,10 +1121,395 @@
             }).join('') : '<div class="empty">尚無課程</div>';
         }
         function showView(view) {
-            document.querySelectorAll('.tabs .tab').forEach((t, i) => t.classList.toggle('active', i === (view === 'grid' ? 0 : 1)));
+            const tabs = document.querySelectorAll('#page-schedule .tabs .tab');
+            tabs.forEach((t, i) => {
+                if (view === 'grid') t.classList.toggle('active', i === 0);
+                else if (view === 'list') t.classList.toggle('active', i === 1);
+                else if (view === 'substitute') t.classList.toggle('active', i === 2);
+            });
             document.getElementById('grid-view').style.display = view === 'grid' ? 'block' : 'none';
             document.getElementById('list-view').style.display = view === 'list' ? 'block' : 'none';
+            document.getElementById('substitute-view').style.display = view === 'substitute' ? 'block' : 'none';
+            
+            if (view === 'substitute') {
+                loadSubstitutes();
+            }
         }
+        
+        // === 課表周次選擇器 ===
+        function initScheduleWeekSelector() {
+            if (!sem.start || !sem.end) {
+                document.getElementById('schedule-week-selector').style.display = 'none';
+                return;
+            }
+            
+            document.getElementById('schedule-week-selector').style.display = 'block';
+            
+            const startDate = new Date(sem.start);
+            const endDate = new Date(sem.end);
+            const now = new Date();
+            
+            // 初始化年份
+            const yearSelector = document.getElementById('schedule-year');
+            const startYear = startDate.getFullYear();
+            const endYear = endDate.getFullYear();
+            let yearOpts = '';
+            for (let y = startYear; y <= endYear; y++) {
+                yearOpts += `<option value="${y}">${y} 年</option>`;
+            }
+            yearSelector.innerHTML = yearOpts;
+            
+            // 設定當前年份
+            if (now >= startDate && now <= endDate) {
+                yearSelector.value = now.getFullYear();
+            } else {
+                yearSelector.value = startYear;
+            }
+            
+            onScheduleYearChange();
+            
+            // 設定當前周
+            if (sem.currentWeek > 0) {
+                selectedScheduleWeek = sem.currentWeek;
+                document.getElementById('schedule-week').value = selectedScheduleWeek;
+                updateScheduleWeekInfo();
+            }
+        }
+        
+        function onScheduleYearChange() {
+            const yearSelector = document.getElementById('schedule-year');
+            const monthSelector = document.getElementById('schedule-month');
+            const selectedYear = parseInt(yearSelector.value);
+            
+            const startDate = new Date(sem.start);
+            const endDate = new Date(sem.end);
+            
+            let monthOpts = '';
+            for (let m = 1; m <= 12; m++) {
+                const monthStart = new Date(selectedYear, m - 1, 1);
+                const monthEnd = new Date(selectedYear, m, 0);
+                if (monthEnd >= startDate && monthStart <= endDate) {
+                    monthOpts += `<option value="${m}">${m} 月</option>`;
+                }
+            }
+            monthSelector.innerHTML = monthOpts;
+            
+            // 設定當前月份
+            const now = new Date();
+            if (now.getFullYear() === selectedYear) {
+                const currentMonth = now.getMonth() + 1;
+                if (monthSelector.querySelector(`option[value="${currentMonth}"]`)) {
+                    monthSelector.value = currentMonth;
+                }
+            }
+            
+            onScheduleMonthChange();
+        }
+        
+        function onScheduleMonthChange() {
+            const yearSelector = document.getElementById('schedule-year');
+            const monthSelector = document.getElementById('schedule-month');
+            const weekSelector = document.getElementById('schedule-week');
+            
+            const selectedYear = parseInt(yearSelector.value);
+            const selectedMonth = parseInt(monthSelector.value);
+            
+            if (!selectedYear || !selectedMonth) return;
+            
+            const startDate = new Date(sem.start);
+            const monthStart = new Date(selectedYear, selectedMonth - 1, 1);
+            const monthEnd = new Date(selectedYear, selectedMonth, 0);
+            const totalWeeks = sem.weeks || 0;
+            const now = new Date();
+            
+            let weekOpts = '';
+            for (let w = 1; w <= totalWeeks; w++) {
+                const weekStart = new Date(startDate);
+                weekStart.setDate(weekStart.getDate() + (w - 1) * 7);
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekEnd.getDate() + 6);
+                
+                if (weekEnd >= monthStart && weekStart <= monthEnd) {
+                    const isCurrentWeek = now >= weekStart && now <= weekEnd;
+                    const label = `第 ${w} 周 (${weekStart.getMonth()+1}/${weekStart.getDate()}-${weekEnd.getMonth()+1}/${weekEnd.getDate()})${isCurrentWeek ? ' 📍' : ''}`;
+                    weekOpts += `<option value="${w}">${label}</option>`;
+                }
+            }
+            weekSelector.innerHTML = weekOpts || '<option value="">此月份無課程周次</option>';
+            
+            if (selectedScheduleWeek > 0 && weekSelector.querySelector(`option[value="${selectedScheduleWeek}"]`)) {
+                weekSelector.value = selectedScheduleWeek;
+            }
+        }
+        
+        function onScheduleWeekChange() {
+            const weekSelector = document.getElementById('schedule-week');
+            selectedScheduleWeek = parseInt(weekSelector.value) || 0;
+            updateScheduleWeekInfo();
+            renderScheduleGrid();
+        }
+        
+        function updateScheduleWeekInfo() {
+            const infoEl = document.getElementById('schedule-week-info');
+            if (!selectedScheduleWeek || !sem.start) {
+                infoEl.style.display = 'none';
+                return;
+            }
+            
+            const startDate = new Date(sem.start);
+            const weekStart = new Date(startDate);
+            weekStart.setDate(weekStart.getDate() + (selectedScheduleWeek - 1) * 7);
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekEnd.getDate() + 6);
+            
+            const now = new Date();
+            const isCurrentWeek = now >= weekStart && now <= weekEnd;
+            
+            infoEl.style.display = 'block';
+            infoEl.className = isCurrentWeek ? 'alert alert-success' : 'alert alert-info';
+            infoEl.innerHTML = `
+                <strong>${isCurrentWeek ? '📍 本周' : `📅 第 ${selectedScheduleWeek} 周`}</strong>：
+                ${weekStart.getFullYear()}/${weekStart.getMonth()+1}/${weekStart.getDate()} (${DAY_NAMES[weekStart.getDay()]}) 
+                ~ ${weekEnd.getFullYear()}/${weekEnd.getMonth()+1}/${weekEnd.getDate()} (${DAY_NAMES[weekEnd.getDay()]})
+            `;
+        }
+        
+        function goToPrevWeek() {
+            if (selectedScheduleWeek > 1) {
+                selectedScheduleWeek--;
+                syncWeekSelectors();
+            } else {
+                toast('已經是第一周', 'warning');
+            }
+        }
+        
+        function goToNextWeek() {
+            if (selectedScheduleWeek < (sem.weeks || 0)) {
+                selectedScheduleWeek++;
+                syncWeekSelectors();
+            } else {
+                toast('已經是最後一周', 'warning');
+            }
+        }
+        
+        function goToCurrentWeek() {
+            if (!sem.currentWeek || sem.currentWeek <= 0) {
+                toast('目前不在學期期間內', 'warning');
+                return;
+            }
+            selectedScheduleWeek = sem.currentWeek;
+            syncWeekSelectors();
+        }
+        
+        function syncWeekSelectors() {
+            if (!sem.start || !selectedScheduleWeek) return;
+            
+            const startDate = new Date(sem.start);
+            const weekStart = new Date(startDate);
+            weekStart.setDate(weekStart.getDate() + (selectedScheduleWeek - 1) * 7);
+            
+            document.getElementById('schedule-year').value = weekStart.getFullYear();
+            onScheduleYearChange();
+            document.getElementById('schedule-month').value = weekStart.getMonth() + 1;
+            onScheduleMonthChange();
+            document.getElementById('schedule-week').value = selectedScheduleWeek;
+            
+            updateScheduleWeekInfo();
+            renderScheduleGrid();
+        }
+        
+        function applyWeekToSchedule() {
+            const infoEl = document.getElementById('selected-week-info');
+            if (!infoEl.style.display || infoEl.style.display === 'none') {
+                toast('請先選擇一個周次', 'warning');
+                return;
+            }
+            
+            // 從選中的周次資訊中取得周次
+            const match = infoEl.innerHTML.match(/第 (\d+) 周/);
+            if (match) {
+                selectedScheduleWeek = parseInt(match[1]);
+                closeModal('weekPicker');
+                showPage('schedule');
+                syncWeekSelectors();
+                toast(`已切換到第 ${selectedScheduleWeek} 周`);
+            }
+        }
+        
+        // === 調代課功能 ===
+        async function loadSubstitutes() {
+            const data = await api('/api/substitutes');
+            substitutes = data || [];
+            renderSubstitutes();
+        }
+        
+        function renderSubstitutes() {
+            const container = document.getElementById('substitute-list');
+            if (!substitutes || substitutes.length === 0) {
+                container.innerHTML = '<div class="empty"><div class="icon">🔄</div><h3>尚無調代課紀錄</h3><p style="color:var(--text-light)">點擊上方按鈕新增調代課</p></div>';
+                return;
+            }
+            
+            const typeLabels = {
+                'substitute': '👨‍🏫 代課',
+                'swap': '🔄 調課',
+                'cancel': '❌ 停課',
+                'makeup': '📝 補課'
+            };
+            
+            const typeColors = {
+                'substitute': '#3b82f6',
+                'swap': '#f59e0b',
+                'cancel': '#ef4444',
+                'makeup': '#10b981'
+            };
+            
+            let html = '';
+            substitutes.forEach(s => {
+                const course = courses.find(c => c.id === s.courseId);
+                const courseName = course ? (course.name || course.subject) : '未知課程';
+                
+                html += `
+                    <div class="list-item" onclick="editSubstitute('${s.id}')" style="border-left:4px solid ${typeColors[s.type] || '#666'}">
+                        <div class="item-main">
+                            <div class="item-title">
+                                <span style="background:${typeColors[s.type] || '#666'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;margin-right:8px">${typeLabels[s.type] || s.type}</span>
+                                ${courseName}
+                            </div>
+                            <div class="item-subtitle">
+                                📅 ${s.date} ${s.teacher ? '・👨‍🏫 ' + s.teacher : ''} ${s.newDate ? '・➜ ' + s.newDate : ''}
+                            </div>
+                            ${s.note ? `<div class="item-subtitle">💬 ${s.note}</div>` : ''}
+                        </div>
+                        <span class="item-arrow">›</span>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        function onSubTypeChange() {
+            const type = document.getElementById('sub-type').value;
+            document.getElementById('sub-substitute-fields').style.display = (type === 'substitute') ? 'block' : 'none';
+            document.getElementById('sub-swap-fields').style.display = (type === 'swap' || type === 'makeup') ? 'block' : 'none';
+        }
+        
+        function onEditSubTypeChange() {
+            const type = document.getElementById('edit-sub-type').value;
+            document.getElementById('edit-sub-substitute-fields').style.display = (type === 'substitute') ? 'block' : 'none';
+            document.getElementById('edit-sub-swap-fields').style.display = (type === 'swap' || type === 'makeup') ? 'block' : 'none';
+        }
+        
+        function openSubstituteModal() {
+            // 更新課程下拉選單
+            const courseOpts = courses.map(c => `<option value="${c.id}">${c.name || c.subject} (${c.classCode})</option>`).join('');
+            document.getElementById('sub-original-course').innerHTML = '<option value="">選擇課程</option>' + courseOpts;
+            
+            // 更新節次下拉選單
+            const ps = sem.periods && sem.periods.length > 0 ? sem.periods : PERIODS[sem.div || 'day'];
+            const periodOpts = ps.map(p => `<option value="${p.n}">第${p.n}節 (${p.s}-${p.e})</option>`).join('');
+            document.getElementById('sub-new-period').innerHTML = periodOpts;
+            
+            // 設定預設日期為今天
+            document.getElementById('sub-date').value = new Date().toISOString().split('T')[0];
+            
+            onSubTypeChange();
+            openModal('addSubstitute');
+        }
+        
+        async function addSubstitute() {
+            const type = document.getElementById('sub-type').value;
+            const courseId = document.getElementById('sub-original-course').value;
+            const date = document.getElementById('sub-date').value;
+            const teacher = document.getElementById('sub-teacher').value.trim();
+            const newDate = document.getElementById('sub-new-date').value;
+            const newPeriod = document.getElementById('sub-new-period').value;
+            const note = document.getElementById('sub-note').value.trim();
+            
+            if (!courseId || !date) {
+                toast('請選擇課程和日期', 'danger');
+                return;
+            }
+            
+            const data = { type, courseId, date, teacher, newDate, newPeriod, note };
+            const r = await api('/api/substitutes', { method: 'POST', body: JSON.stringify(data) });
+            
+            if (r?.success) {
+                toast('調代課已新增！');
+                closeModal('addSubstitute');
+                loadSubstitutes();
+                
+                // 清空表單
+                document.getElementById('sub-teacher').value = '';
+                document.getElementById('sub-new-date').value = '';
+                document.getElementById('sub-note').value = '';
+            } else {
+                toast(r?.message || '新增失敗', 'danger');
+            }
+        }
+        
+        function editSubstitute(id) {
+            currentSubstitute = substitutes.find(s => s.id === id);
+            if (!currentSubstitute) return;
+            
+            // 更新課程下拉選單
+            const courseOpts = courses.map(c => `<option value="${c.id}">${c.name || c.subject} (${c.classCode})</option>`).join('');
+            document.getElementById('edit-sub-original-course').innerHTML = '<option value="">選擇課程</option>' + courseOpts;
+            
+            // 更新節次下拉選單
+            const ps = sem.periods && sem.periods.length > 0 ? sem.periods : PERIODS[sem.div || 'day'];
+            const periodOpts = ps.map(p => `<option value="${p.n}">第${p.n}節 (${p.s}-${p.e})</option>`).join('');
+            document.getElementById('edit-sub-new-period').innerHTML = periodOpts;
+            
+            // 填入資料
+            document.getElementById('edit-sub-type').value = currentSubstitute.type || 'substitute';
+            document.getElementById('edit-sub-original-course').value = currentSubstitute.courseId || '';
+            document.getElementById('edit-sub-date').value = currentSubstitute.date || '';
+            document.getElementById('edit-sub-teacher').value = currentSubstitute.teacher || '';
+            document.getElementById('edit-sub-new-date').value = currentSubstitute.newDate || '';
+            document.getElementById('edit-sub-new-period').value = currentSubstitute.newPeriod || '';
+            document.getElementById('edit-sub-note').value = currentSubstitute.note || '';
+            
+            onEditSubTypeChange();
+            openModal('editSubstitute');
+        }
+        
+        async function saveSubstitute() {
+            const type = document.getElementById('edit-sub-type').value;
+            const courseId = document.getElementById('edit-sub-original-course').value;
+            const date = document.getElementById('edit-sub-date').value;
+            const teacher = document.getElementById('edit-sub-teacher').value.trim();
+            const newDate = document.getElementById('edit-sub-new-date').value;
+            const newPeriod = document.getElementById('edit-sub-new-period').value;
+            const note = document.getElementById('edit-sub-note').value.trim();
+            
+            const data = { type, courseId, date, teacher, newDate, newPeriod, note };
+            const r = await api('/api/substitutes/' + currentSubstitute.id, { method: 'PUT', body: JSON.stringify(data) });
+            
+            if (r?.success) {
+                toast('調代課已更新！');
+                closeModal('editSubstitute');
+                loadSubstitutes();
+            } else {
+                toast(r?.message || '更新失敗', 'danger');
+            }
+        }
+        
+        async function deleteSubstitute() {
+            if (!confirm('確定刪除此調代課紀錄？')) return;
+            
+            const r = await api('/api/substitutes/' + currentSubstitute.id, { method: 'DELETE' });
+            
+            if (r?.success) {
+                toast('調代課已刪除！');
+                closeModal('editSubstitute');
+                loadSubstitutes();
+            } else {
+                toast(r?.message || '刪除失敗', 'danger');
+            }
+        }
+        
         function renderScheduleGrid() {
             const div = sem.div || 'day';
             const ps = sem.periods && sem.periods.length > 0 ? sem.periods : PERIODS[div];
@@ -2014,7 +2539,7 @@
         function loadPage(page) {
             if (page === 'dashboard') loadDashboard();
             if (page === 'semester') { initSemesterUI(); }
-            if (page === 'schedule') { renderScheduleGrid(); renderCourses(); }
+            if (page === 'schedule') { initScheduleWeekSelector(); renderScheduleGrid(); renderCourses(); }
             if (page === 'sessions') loadSessions();
             if (page === 'classes') loadClasses();
             if (page === 'students') loadStudents();
