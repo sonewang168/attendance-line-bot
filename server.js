@@ -605,7 +605,7 @@ async function handleCommand(event, userId, userName, text) {
             }
             userStates.set(userId, { step: 'addNewClass', studentId: student.get('學號') });
             const availableClasses = await getClasses();
-            const currentClasses = (student.get('班級') || '').split(',').map(c => c.trim()).filter(c => c);
+            const currentClasses = (student.get('班級') || '').split('、').map(c => c.trim()).filter(c => c);
             const newClasses = availableClasses.filter(c => !currentClasses.includes(c.code));
             if (newClasses.length === 0) {
                 userStates.delete(userId);
@@ -620,7 +620,7 @@ async function handleCommand(event, userId, userName, text) {
             if (!student) {
                 return replyText(event, '❌ 您尚未註冊！');
             }
-            const myClasses = (student.get('班級') || '').split(',').map(c => c.trim()).filter(c => c);
+            const myClasses = (student.get('班級') || '').split('、').map(c => c.trim()).filter(c => c);
             if (myClasses.length <= 1) {
                 return replyText(event, '❌ 您只有一個班級，無法退出！\n\n如需完全解除綁定，請輸入「解除綁定」。');
             }
@@ -1284,13 +1284,13 @@ async function handleAddNewClass(event, userId, text, state) {
         const studentRow = rows.find(r => r.get('學號') === state.studentId);
         
         if (studentRow) {
-            const currentClasses = (studentRow.get('班級') || '').split(',').map(c => c.trim()).filter(c => c);
+            const currentClasses = (studentRow.get('班級') || '').split('、').map(c => c.trim()).filter(c => c);
             if (currentClasses.includes(targetClass.code)) {
                 userStates.delete(userId);
                 return replyText(event, '❌ 您已在「' + targetClass.code + '」班級中！');
             }
             currentClasses.push(targetClass.code);
-            studentRow.set('班級', currentClasses.join(','));
+            studentRow.set('班級', currentClasses.join('、'));
             await studentRow.save();
             userStates.delete(userId);
             return replyText(event, '✅ 成功加入班級！\n\n🏫 ' + targetClass.code + ' - ' + targetClass.name + '\n\n📋 您的所有班級：\n' + currentClasses.join('、'));
@@ -1326,7 +1326,7 @@ async function handleRemoveClass(event, userId, text, state) {
         
         if (studentRow) {
             const newClasses = state.currentClasses.filter(c => c !== classCode);
-            studentRow.set('班級', newClasses.join(','));
+            studentRow.set('班級', newClasses.join('、'));
             await studentRow.save();
             userStates.delete(userId);
             return replyText(event, '✅ 已退出班級「' + classCode + '」！\n\n📋 目前班級：\n' + newClasses.join('、'));
@@ -1342,7 +1342,7 @@ async function handleRemoveClass(event, userId, text, state) {
 // 回覆班級詳細資料
 async function replyClassDetails(event, student) {
     const classesStr = student.get('班級') || '';
-    const studentClasses = classesStr.split(',').map(c => c.trim()).filter(c => c);
+    const studentClasses = classesStr.split('、').map(c => c.trim()).filter(c => c);
     
     if (studentClasses.length === 0) {
         return replyText(event, '❌ 您尚未加入任何班級！\n\n請輸入「加入班級」。');
