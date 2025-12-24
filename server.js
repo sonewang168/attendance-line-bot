@@ -374,13 +374,20 @@ const userStates = new Map();
  * 處理 Webhook 事件
  */
 async function handleEvent(event) {
+    console.log('📨 收到事件:', event.type, event.message?.type, event.message?.text?.substring(0, 50));
+    
     if (event.type !== 'message' && event.type !== 'postback') {
         return null;
     }
     
     const userId = event.source.userId;
-    const userProfile = await lineClient.getProfile(userId);
-    const userName = userProfile.displayName;
+    let userName = '用戶';
+    try {
+        const userProfile = await lineClient.getProfile(userId);
+        userName = userProfile.displayName;
+    } catch (e) {
+        console.log('無法取得用戶資料:', e.message);
+    }
     
     // 處理 Postback（按鈕回應）
     if (event.type === 'postback') {
@@ -395,6 +402,7 @@ async function handleEvent(event) {
     // 處理文字訊息
     if (event.message.type === 'text') {
         const text = event.message.text.trim();
+        console.log('📝 處理文字訊息:', text);
         
         // 檢查是否為簽到連結
         if (text.startsWith('直接簽到:')) {
@@ -415,10 +423,12 @@ async function handleEvent(event) {
         // 檢查用戶狀態（是否在註冊流程中）
         const state = userStates.get(userId);
         if (state) {
+            console.log('📋 用戶在流程中:', state.step);
             return handleRegistrationFlow(event, userId, userName, text, state);
         }
         
         // 一般指令
+        console.log('🔧 執行指令:', text);
         return handleCommand(event, userId, userName, text);
     }
     
@@ -429,7 +439,10 @@ async function handleEvent(event) {
  * 處理一般指令
  */
 async function handleCommand(event, userId, userName, text) {
+    console.log('⚙️ handleCommand 開始, 指令:', text);
+    
     const student = await getStudent(userId);
+    console.log('👤 學生資料:', student ? student.get('姓名') : '未註冊');
     
     switch(text) {
         case '註冊':
@@ -1792,13 +1805,44 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// 健康檢查端點
+app.get('/health', async (req, res) => {
+    try {
+        const status = {
+            server: 'OK',
+            time: new Date().toISOString(),
+            lineBot: lineConfig.channelAccessToken ? 'Configured' : 'Not Configured',
+            googleSheets: doc ? 'Connected' : 'Not Connected'
+        };
+        
+        // 測試 Google Sheets 連接
+        if (doc) {
+            try {
+                const sheet = doc.sheetsByTitle['學生名單'];
+                status.studentSheet = sheet ? 'OK' : 'Not Found';
+            } catch (e) {
+                status.studentSheet = 'Error: ' + e.message;
+            }
+        }
+        
+        res.json(status);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.use('/webhook', line.middleware(lineConfig));
 
 app.post('/webhook', (req, res) => {
+    console.log('🔔 Webhook 收到請求, 事件數:', req.body.events?.length);
+    
     Promise.all(req.body.events.map(handleEvent))
-        .then((result) => res.json(result))
+        .then((result) => {
+            console.log('✅ Webhook 處理完成');
+            res.json(result);
+        })
         .catch((err) => {
-            console.error('Webhook Error:', err);
+            console.error('❌ Webhook Error:', err);
             res.status(500).end();
         });
 });
