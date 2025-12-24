@@ -374,20 +374,13 @@ const userStates = new Map();
  * 處理 Webhook 事件
  */
 async function handleEvent(event) {
-    console.log('📨 收到事件:', event.type, event.message?.type, event.message?.text?.substring(0, 50));
-    
     if (event.type !== 'message' && event.type !== 'postback') {
         return null;
     }
     
     const userId = event.source.userId;
-    let userName = '用戶';
-    try {
-        const userProfile = await lineClient.getProfile(userId);
-        userName = userProfile.displayName;
-    } catch (e) {
-        console.log('無法取得用戶資料:', e.message);
-    }
+    const userProfile = await lineClient.getProfile(userId);
+    const userName = userProfile.displayName;
     
     // 處理 Postback（按鈕回應）
     if (event.type === 'postback') {
@@ -436,13 +429,9 @@ async function handleEvent(event) {
  * 處理一般指令
  */
 async function handleCommand(event, userId, userName, text) {
-    console.log('⚙️ handleCommand:', text);
+    const student = await getStudent(userId);
     
-    try {
-        const student = await getStudent(userId);
-        console.log('👤 學生:', student ? student.get('姓名') : '未註冊');
-        
-        switch(text) {
+    switch(text) {
         case '註冊':
         case '綁定':
             if (student) {
@@ -505,13 +494,11 @@ async function handleCommand(event, userId, userName, text) {
         
         case '加入班級':
         case '新班級':
-            console.log('📚 處理加入班級');
             if (!student) {
                 return replyText(event, '❌ 您尚未註冊！\n\n請先輸入「註冊」綁定學號後，再加入班級。');
             }
             userStates.set(userId, { step: 'addNewClass', studentId: student.get('學號') });
             const availableClasses = await getClasses();
-            console.log('📚 可用班級:', availableClasses.length);
             const currentClasses = (student.get('班級') || '').split(',').map(c => c.trim()).filter(c => c);
             const newClasses = availableClasses.filter(c => !currentClasses.includes(c.code));
             if (newClasses.length === 0) {
@@ -559,11 +546,7 @@ async function handleCommand(event, userId, userName, text) {
             if (!student) {
                 return replyText(event, `👋 歡迎 ${userName}！\n\n您尚未註冊，請輸入「註冊」綁定學號後才能使用簽到功能。\n\n輸入「說明」查看更多指令。`);
             }
-            return replyText(event, `👋 ${student.get('姓名')} 同學您好！\n\n📌 可用指令：\n• 我的資料\n• 我的班級\n• 出席紀錄\n• 全部紀錄\n• 加入班級\n• 退出班級\n• 解除綁定\n• 說明\n\n📍 簽到請掃描教師提供的 QR Code`);
-    }
-    } catch (error) {
-        console.error('❌ handleCommand 錯誤:', error);
-        return replyText(event, '❌ 系統錯誤: ' + error.message);
+            return replyText(event, `👋 ${student.get('姓名')} 同學您好！\n\n📌 可用指令：\n• 我的資料\n• 我的班級\n• 出席紀錄\n• 全部紀錄\n• 加入班級\n• 退出班級\n• 說明\n\n📍 簽到請掃描教師提供的 QR Code`);
     }
 }
 
@@ -1155,7 +1138,7 @@ function replyHelp(event) {
         `• 退出班級 - 退出指定班級\n` +
         `• 全部紀錄 - 所有班級出缺席統計\n\n` +
         `【簽到方式】\n` +
-        `掃描教師 QR Code → 分享位置 → 完成簽到\n\n` +
+        `掃描教師 QR Code → 分享位置 → 完成\n\n` +
         `💡 一個學號可加入多個班級`;
     
     return replyText(event, message);
@@ -1655,32 +1638,13 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// 健康檢查端點
-app.get('/health', async (req, res) => {
-    try {
-        res.json({
-            server: 'OK',
-            time: new Date().toISOString(),
-            lineBot: lineConfig.channelAccessToken ? 'Configured' : 'Not Configured',
-            googleSheets: doc ? 'Connected' : 'Not Connected'
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
 app.use('/webhook', line.middleware(lineConfig));
 
 app.post('/webhook', (req, res) => {
-    console.log('🔔 Webhook 收到請求, 事件數:', req.body.events?.length);
-    
     Promise.all(req.body.events.map(handleEvent))
-        .then((result) => {
-            console.log('✅ Webhook 處理完成');
-            res.json(result);
-        })
+        .then((result) => res.json(result))
         .catch((err) => {
-            console.error('❌ Webhook Error:', err);
+            console.error('Webhook Error:', err);
             res.status(500).end();
         });
 });
@@ -2919,7 +2883,7 @@ app.get('/api/export/attendance', async (req, res) => {
 // 新增學生（手動）
 app.post('/api/students', async (req, res) => {
     try {
-        const { studentId, name, classCode, lineId, phone, parentPhone, parentLineId } = req.body;
+        const { studentId, name, classCode, lineId, lineName, phone, parentPhone, parentLineId } = req.body;
         const sheet = await getOrCreateSheet('學生名單', ['學號', '姓名', '班級', 'LINE_ID', 'LINE名稱', '電話', '家長電話', '家長LINE_ID', '註冊時間']);
         
         // 檢查學號是否已存在
@@ -2934,7 +2898,7 @@ app.post('/api/students', async (req, res) => {
             '姓名': name,
             '班級': classCode,
             'LINE_ID': lineId || '',
-            'LINE名稱': '',
+            'LINE名稱': lineName || '',
             '電話': phone || '',
             '家長電話': parentPhone || '',
             '家長LINE_ID': parentLineId || '',
@@ -2951,7 +2915,7 @@ app.post('/api/students', async (req, res) => {
 app.put('/api/students/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, classCode, lineId, phone, parentPhone } = req.body;
+        const { name, classCode, lineId, lineName, phone, parentPhone } = req.body;
         const sheet = doc.sheetsByTitle['學生名單'];
         if (!sheet) return res.json({ success: false });
         
@@ -2962,6 +2926,7 @@ app.put('/api/students/:id', async (req, res) => {
         if (name) row.set('姓名', name);
         if (classCode) row.set('班級', classCode);
         if (lineId !== undefined) row.set('LINE_ID', lineId);
+        if (lineName !== undefined) row.set('LINE名稱', lineName);
         if (phone !== undefined) row.set('電話', phone);
         if (parentPhone !== undefined) row.set('家長電話', parentPhone);
         await row.save();
