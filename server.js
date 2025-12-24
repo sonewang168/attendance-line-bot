@@ -98,25 +98,11 @@ async function getOrCreateSheet(title, headers) {
  */
 async function getStudent(lineUserId) {
     try {
-        console.log("🔍 getStudent 查詢 LINE_ID：", lineUserId);
-        
         const sheet = await getOrCreateSheet('學生名單', [
             '學號', '姓名', '班級', 'LINE_ID', 'LINE名稱', '註冊時間', '狀態'
         ]);
         const rows = await sheet.getRows();
-        
-        // Debug: 列出所有學生的 LINE_ID
-        console.log("📋 學生名單中的 LINE_ID：", rows.map(r => r.get('LINE_ID')).filter(id => id));
-        
-        const student = rows.find(row => row.get('LINE_ID') === lineUserId);
-        
-        if (student) {
-            console.log("✅ 找到學生：", student.get('學號'), student.get('姓名'));
-        } else {
-            console.log("❌ 找不到匹配的 LINE_ID");
-        }
-        
-        return student;
+        return rows.find(row => row.get('LINE_ID') === lineUserId);
     } catch (error) {
         console.error('❌ getStudent 錯誤:', error);
         return null;
@@ -126,6 +112,10 @@ async function getStudent(lineUserId) {
 /**
  * 註冊學生
  */
+/**
+ * 註冊學生
+ * 支援「同一學號換手機/換 LINE」自動覆寫 LINE_ID
+ */
 async function registerStudent(lineUserId, lineName, studentId, studentName, className) {
     try {
         await doc.loadInfo();
@@ -133,16 +123,34 @@ async function registerStudent(lineUserId, lineName, studentId, studentName, cla
             '學號', '姓名', '班級', 'LINE_ID', 'LINE名稱', '註冊時間', '狀態'
         ]);
         
-        // 檢查學號是否已被使用
+        // 檢查學號是否已存在
         const rows = await sheet.getRows();
         const existing = rows.find(row => row.get('學號') === studentId);
+        
         if (existing) {
-            if (existing.get('LINE_ID') === lineUserId) {
+            const oldLineId = existing.get('LINE_ID') || '';
+            
+            // 1️⃣ 完全同一個 LINE 帳號：視為重複註冊
+            if (oldLineId === lineUserId) {
                 return { success: false, message: '您已經註冊過了！' };
             }
-            return { success: false, message: '此學號已被其他帳號綁定！' };
+            
+            // 2️⃣ 學號已存在但 LINE_ID 不同：視為「換手機 / 換 LINE 帳號」
+            existing.set('LINE_ID', lineUserId);
+            existing.set('LINE名稱', lineName);
+            existing.set('狀態', '正常');
+            existing.set('註冊時間', formatDateTime(new Date()));
+            await existing.save();
+            
+            console.log(`🔄 學號 ${studentId} 重新綁定 LINE_ID，舊=${oldLineId} 新=${lineUserId}`);
+            
+            return { 
+                success: true, 
+                message: '偵測到您使用新裝置，已為您更新綁定資料。' 
+            };
         }
         
+        // 3️⃣ 全新註冊
         await sheet.addRow({
             '學號': studentId,
             '姓名': studentName,
@@ -635,6 +643,7 @@ async function handleRegistrationFlow(event, userId, userName, text, state) {
  */
 async function handleDirectCheckin(event, userId, text) {
     const student = await getStudent(userId);
+    console.log('📲 直接簽到 - userId =', userId, ' student =', student ? student.get('學號') : '未找到');
     if (!student) {
         return replyText(event, '❌ 您尚未註冊！\n\n請先輸入「註冊」綁定學號。');
     }
@@ -710,14 +719,11 @@ async function handleDirectCheckin(event, userId, text) {
  * 需要 GPS 驗證
  */
 async function handleGPSCheckin(event, userId, text) {
-    console.log("🆔 GPS簽到 收到的 userId：", userId);
-    
     const student = await getStudent(userId);
+    console.log('📍 GPS 簽到 - userId =', userId, ' student =', student ? student.get('學號') : '未找到');
     if (!student) {
         return replyText(event, `❌ 找不到您的帳號！\n\n📱 收到的 ID：\n${userId}\n\n請輸入「我的ID」比對，或輸入「註冊」重新綁定。`);
     }
-    
-    console.log("✅ 找到學生：", student.get('學號'), student.get('姓名'));
     
     const parts = text.replace('GPS簽到:', '').split('|');
     if (parts.length < 2) {
@@ -2252,9 +2258,11 @@ app.get('/api/stats/consecutive-absent', async (req, res) => {
 
 // === 通知 API ===
 // 發送上課提醒（附帶簽到連結）
+// === 通知 API ===
+// 發送上課提醒（附帶簽到連結，含防重複機制）
 app.post('/api/notify/remind', async (req, res) => {
     try {
-        const { courseId, sessionId, message, force } = req.body;
+        const { courseId, sessionId, message } = req.body;
         const studentSheet = doc.sheetsByTitle['學生名單'];
         const courseSheet = doc.sheetsByTitle['課程列表'];
         
@@ -2268,90 +2276,111 @@ app.post('/api/notify/remind', async (req, res) => {
             return res.json({ success: false, message: '找不到課程' });
         }
         
-        // 檢查今天是否已發送過（避免重複發送）
-        const today = getTodayString();
-        const reminderSheet = await getOrCreateSheet('提醒紀錄', ['課程ID', '日期', '類型', '發送時間']);
-        const reminders = await reminderSheet.getRows();
-        const alreadySent = reminders.some(r => 
-            r.get('課程ID') === courseId && 
-            r.get('日期') === today && 
-            r.get('類型') === '手動提醒'
-        );
-        
-        // 如果已發送且沒有強制發送，返回警告
-        if (alreadySent && !force) {
-            return res.json({ 
-                success: false, 
-                alreadySent: true, 
-                message: '今天已發送過通知，確定要再次發送嗎？' 
-            });
-        }
-        
         const classCode = course.get('班級');
         const students = await studentSheet.getRows();
-        const classStudents = students.filter(s => (s.get('班級') || '').split(/[,、]/).map(c => c.trim()).includes(classCode) && s.get('LINE_ID'));
+        const classStudents = students.filter(s => 
+            (s.get('班級') || '')
+                .split(/[,、]/)
+                .map(c => c.trim())
+                .includes(classCode) && 
+            s.get('LINE_ID')
+        );
+        
+        // 讀取提醒紀錄，避免同一節課重複發送手動提醒
+        const reminderSheet = await getOrCreateSheet('提醒紀錄', [
+            '課程ID', '日期', '類型', '發送時間', '活動ID'
+        ]);
+        const reminders = await reminderSheet.getRows();
+        const today = getTodayString();
+        
+        if (sessionId) {
+            const alreadySent = reminders.some(r =>
+                r.get('課程ID') === courseId &&
+                r.get('日期') === today &&
+                (r.get('類型') === '手動上課提醒') &&
+                (r.get('活動ID') || '') === String(sessionId)
+            );
+            
+            if (alreadySent) {
+                console.log(`⛔ 手動提醒略過：課程 ${courseId} 活動 ${sessionId} 今日已發送過`);
+                return res.json({ 
+                    success: false, 
+                    message: '今日此節課已發送過簽到提醒，不再重複推播。' 
+                });
+            }
+        }
         
         // 建立簽到連結（學生使用 GPS 簽到）
         const botId = process.env.LINE_BOT_ID;
         const checkinCode = sessionId ? `GPS簽到:${courseId}|${sessionId}` : '';
-        const checkinUrl = checkinCode ? `https://line.me/R/oaMessage/${botId}/?${encodeURIComponent(checkinCode)}` : '';
+        const checkinUrl = checkinCode 
+            ? `https://line.me/R/oaMessage/${botId}/?${encodeURIComponent(checkinCode)}` 
+            : '';
         
-        console.log(`📢 手動發送通知: ${course.get('科目')}，學生數: ${classStudents.length}`);
+        let sent = 0;
         
         // 發送 LINE 通知
-        const notifications = [];
         for (const student of classStudents) {
             const lineId = student.get('LINE_ID');
-            if (lineId) {
-                try {
-                    // 如果有簽到連結，發送帶按鈕的訊息
-                    if (checkinUrl) {
-                        await lineClient.pushMessage(lineId, {
-                            type: 'template',
-                            altText: `📢 上課提醒 - ${course.get('科目')}`,
-                            template: {
-                                type: 'buttons',
-                                title: `📢 ${course.get('科目')} 上課提醒`,
-                                text: `⏰ ${course.get('上課時間')}\n📍 ${course.get('教室') || '教室'}\n\n請點擊下方按鈕簽到`,
-                                actions: [
-                                    {
-                                        type: 'uri',
-                                        label: '📱 點我簽到',
-                                        uri: checkinUrl
-                                    }
-                                ]
-                            }
-                        });
-                    } else {
-                        await lineClient.pushMessage(lineId, {
-                            type: 'text',
-                            text: message || `📢 上課提醒\n\n${course.get('科目')} 即將開始！\n⏰ ${course.get('上課時間')}\n📍 ${course.get('教室')}\n\n請準時出席！`
-                        });
-                    }
-                    notifications.push({ studentId: student.get('學號'), status: 'sent' });
-                } catch (e) {
-                    console.error(`發送失敗 ${student.get('學號')}:`, e.message);
-                    notifications.push({ studentId: student.get('學號'), status: 'failed', error: e.message });
+            if (!lineId) continue;
+            
+            try {
+                if (checkinUrl) {
+                    // 帶簽到按鈕
+                    await lineClient.pushMessage(lineId, {
+                        type: 'template',
+                        altText: `📢 上課提醒 - ${course.get('科目')}`,
+                        template: {
+                            type: 'buttons',
+                            title: `📢 ${course.get('科目')} 上課提醒`,
+                            text: `⏰ ${course.get('上課時間')}
+📍 ${course.get('教室') || '教室'}
+
+請點擊下方按鈕簽到`,
+                            actions: [
+                                {
+                                    type: 'uri',
+                                    label: '📱 點我簽到',
+                                    uri: checkinUrl
+                                }
+                            ]
+                        }
+                    });
+                } else {
+                    // 純文字提醒
+                    await lineClient.pushMessage(lineId, {
+                        type: 'text',
+                        text: message || 
+                            `📢 上課提醒
+
+${course.get('科目')} 即將開始！
+⏰ ${course.get('上課時間')}
+📍 ${course.get('教室') || '教室'}`
+                    });
                 }
+                sent++;
+            } catch (e) {
+                console.error(`發送提醒失敗 ${student.get('學號')}:`, e.message);
             }
         }
         
-        // 記錄發送紀錄（避免重複發送）
-        if (notifications.some(n => n.status === 'sent')) {
-            await reminderSheet.addRow({
-                '課程ID': courseId,
-                '日期': today,
-                '類型': '手動提醒',
-                '發送時間': new Date().toLocaleString('zh-TW')
-            });
-        }
+        // 寫入提醒紀錄
+        await reminderSheet.addRow({
+            '課程ID': courseId,
+            '日期': today,
+            '類型': '手動上課提醒',
+            '發送時間': formatDateTime(new Date()),
+            '活動ID': sessionId || ''
+        });
         
-        res.json({ success: true, sent: notifications.filter(n => n.status === 'sent').length, total: classStudents.length, details: notifications });
+        console.log(`✅ 手動上課提醒已發送：課程 ${courseId}，人數 ${sent}`);
+        return res.json({ success: true, sent });
     } catch (error) {
-        console.error('發送通知錯誤:', error);
-        res.status(500).json({ success: false, error: error.message });
+        console.error('手動上課提醒錯誤:', error);
+        return res.status(500).json({ success: false, message: error.message });
     }
 });
+
 
 // 發送缺席通知
 app.post('/api/notify/absent', async (req, res) => {
