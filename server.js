@@ -1640,6 +1640,10 @@ async function autoClassReminder() {
                     // 學生連結使用 GPS 簽到
                     const checkinUrl = `https://line.me/R/oaMessage/${botId}/?${encodeURIComponent(gpsCheckinCode)}`;
                     
+                    // 延遲函數
+                    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+                    let sentCount = 0;
+                    
                     for (const student of classStudents) {
                         try {
                             await lineClient.pushMessage(student.get('LINE_ID'), {
@@ -1658,12 +1662,18 @@ async function autoClassReminder() {
                                     ]
                                 }
                             });
+                            sentCount++;
+                            // 每則訊息間隔 200ms
+                            await delay(200);
                         } catch (e) {
                             console.error(`發送提醒失敗 ${student.get('學號')}:`, e.message);
+                            if (e.message.includes('429')) {
+                                await delay(2000);
+                            }
                         }
                     }
                     
-                    console.log(`✅ 已發送 ${classStudents.length} 則提醒`);
+                    console.log(`✅ 已發送 ${sentCount} 則提醒`);
                 }
                 
                 // 記錄已發送
@@ -2321,7 +2331,10 @@ app.post('/api/notify/remind', async (req, res) => {
         
         let sent = 0;
         
-        // 發送 LINE 通知
+        // 延遲函數（避免 LINE API 429 錯誤）
+        const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+        
+        // 發送 LINE 通知（每則間隔 200ms 避免速率限制）
         for (const student of classStudents) {
             const lineId = student.get('LINE_ID');
             if (!lineId) continue;
@@ -2361,8 +2374,16 @@ ${course.get('科目')} 即將開始！
                     });
                 }
                 sent++;
+                
+                // 每則訊息間隔 200ms，避免觸發速率限制
+                await delay(200);
             } catch (e) {
                 console.error(`發送提醒失敗 ${student.get('學號')}:`, e.message);
+                // 如果是 429 錯誤，等待更長時間
+                if (e.message.includes('429')) {
+                    console.log('⚠️ 速率限制，等待 2 秒...');
+                    await delay(2000);
+                }
             }
         }
         
