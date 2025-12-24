@@ -169,6 +169,7 @@
         <!-- Leaves -->
         <div class="page" id="page-leaves">
             <div class="header"><h1 class="page-title">請假管理</h1></div>
+            <button class="btn btn-primary btn-block" style="margin-bottom:15px" onclick="openModal('addLeave')">➕ 新增請假</button>
             <div class="tabs"><div class="tab active" onclick="filterLeaves('pending')">待審核</div><div class="tab" onclick="filterLeaves('approved')">已核准</div><div class="tab" onclick="filterLeaves('rejected')">已駁回</div><div class="tab" onclick="filterLeaves('all')">全部</div></div>
             <div id="leaves-list"></div>
         </div>
@@ -292,7 +293,7 @@
                 <div id="debug-result" style="margin-top:10px;padding:10px;background:#f5f5f5;border-radius:8px;font-size:12px;font-family:monospace;display:none"></div>
             </div>
             <div class="card"><div class="card-title">🔧 LINE Bot 設定</div>
-                <div class="form-group"><label class="form-label">LINE Bot ID</label><input type="text" class="form-input" id="bot-id" placeholder="@516bpeih"></div>
+                <div class="form-group"><label class="form-label">LINE Bot ID</label><input type="text" class="form-input" id="bot-id" placeholder="@yourBotId"></div>
                 <button class="btn btn-primary btn-block" onclick="saveBotId()">💾 儲存 Bot ID</button>
             </div>
         </div>
@@ -313,6 +314,8 @@
     <div class="modal-overlay" id="modal-editStudent"><div class="modal"><div class="modal-header"><h3 class="modal-title">編輯學生</h3><button class="modal-close" onclick="closeModal('editStudent')">&times;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">學號</label><input type="text" class="form-input" id="edit-student-id" readonly></div><div class="form-group"><label class="form-label">姓名</label><input type="text" class="form-input" id="edit-student-name"></div><div class="form-group"><label class="form-label">班級 (可多選)</label><select class="form-select" id="edit-student-class" multiple style="height:80px"></select></div><div class="form-group"><label class="form-label">LINE User ID</label><input type="text" class="form-input" id="edit-student-line-id"></div><div class="form-group"><label class="form-label">LINE 名稱</label><input type="text" class="form-input" id="edit-student-line-name"></div><div class="form-group"><label class="form-label">電話</label><input type="tel" class="form-input" id="edit-student-phone"></div><div class="form-group"><label class="form-label">家長電話</label><input type="tel" class="form-input" id="edit-student-parent-phone"></div></div><div class="modal-footer"><button class="btn btn-danger" onclick="deleteStudent()">🗑️ 刪除</button><button class="btn btn-primary" onclick="saveStudent()">💾 儲存</button></div></div></div>
 
     <div class="modal-overlay" id="modal-addRecord"><div class="modal"><div class="modal-header"><h3 class="modal-title">手動新增紀錄</h3><button class="modal-close" onclick="closeModal('addRecord')">&times;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">學號 *</label><input type="text" class="form-input" id="record-student"></div><div class="form-group"><label class="form-label">日期 *</label><input type="date" class="form-input" id="record-date"></div><div class="form-group"><label class="form-label">狀態</label><select class="form-select" id="record-status"><option value="已報到">已報到</option><option value="遲到">遲到</option><option value="缺席">缺席</option></select></div><div class="form-group"><label class="form-label">備註</label><input type="text" class="form-input" id="record-note"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('addRecord')">取消</button><button class="btn btn-primary" onclick="addRecord()">新增</button></div></div></div>
+
+    <div class="modal-overlay" id="modal-addLeave"><div class="modal"><div class="modal-header"><h3 class="modal-title">新增請假</h3><button class="modal-close" onclick="closeModal('addLeave')">&times;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">學號 *</label><input type="text" class="form-input" id="leave-student" placeholder="輸入學號"></div><div class="form-group"><label class="form-label">日期 *</label><input type="date" class="form-input" id="leave-date"></div><div class="form-group"><label class="form-label">節次 *</label><input type="text" class="form-input" id="leave-period" placeholder="例如：1 或 1-3 或 1,2,3"></div><div class="form-group"><label class="form-label">請假類型</label><select class="form-select" id="leave-type"><option value="事假">事假</option><option value="病假">病假</option><option value="公假">公假</option><option value="喪假">喪假</option><option value="其他">其他</option></select></div><div class="form-group"><label class="form-label">原因</label><textarea class="form-textarea" id="leave-reason" placeholder="請輸入請假原因"></textarea></div><div class="form-group"><label class="form-label">狀態</label><select class="form-select" id="leave-status"><option value="待審核">待審核</option><option value="已核准">已核准</option><option value="已駁回">已駁回</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('addLeave')">取消</button><button class="btn btn-primary" onclick="addLeave()">新增</button></div></div></div>
 
     <div class="modal-overlay" id="modal-reviewLeave"><div class="modal"><div class="modal-header"><h3 class="modal-title">審核請假</h3><button class="modal-close" onclick="closeModal('reviewLeave')">&times;</button></div><div class="modal-body"><div id="leave-detail"></div><div class="form-group"><label class="form-label">備註</label><textarea class="form-textarea" id="review-note"></textarea></div></div><div class="modal-footer"><button class="btn btn-danger" onclick="reviewLeave('已駁回')">❌ 駁回</button><button class="btn btn-success" onclick="reviewLeave('已核准')">✅ 核准</button></div></div></div>
 
@@ -1347,7 +1350,7 @@
             container.innerHTML = '';
             
             // 建立連結
-            const botId = BOT || '@516bpeih';
+            const botId = BOT || '';
             // 老師手機 QR Code（直接簽到）
             currentQRUrl = 'https://line.me/R/oaMessage/' + botId + '/?' + encodeURIComponent(directContent);
             // 學生連結（GPS 簽到）
@@ -1475,6 +1478,36 @@
             const note = document.getElementById('review-note').value.trim();
             const r = await api('/api/leaves/' + currentLeave.id, { method: 'PUT', body: JSON.stringify({ status, note }) });
             if (r?.success) { toast(status === '已核准' ? '已核准！' : '已駁回！'); closeModal('reviewLeave'); loadLeaves(); }
+        }
+        async function addLeave() {
+            const studentId = document.getElementById('leave-student').value.trim();
+            const date = document.getElementById('leave-date').value;
+            const period = document.getElementById('leave-period').value.trim();
+            const type = document.getElementById('leave-type').value;
+            const reason = document.getElementById('leave-reason').value.trim();
+            const status = document.getElementById('leave-status').value;
+            
+            if (!studentId || !date || !period) {
+                toast('請填寫必填欄位！', 'error');
+                return;
+            }
+            
+            const r = await api('/api/leaves', { 
+                method: 'POST', 
+                body: JSON.stringify({ studentId, date, periods: period, type, reason, status }) 
+            });
+            
+            if (r?.success) {
+                toast('請假新增成功！');
+                closeModal('addLeave');
+                document.getElementById('leave-student').value = '';
+                document.getElementById('leave-date').value = '';
+                document.getElementById('leave-period').value = '';
+                document.getElementById('leave-reason').value = '';
+                loadLeaves();
+            } else {
+                toast(r?.message || '新增失敗', 'error');
+            }
         }
 
         // === 出缺紀錄 ===
