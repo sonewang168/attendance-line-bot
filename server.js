@@ -412,9 +412,18 @@ async function handleEvent(event) {
             return handleCheckinRequest(event, userId, text);
         }
         
-        // 檢查用戶狀態（是否在註冊流程中）
+        // 檢查用戶狀態（是否在流程中）
         const state = userStates.get(userId);
         if (state) {
+            // 處理加入班級流程
+            if (state.step === 'addNewClass') {
+                return handleAddNewClass(event, userId, text, state);
+            }
+            // 處理退出班級流程
+            if (state.step === 'removeClass') {
+                return handleRemoveClass(event, userId, text, state);
+            }
+            // 處理註冊流程
             return handleRegistrationFlow(event, userId, userName, text, state);
         }
         
@@ -534,15 +543,6 @@ async function handleCommand(event, userId, userName, text) {
             return replyHelp(event);
         
         default:
-            // 檢查是否在流程中
-            const currentState = userStates.get(userId);
-            if (currentState && currentState.step === 'addNewClass') {
-                return handleAddNewClass(event, userId, text, currentState);
-            }
-            if (currentState && currentState.step === 'removeClass') {
-                return handleRemoveClass(event, userId, text, currentState);
-            }
-            
             if (!student) {
                 return replyText(event, `👋 歡迎 ${userName}！\n\n您尚未註冊，請輸入「註冊」綁定學號後才能使用簽到功能。\n\n輸入「說明」查看更多指令。`);
             }
