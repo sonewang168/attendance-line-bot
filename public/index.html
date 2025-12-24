@@ -18,7 +18,7 @@
         .nav-menu{list-style:none;padding:10px}.nav-section{padding:15px 15px 8px;font-size:11px;text-transform:uppercase;opacity:.6;letter-spacing:1px}
         .nav-link{display:flex;align-items:center;gap:12px;padding:14px 15px;color:rgba(255,255,255,.8);text-decoration:none;border-radius:12px;margin-bottom:4px;transition:.3s;font-size:15px}.nav-link:hover,.nav-link.active{background:rgba(255,255,255,.2);color:#fff}
         .nav-badge{background:var(--danger);color:#fff;font-size:11px;padding:2px 8px;border-radius:10px;margin-left:auto}
-        .main{padding:70px 15px 20px}.header{margin-bottom:20px}.page-title{font-size:24px;font-weight:700;margin-bottom:5px}.page-subtitle{font-size:14px;color:var(--text-light);margin-bottom:15px}
+        .main{padding:70px 15px 20px}.header{margin-bottom:20px;display:flex;align-items:center}.page-title{font-size:24px;font-weight:700;margin-bottom:5px}.page-subtitle{font-size:14px;color:var(--text-light);margin-bottom:15px}
         .stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px}
         .stat-card{background:var(--card);border-radius:16px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.05);position:relative;overflow:hidden}
         .stat-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%}.stat-card.primary::before{background:var(--primary)}.stat-card.success::before{background:var(--success)}.stat-card.warning::before{background:var(--warning)}.stat-card.danger::before{background:var(--danger)}
@@ -168,7 +168,7 @@
         </div>
         <!-- Leaves -->
         <div class="page" id="page-leaves">
-            <div class="header"><h1 class="page-title">請假管理</h1></div>
+            <div class="header"><h1 class="page-title">請假管理</h1><button class="btn btn-outline btn-sm" onclick="loadLeaves()" style="margin-left:auto">🔄 刷新</button></div>
             <button class="btn btn-primary btn-block" style="margin-bottom:15px" onclick="openModal('addLeave')">➕ 新增請假</button>
             <div class="tabs"><div class="tab active" onclick="filterLeaves('pending')">待審核</div><div class="tab" onclick="filterLeaves('approved')">已核准</div><div class="tab" onclick="filterLeaves('rejected')">已駁回</div><div class="tab" onclick="filterLeaves('all')">全部</div></div>
             <div id="leaves-list"></div>
@@ -329,6 +329,7 @@
         let classes = [], courses = [], students = [], leaves = [];
         let currentClass = null, currentCourse = null, currentStudent = null, currentLeave = null;
         let leaveFilter = 'pending';
+        let currentPage = 'dashboard';
         
         const PERIODS = {
             day: [{n:1,s:'08:00',e:'08:50'},{n:2,s:'09:00',e:'09:50'},{n:3,s:'10:00',e:'10:50'},{n:4,s:'11:00',e:'11:50'},{n:5,s:'13:00',e:'13:50'},{n:6,s:'14:00',e:'14:50'},{n:7,s:'15:00',e:'15:50'},{n:8,s:'16:00',e:'17:00'}],
@@ -1716,6 +1717,7 @@
 
         // === 頁面載入 ===
         function loadPage(page) {
+            currentPage = page;
             if (page === 'dashboard') loadDashboard();
             if (page === 'semester') { initSemesterUI(); }
             if (page === 'schedule') { renderScheduleGrid(); renderCourses(); }
@@ -1758,6 +1760,20 @@
             if (API) {
                 loadAll();
                 loadReminderSettings();
+                
+                // 每 30 秒自動刷新請假列表（同步學生 LINE Bot 請假）
+                setInterval(() => {
+                    if (currentPage === 'leaves') {
+                        loadLeaves();
+                    }
+                }, 30000);
+                
+                // 每 60 秒刷新儀表板
+                setInterval(() => {
+                    if (currentPage === 'dashboard') {
+                        loadDashboard();
+                    }
+                }, 60000);
             }
         }
         init();
