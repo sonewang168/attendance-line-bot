@@ -556,6 +556,9 @@ async function handleEvent(event) {
             if (state.step === 'removeClass') {
                 return handleRemoveClass(event, userId, text, state);
             }
+            if (state.flow === 'leave') {
+                return handleLeaveFlow(event, userId, text, state);
+            }
             return handleRegistrationFlow(event, userId, userName, text, state);
         }
         
@@ -673,6 +676,14 @@ async function handleCommand(event, userId, userName, text) {
         case 'help':
             return replyHelp(event);
         
+        case '請假':
+        case '申請請假':
+            if (!student) {
+                return replyText(event, '❌ 您尚未註冊！\n\n請輸入「註冊」開始綁定學號。');
+            }
+            userStates.set(userId, { step: 'leaveDate', flow: 'leave' });
+            return replyText(event, '📋 請假申請\n\n請輸入請假日期\n格式：YYYY-MM-DD\n例如：2025-01-02');
+        
         case '我的ID':
         case 'myid':
             // 除錯用：顯示用戶的 LINE ID
@@ -683,7 +694,7 @@ async function handleCommand(event, userId, userName, text) {
             if (!student) {
                 return replyText(event, `👋 歡迎 ${userName}！\n\n您尚未註冊，請輸入「註冊」綁定學號後才能使用簽到功能。\n\n輸入「說明」查看更多指令。`);
             }
-            return replyText(event, `👋 ${student.get('姓名')} 同學您好！\n\n📌 可用指令：\n• 我的資料\n• 我的班級\n• 出席紀錄\n• 全部紀錄\n• 加入班級\n• 退出班級\n• 說明\n\n📍 簽到請掃描教師提供的 QR Code`);
+            return replyText(event, `👋 ${student.get('姓名')} 同學您好！\n\n📌 可用指令：\n• 我的資料\n• 我的班級\n• 出席紀錄\n• 全部紀錄\n• 請假\n• 加入班級\n• 退出班級\n• 說明\n\n📍 簽到請掃描教師提供的 QR Code`);
     }
 }
 
@@ -727,6 +738,74 @@ async function handleRegistrationFlow(event, userId, userName, text, state) {
                 return replyText(event, `🎉 註冊成功！\n\n📋 您的資料：\n學號：${state.studentId}\n姓名：${state.studentName}\n班級：${text}\n\n現在可以使用簽到功能了！`);
             }
             return replyText(event, `❌ ${result.message}`);
+    }
+}
+
+/**
+ * 處理請假流程
+ */
+async function handleLeaveFlow(event, userId, text, state) {
+    const student = await getStudent(userId);
+    if (!student) {
+        userStates.delete(userId);
+        return replyText(event, '❌ 您尚未註冊！\n\n請輸入「註冊」開始綁定學號。');
+    }
+    
+    // 取消請假
+    if (text === '取消' || text === '取消請假') {
+        userStates.delete(userId);
+        return replyText(event, '❌ 已取消請假申請。');
+    }
+    
+    switch(state.step) {
+        case 'leaveDate':
+            // 驗證日期格式
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+                return replyText(event, '❌ 日期格式不正確！\n\n請輸入：YYYY-MM-DD\n例如：2025-01-02\n\n輸入「取消」取消請假');
+            }
+            userStates.set(userId, { ...state, step: 'leavePeriod', leaveDate: text });
+            return replyText(event, `日期：${text} ✓\n\n請輸入請假節次\n例如：1 或 1-3 或 1,2,3\n\n輸入「取消」取消請假`);
+        
+        case 'leavePeriod':
+            userStates.set(userId, { ...state, step: 'leaveType', leavePeriod: text });
+            return replyText(event, `節次：${text} ✓\n\n請選擇請假類型\n輸入數字：\n1. 事假\n2. 病假\n3. 公假\n4. 喪假\n5. 其他\n\n輸入「取消」取消請假`);
+        
+        case 'leaveType':
+            const types = { '1': '事假', '2': '病假', '3': '公假', '4': '喪假', '5': '其他' };
+            const leaveType = types[text] || text;
+            userStates.set(userId, { ...state, step: 'leaveReason', leaveType: leaveType });
+            return replyText(event, `類型：${leaveType} ✓\n\n請輸入請假原因：\n\n輸入「取消」取消請假`);
+        
+        case 'leaveReason':
+            // 提交請假申請
+            try {
+                const sheet = await getOrCreateSheet('請假紀錄', [
+                    '請假ID', '學號', '姓名', '班級', '日期', '節次', '請假類型', '原因', '狀態', '申請時間', '審核時間', '審核備註'
+                ]);
+                
+                const leaveId = 'L' + Date.now();
+                await sheet.addRow({
+                    '請假ID': leaveId,
+                    '學號': student.get('學號'),
+                    '姓名': student.get('姓名'),
+                    '班級': student.get('班級'),
+                    '日期': state.leaveDate,
+                    '節次': state.leavePeriod,
+                    '請假類型': state.leaveType,
+                    '原因': text,
+                    '狀態': '待審核',
+                    '申請時間': new Date().toLocaleString('zh-TW'),
+                    '審核時間': '',
+                    '審核備註': ''
+                });
+                
+                userStates.delete(userId);
+                return replyText(event, `✅ 請假申請已送出！\n\n📋 申請內容：\n日期：${state.leaveDate}\n節次：${state.leavePeriod}\n類型：${state.leaveType}\n原因：${text}\n\n請等待老師審核。`);
+            } catch (e) {
+                console.error('請假申請失敗:', e);
+                userStates.delete(userId);
+                return replyText(event, '❌ 請假申請失敗，請稍後再試。');
+            }
     }
 }
 
@@ -1275,6 +1354,7 @@ function replyHelp(event) {
         `• 註冊 - 綁定學號\n` +
         `• 我的資料 - 查看個人資訊\n` +
         `• 出席紀錄 - 最近簽到記錄\n` +
+        `• 請假 - 線上請假申請\n` +
         `• 解除綁定 - 解除 LINE 綁定\n\n` +
         `【班級管理】\n` +
         `• 我的班級 - 查看班級詳細資料\n` +
@@ -2809,10 +2889,10 @@ app.get('/api/leaves', async (req, res) => {
     }
 });
 
-// 學生申請請假
+// 學生申請請假 / 手動新增請假
 app.post('/api/leaves', async (req, res) => {
     try {
-        const { studentId, date, periods, type, reason } = req.body;
+        const { studentId, date, periods, type, reason, status } = req.body;
         const sheet = await getOrCreateSheet('請假紀錄', ['請假ID', '學號', '姓名', '班級', '日期', '節次', '請假類型', '原因', '狀態', '申請時間', '審核時間', '審核備註']);
         const studentSheet = doc.sheetsByTitle['學生名單'];
         
@@ -2823,6 +2903,9 @@ app.post('/api/leaves', async (req, res) => {
         if (!student) return res.json({ success: false, message: '學生不存在' });
         
         const leaveId = 'L' + Date.now();
+        const leaveStatus = status || '待審核';
+        const now = new Date().toLocaleString('zh-TW');
+        
         await sheet.addRow({
             '請假ID': leaveId,
             '學號': studentId,
@@ -2832,9 +2915,9 @@ app.post('/api/leaves', async (req, res) => {
             '節次': periods,
             '請假類型': type || '事假',
             '原因': reason || '',
-            '狀態': '待審核',
-            '申請時間': new Date().toLocaleString('zh-TW'),
-            '審核時間': '',
+            '狀態': leaveStatus,
+            '申請時間': now,
+            '審核時間': leaveStatus !== '待審核' ? now : '',
             '審核備註': ''
         });
         
