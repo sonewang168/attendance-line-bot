@@ -98,11 +98,25 @@ async function getOrCreateSheet(title, headers) {
  */
 async function getStudent(lineUserId) {
     try {
+        console.log("🔍 getStudent 查詢 LINE_ID：", lineUserId);
+        
         const sheet = await getOrCreateSheet('學生名單', [
             '學號', '姓名', '班級', 'LINE_ID', 'LINE名稱', '註冊時間', '狀態'
         ]);
         const rows = await sheet.getRows();
-        return rows.find(row => row.get('LINE_ID') === lineUserId);
+        
+        // Debug: 列出所有學生的 LINE_ID
+        console.log("📋 學生名單中的 LINE_ID：", rows.map(r => r.get('LINE_ID')).filter(id => id));
+        
+        const student = rows.find(row => row.get('LINE_ID') === lineUserId);
+        
+        if (student) {
+            console.log("✅ 找到學生：", student.get('學號'), student.get('姓名'));
+        } else {
+            console.log("❌ 找不到匹配的 LINE_ID");
+        }
+        
+        return student;
     } catch (error) {
         console.error('❌ getStudent 錯誤:', error);
         return null;
@@ -696,10 +710,14 @@ async function handleDirectCheckin(event, userId, text) {
  * 需要 GPS 驗證
  */
 async function handleGPSCheckin(event, userId, text) {
+    console.log("🆔 GPS簽到 收到的 userId：", userId);
+    
     const student = await getStudent(userId);
     if (!student) {
         return replyText(event, `❌ 找不到您的帳號！\n\n📱 收到的 ID：\n${userId}\n\n請輸入「我的ID」比對，或輸入「註冊」重新綁定。`);
     }
+    
+    console.log("✅ 找到學生：", student.get('學號'), student.get('姓名'));
     
     const parts = text.replace('GPS簽到:', '').split('|');
     if (parts.length < 2) {
@@ -2236,7 +2254,7 @@ app.get('/api/stats/consecutive-absent', async (req, res) => {
 // 發送上課提醒（附帶簽到連結）
 app.post('/api/notify/remind', async (req, res) => {
     try {
-        const { courseId, sessionId, message } = req.body;
+        const { courseId, sessionId, message, force } = req.body;
         const studentSheet = doc.sheetsByTitle['學生名單'];
         const courseSheet = doc.sheetsByTitle['課程列表'];
         
@@ -2250,6 +2268,25 @@ app.post('/api/notify/remind', async (req, res) => {
             return res.json({ success: false, message: '找不到課程' });
         }
         
+        // 檢查今天是否已發送過（避免重複發送）
+        const today = getTodayString();
+        const reminderSheet = await getOrCreateSheet('提醒紀錄', ['課程ID', '日期', '類型', '發送時間']);
+        const reminders = await reminderSheet.getRows();
+        const alreadySent = reminders.some(r => 
+            r.get('課程ID') === courseId && 
+            r.get('日期') === today && 
+            r.get('類型') === '手動提醒'
+        );
+        
+        // 如果已發送且沒有強制發送，返回警告
+        if (alreadySent && !force) {
+            return res.json({ 
+                success: false, 
+                alreadySent: true, 
+                message: '今天已發送過通知，確定要再次發送嗎？' 
+            });
+        }
+        
         const classCode = course.get('班級');
         const students = await studentSheet.getRows();
         const classStudents = students.filter(s => (s.get('班級') || '').split(/[,、]/).map(c => c.trim()).includes(classCode) && s.get('LINE_ID'));
@@ -2258,6 +2295,8 @@ app.post('/api/notify/remind', async (req, res) => {
         const botId = process.env.LINE_BOT_ID;
         const checkinCode = sessionId ? `GPS簽到:${courseId}|${sessionId}` : '';
         const checkinUrl = checkinCode ? `https://line.me/R/oaMessage/${botId}/?${encodeURIComponent(checkinCode)}` : '';
+        
+        console.log(`📢 手動發送通知: ${course.get('科目')}，學生數: ${classStudents.length}`);
         
         // 發送 LINE 通知
         const notifications = [];
@@ -2291,13 +2330,25 @@ app.post('/api/notify/remind', async (req, res) => {
                     }
                     notifications.push({ studentId: student.get('學號'), status: 'sent' });
                 } catch (e) {
+                    console.error(`發送失敗 ${student.get('學號')}:`, e.message);
                     notifications.push({ studentId: student.get('學號'), status: 'failed', error: e.message });
                 }
             }
         }
         
+        // 記錄發送紀錄（避免重複發送）
+        if (notifications.some(n => n.status === 'sent')) {
+            await reminderSheet.addRow({
+                '課程ID': courseId,
+                '日期': today,
+                '類型': '手動提醒',
+                '發送時間': new Date().toLocaleString('zh-TW')
+            });
+        }
+        
         res.json({ success: true, sent: notifications.filter(n => n.status === 'sent').length, total: classStudents.length, details: notifications });
     } catch (error) {
+        console.error('發送通知錯誤:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
