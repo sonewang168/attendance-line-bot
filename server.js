@@ -113,6 +113,37 @@ async function getStudent(lineUserId) {
  * 註冊學生
  */
 /**
+ * 更新班級人數（同步到 Google Sheets）
+ */
+async function updateClassCount(classCode) {
+    try {
+        const classSheet = doc.sheetsByTitle['班級列表'];
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        
+        if (!classSheet || !studentSheet) return;
+        
+        const students = await studentSheet.getRows();
+        const classRows = await classSheet.getRows();
+        
+        // 計算該班級人數（支援多班級分隔符）
+        const count = students.filter(s => {
+            const classStr = s.get('班級') || '';
+            return classStr.split(/[,、/]/).map(c => c.trim()).includes(classCode);
+        }).length;
+        
+        // 更新班級列表
+        const classRow = classRows.find(r => r.get('班級代碼') === classCode);
+        if (classRow) {
+            classRow.set('人數', count);
+            await classRow.save();
+            console.log(`📊 更新班級 ${classCode} 人數: ${count}`);
+        }
+    } catch (e) {
+        console.error('更新班級人數失敗:', e.message);
+    }
+}
+
+/**
  * 註冊學生
  * 支援「同一學號換手機/換 LINE」自動覆寫 LINE_ID
  */
@@ -160,6 +191,12 @@ async function registerStudent(lineUserId, lineName, studentId, studentName, cla
             '註冊時間': formatDateTime(new Date()),
             '狀態': '正常'
         });
+        
+        // 更新班級人數（支援多班級）
+        const classCodes = className.split(/[,、/]/).map(c => c.trim()).filter(c => c);
+        for (const code of classCodes) {
+            await updateClassCount(code);
+        }
         
         return { success: true, message: '註冊成功！' };
     } catch (error) {
