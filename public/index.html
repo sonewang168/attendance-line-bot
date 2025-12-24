@@ -1314,6 +1314,23 @@
             
             if (r?.success) {
                 toast('已發送 ' + r.sent + ' 則通知！');
+            } else if (r?.alreadySent) {
+                // 今天已發送過，詢問是否再次發送
+                if (confirm('今天已發送過通知，確定要再次發送嗎？')) {
+                    const r2 = await api('/api/notify/remind', { 
+                        method: 'POST', 
+                        body: JSON.stringify({ 
+                            courseId: courseId, 
+                            sessionId: currentSessionId,
+                            force: true
+                        }) 
+                    });
+                    if (r2?.success) {
+                        toast('已發送 ' + r2.sent + ' 則通知！');
+                    } else {
+                        toast(r2?.message || '發送失敗', 'danger');
+                    }
+                }
             } else {
                 toast(r?.message || '發送失敗', 'danger');
             }
@@ -1406,6 +1423,22 @@
             
             if (r?.success) {
                 toast('已發送 ' + r.sent + ' 則通知！');
+            } else if (r?.alreadySent) {
+                if (confirm('今天已發送過通知，確定要再次發送嗎？')) {
+                    const r2 = await api('/api/notify/remind', { 
+                        method: 'POST', 
+                        body: JSON.stringify({ 
+                            courseId: currentSessionCourseId, 
+                            sessionId: currentSessionId,
+                            force: true
+                        }) 
+                    });
+                    if (r2?.success) {
+                        toast('已發送 ' + r2.sent + ' 則通知！');
+                    } else {
+                        toast(r2?.message || '發送失敗', 'danger');
+                    }
+                }
             } else {
                 toast(r?.message || '發送失敗', 'danger');
             }
