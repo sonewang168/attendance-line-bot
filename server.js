@@ -566,6 +566,12 @@ async function handleCommand(event, userId, userName, text) {
         case 'help':
             return replyHelp(event);
         
+        case '我的ID':
+        case 'myid':
+            // 除錯用：顯示用戶的 LINE ID
+            const storedLineId = student ? student.get('LINE_ID') : '未註冊';
+            return replyText(event, `🔍 LINE ID 資訊\n\n📱 您目前的 ID：\n${userId}\n\n📋 試算表中的 ID：\n${storedLineId}\n\n${userId === storedLineId ? '✅ ID 一致' : '❌ ID 不一致！'}`);
+        
         default:
             if (!student) {
                 return replyText(event, `👋 歡迎 ${userName}！\n\n您尚未註冊，請輸入「註冊」綁定學號後才能使用簽到功能。\n\n輸入「說明」查看更多指令。`);
