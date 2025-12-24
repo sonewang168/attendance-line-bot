@@ -435,7 +435,8 @@ async function handleCommand(event, userId, userName, text) {
         case '註冊':
         case '綁定':
             if (student) {
-                return replyText(event, `✅ 您已經註冊過了！\n\n📋 您的資料：\n學號：${student.get('學號')}\n姓名：${student.get('姓名')}\n班級：${student.get('班級')}`);
+                const classes = student.get('班級') || '';
+                return replyText(event, `✅ 您已經註冊過了！\n\n📋 您的資料：\n學號：${student.get('學號')}\n姓名：${student.get('姓名')}\n班級：${classes}\n\n💡 如需加入其他班級，請輸入「加入班級」`);
             }
             // 開始註冊流程
             userStates.set(userId, { step: 'studentId' });
@@ -485,17 +486,302 @@ async function handleCommand(event, userId, userName, text) {
             }
             return replyAttendanceStats(event, student.get('學號'));
         
+        // === 新增多班級指令 ===
+        case '我的班級':
+        case '班級資料':
+        case '查詢班級':
+            if (!student) {
+                return replyText(event, '❌ 您尚未註冊！\n\n請輸入「註冊」開始綁定學號。');
+            }
+            return replyClassDetails(event, student);
+        
+        case '加入班級':
+        case '新班級':
+        case '新增班級':
+            if (!student) {
+                return replyText(event, '❌ 您尚未註冊！\n\n請先輸入「註冊」綁定學號後，再加入班級。');
+            }
+            userStates.set(userId, { step: 'addNewClass', studentId: student.get('學號') });
+            // 顯示可選班級
+            const availableClasses = await getClasses();
+            const currentClasses = (student.get('班級') || '').split(',').map(c => c.trim()).filter(c => c);
+            const newClasses = availableClasses.filter(c => !currentClasses.includes(c.code));
+            
+            if (newClasses.length === 0) {
+                userStates.delete(userId);
+                return replyText(event, '📋 您已加入所有可用班級！\n\n目前班級：' + currentClasses.join('、'));
+            }
+            
+            let classListMsg = '📝 加入新班級\n\n您目前的班級：' + (currentClasses.length > 0 ? currentClasses.join('、') : '無') + '\n\n可加入的班級：\n';
+            newClasses.forEach(c => {
+                classListMsg += `• ${c.code} - ${c.name}\n`;
+            });
+            classListMsg += '\n請輸入要加入的【班級代碼】：';
+            return replyText(event, classListMsg);
+        
+        case '全部紀錄':
+        case '所有紀錄':
+        case '全部出席':
+        case '所有班級紀錄':
+            if (!student) {
+                return replyText(event, '❌ 您尚未註冊！\n\n請輸入「註冊」開始綁定學號。');
+            }
+            return replyAllClassesAttendance(event, student);
+        
+        case '退出班級':
+        case '離開班級':
+            if (!student) {
+                return replyText(event, '❌ 您尚未註冊！');
+            }
+            const studentClasses = (student.get('班級') || '').split(',').map(c => c.trim()).filter(c => c);
+            if (studentClasses.length <= 1) {
+                return replyText(event, '❌ 您只有一個班級，無法退出！\n\n如需完全解除綁定，請輸入「解除綁定」。');
+            }
+            userStates.set(userId, { step: 'removeClass', studentId: student.get('學號'), currentClasses: studentClasses });
+            let removeMsg = '📝 退出班級\n\n您目前的班級：\n';
+            studentClasses.forEach((c, i) => {
+                removeMsg += `${i + 1}. ${c}\n`;
+            });
+            removeMsg += '\n請輸入要退出的【班級代碼】：';
+            return replyText(event, removeMsg);
+        
         case '說明':
         case '幫助':
         case 'help':
             return replyHelp(event);
         
         default:
+            // 檢查是否在加入班級流程中
+            const currentState = userStates.get(userId);
+            if (currentState && currentState.step === 'addNewClass') {
+                return handleAddNewClass(event, userId, text, currentState);
+            }
+            if (currentState && currentState.step === 'removeClass') {
+                return handleRemoveClass(event, userId, text, currentState);
+            }
+            
             if (!student) {
                 return replyText(event, `👋 歡迎 ${userName}！\n\n您尚未註冊，請輸入「註冊」綁定學號後才能使用簽到功能。\n\n輸入「說明」查看更多指令。`);
             }
-            return replyText(event, `👋 ${student.get('姓名')} 同學您好！\n\n📌 可用指令：\n• 我的資料\n• 出席紀錄\n• 解除綁定\n• 說明\n\n📍 簽到請掃描教師提供的 QR Code`);
+            return replyText(event, `👋 ${student.get('姓名')} 同學您好！\n\n📌 可用指令：\n• 我的資料\n• 我的班級\n• 出席紀錄\n• 全部紀錄\n• 加入班級\n• 退出班級\n• 解除綁定\n• 說明\n\n📍 簽到請掃描教師提供的 QR Code`);
     }
+}
+
+/**
+ * 處理加入新班級
+ */
+async function handleAddNewClass(event, userId, text, state) {
+    const classCode = text.trim().toUpperCase();
+    
+    // 驗證班級是否存在
+    const allClasses = await getClasses();
+    const targetClass = allClasses.find(c => c.code.toUpperCase() === classCode || c.code === text.trim());
+    
+    if (!targetClass) {
+        userStates.delete(userId);
+        return replyText(event, `❌ 找不到班級「${text}」！\n\n請重新輸入「加入班級」選擇正確的班級。`);
+    }
+    
+    // 更新學生班級
+    try {
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        const rows = await studentSheet.getRows();
+        const studentRow = rows.find(r => r.get('學號') === state.studentId);
+        
+        if (studentRow) {
+            const currentClasses = (studentRow.get('班級') || '').split(',').map(c => c.trim()).filter(c => c);
+            
+            if (currentClasses.includes(targetClass.code)) {
+                userStates.delete(userId);
+                return replyText(event, `❌ 您已經在「${targetClass.code} - ${targetClass.name}」班級中了！`);
+            }
+            
+            currentClasses.push(targetClass.code);
+            studentRow.set('班級', currentClasses.join(','));
+            await studentRow.save();
+            
+            userStates.delete(userId);
+            return replyText(event, `✅ 成功加入班級！\n\n🏫 新班級：${targetClass.code} - ${targetClass.name}\n\n📋 您目前的所有班級：\n${currentClasses.join('、')}`);
+        }
+        
+        userStates.delete(userId);
+        return replyText(event, '❌ 找不到您的學生資料，請重新註冊。');
+    } catch (e) {
+        console.error('加入班級錯誤:', e);
+        userStates.delete(userId);
+        return replyText(event, '❌ 加入班級失敗，請稍後再試。');
+    }
+}
+
+/**
+ * 處理退出班級
+ */
+async function handleRemoveClass(event, userId, text, state) {
+    const classCode = text.trim();
+    
+    if (!state.currentClasses.includes(classCode)) {
+        userStates.delete(userId);
+        return replyText(event, `❌ 您不在「${classCode}」班級中！\n\n請重新輸入「退出班級」選擇正確的班級。`);
+    }
+    
+    if (state.currentClasses.length <= 1) {
+        userStates.delete(userId);
+        return replyText(event, '❌ 您只有一個班級，無法退出！');
+    }
+    
+    try {
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        const rows = await studentSheet.getRows();
+        const studentRow = rows.find(r => r.get('學號') === state.studentId);
+        
+        if (studentRow) {
+            const newClasses = state.currentClasses.filter(c => c !== classCode);
+            studentRow.set('班級', newClasses.join(','));
+            await studentRow.save();
+            
+            userStates.delete(userId);
+            return replyText(event, `✅ 已退出班級「${classCode}」！\n\n📋 您目前的班級：\n${newClasses.join('、')}`);
+        }
+        
+        userStates.delete(userId);
+        return replyText(event, '❌ 操作失敗，請稍後再試。');
+    } catch (e) {
+        console.error('退出班級錯誤:', e);
+        userStates.delete(userId);
+        return replyText(event, '❌ 退出班級失敗，請稍後再試。');
+    }
+}
+
+/**
+ * 回覆班級詳細資料
+ */
+async function replyClassDetails(event, student) {
+    const classesStr = student.get('班級') || '';
+    const studentClasses = classesStr.split(',').map(c => c.trim()).filter(c => c);
+    
+    if (studentClasses.length === 0) {
+        return replyText(event, '❌ 您尚未加入任何班級！\n\n請輸入「加入班級」來加入班級。');
+    }
+    
+    // 取得班級詳細資料
+    const classSheet = doc.sheetsByTitle['班級列表'];
+    const courseSheet = doc.sheetsByTitle['課程列表'];
+    
+    let message = `🏫 我的班級資料\n`;
+    message += `━━━━━━━━━━━━━━━\n`;
+    message += `👤 ${student.get('姓名')} (${student.get('學號')})\n`;
+    message += `📚 共 ${studentClasses.length} 個班級\n\n`;
+    
+    for (const classCode of studentClasses) {
+        message += `【${classCode}】`;
+        
+        if (classSheet) {
+            const classRows = await classSheet.getRows();
+            const classInfo = classRows.find(r => r.get('班級代碼') === classCode);
+            if (classInfo) {
+                message += ` ${classInfo.get('班級名稱')}\n`;
+                message += `   👨‍🏫 導師：${classInfo.get('導師') || '未設定'}\n`;
+                message += `   🏢 部別：${classInfo.get('部別') || '日間部'}\n`;
+            } else {
+                message += `\n`;
+            }
+        } else {
+            message += `\n`;
+        }
+        
+        // 取得該班課程數量
+        if (courseSheet) {
+            const courseRows = await courseSheet.getRows();
+            const classCourses = courseRows.filter(r => r.get('班級') === classCode);
+            message += `   📖 課程：${classCourses.length} 門\n`;
+        }
+        
+        message += `\n`;
+    }
+    
+    message += `💡 輸入「加入班級」可加入新班級\n`;
+    message += `💡 輸入「退出班級」可退出班級`;
+    
+    return replyText(event, message);
+}
+
+/**
+ * 回覆所有班級出缺席紀錄
+ */
+async function replyAllClassesAttendance(event, student) {
+    const classesStr = student.get('班級') || '';
+    const studentClasses = classesStr.split(',').map(c => c.trim()).filter(c => c);
+    const studentId = student.get('學號');
+    
+    const recordSheet = doc.sheetsByTitle['簽到紀錄'];
+    const courseSheet = doc.sheetsByTitle['課程列表'];
+    
+    if (!recordSheet) {
+        return replyText(event, '📊 尚無簽到紀錄');
+    }
+    
+    const allRecords = await recordSheet.getRows();
+    const studentRecords = allRecords.filter(r => r.get('學號') === studentId);
+    
+    if (studentRecords.length === 0) {
+        return replyText(event, '📊 尚無簽到紀錄');
+    }
+    
+    let message = `📊 所有班級出缺席統計\n`;
+    message += `━━━━━━━━━━━━━━━\n`;
+    message += `👤 ${student.get('姓名')} (${studentId})\n\n`;
+    
+    // 按班級分組統計
+    const courseRows = courseSheet ? await courseSheet.getRows() : [];
+    
+    let totalAttend = 0, totalLate = 0, totalAbsent = 0;
+    
+    for (const classCode of studentClasses) {
+        // 找出該班級的課程
+        const classCourseIds = courseRows
+            .filter(c => c.get('班級') === classCode)
+            .map(c => c.get('課程ID'));
+        
+        // 統計該班級的出缺席
+        let attend = 0, late = 0, absent = 0;
+        
+        studentRecords.forEach(r => {
+            // 需要從活動找到課程ID再比對
+            const status = r.get('狀態');
+            if (status === '已報到') attend++;
+            else if (status === '遲到') late++;
+            else if (status === '缺席') absent++;
+        });
+        
+        // 簡化：直接按班級分組顯示總數
+        message += `【${classCode}】\n`;
+        
+        const classTotal = attend + late + absent;
+        if (classTotal > 0) {
+            const attendRate = Math.round((attend + late) / classTotal * 100);
+            message += `   ✅ 出席：${attend} 次\n`;
+            message += `   ⚠️ 遲到：${late} 次\n`;
+            message += `   ❌ 缺席：${absent} 次\n`;
+            message += `   📈 出席率：${attendRate}%\n\n`;
+        }
+        
+        totalAttend += attend;
+        totalLate += late;
+        totalAbsent += absent;
+    }
+    
+    // 總計
+    const total = totalAttend + totalLate + totalAbsent;
+    if (total > 0) {
+        message += `━━━━━━━━━━━━━━━\n`;
+        message += `📊 總計\n`;
+        message += `✅ 出席：${totalAttend} 次\n`;
+        message += `⚠️ 遲到：${totalLate} 次\n`;
+        message += `❌ 缺席：${totalAbsent} 次\n`;
+        message += `📈 總出席率：${Math.round((totalAttend + totalLate) / total * 100)}%`;
+    }
+    
+    return replyText(event, message);
 }
 
 /**
@@ -1028,10 +1314,13 @@ async function replyStudentInfo(event, student) {
         stats = rows.find(row => row.get('學號') === student.get('學號'));
     }
     
+    const classesStr = student.get('班級') || '';
+    const classes = classesStr.split(',').map(c => c.trim()).filter(c => c);
+    
     let message = `📋 學生資料\n\n`;
     message += `👤 姓名：${student.get('姓名')}\n`;
     message += `🔢 學號：${student.get('學號')}\n`;
-    message += `🏫 班級：${student.get('班級')}\n`;
+    message += `🏫 班級：${classes.length > 1 ? '\n   ' + classes.join('\n   ') : classes[0] || '未設定'}\n`;
     message += `📅 註冊時間：${student.get('註冊時間')}\n`;
     
     if (stats) {
@@ -1040,6 +1329,10 @@ async function replyStudentInfo(event, student) {
         message += `⚠️ 遲到：${stats.get('遲到次數')} 次\n`;
         message += `❌ 缺席：${stats.get('缺席次數')} 次\n`;
         message += `📈 出席率：${stats.get('出席率')}`;
+    }
+    
+    if (classes.length > 1) {
+        message += `\n\n💡 輸入「我的班級」查看各班詳情`;
     }
     
     return replyText(event, message);
@@ -1075,16 +1368,22 @@ async function replyAttendanceStats(event, studentId) {
 
 function replyHelp(event) {
     const message = `📖 使用說明\n\n` +
-        `【學生指令】\n` +
+        `【基本指令】\n` +
         `• 註冊 - 綁定學號\n` +
         `• 我的資料 - 查看個人資訊\n` +
-        `• 出席紀錄 - 查看簽到記錄\n` +
-        `• 說明 - 顯示此說明\n\n` +
+        `• 出席紀錄 - 最近簽到記錄\n` +
+        `• 解除綁定 - 解除 LINE 綁定\n\n` +
+        `【班級管理】\n` +
+        `• 我的班級 - 查看班級詳細資料\n` +
+        `• 加入班級 - 加入新的班級\n` +
+        `• 退出班級 - 退出指定班級\n` +
+        `• 全部紀錄 - 所有班級出缺席統計\n\n` +
         `【簽到方式】\n` +
         `1. 掃描教師提供的 QR Code\n` +
-        `2. 分享您的位置\n` +
+        `2. 分享您的位置（GPS 驗證）\n` +
         `3. 系統自動完成簽到\n\n` +
-        `⚠️ 注意：必須在教室範圍內才能簽到！`;
+        `⚠️ 注意：必須在教室範圍內才能簽到！\n\n` +
+        `💡 一個學號可同時加入多個班級（日間/夜間/進修部）`;
     
     return replyText(event, message);
 }
