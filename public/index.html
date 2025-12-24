@@ -118,15 +118,9 @@
                 <div class="alert alert-info" style="margin-top:10px">
                     ℹ️ 自動計算：<strong id="semester-weeks">0</strong> 週 · 目前第 <strong id="current-week">0</strong> 週
                     <div id="week-selector-container" style="margin-top:12px;display:none">
-                        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-                            <span style="font-size:13px">快速跳轉：</span>
-                            <select class="form-select" id="week-selector" style="width:auto;padding:6px 10px;font-size:13px" onchange="jumpToWeek(this.value)">
-                                <option value="">選擇周次</option>
-                            </select>
-                            <select class="form-select" id="month-selector" style="width:auto;padding:6px 10px;font-size:13px" onchange="jumpToMonth(this.value)">
-                                <option value="">選擇月份</option>
-                            </select>
-                        </div>
+                        <button type="button" class="btn btn-outline" style="width:100%" onclick="openWeekPicker()">
+                            📅 開啟學期日曆（選擇年/月/周次）
+                        </button>
                     </div>
                 </div>
             </div>
@@ -363,6 +357,41 @@
 
     <div class="modal-overlay" id="modal-qr"><div class="modal"><div class="modal-header"><h3 class="modal-title">📱 簽到 QR Code</h3><button class="modal-close" onclick="closeModal('qr')">&times;</button></div><div class="modal-body"><div class="qr-container"><div class="qr-code" id="qr-container"></div><div class="qr-info"><strong id="qr-name"></strong><span id="qr-time"></span></div><div class="alert alert-success" style="margin-top:10px;font-size:12px">👆 學生掃此 QR Code → 直接簽到成功</div><div id="qr-link-box" style="margin-top:15px;padding:10px;background:#fff3cd;border-radius:10px"><p style="font-size:12px;color:#856404;margin-bottom:8px">📤 學生自己手機簽到連結（需 GPS 驗證）：</p><input type="text" id="qr-link" readonly style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:11px" onclick="this.select()"><button class="btn btn-outline btn-sm" style="margin-top:8px;width:100%" onclick="copyQRLink()">📋 複製連結分享給學生</button></div></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('qr')">關閉</button><button class="btn btn-success" onclick="sendReminderFromQR()">📢 發送通知</button><button class="btn btn-primary" onclick="downloadQR()">📥 下載</button></div></div></div>
 
+    <!-- 學期日曆選擇器 Modal -->
+    <div class="modal-overlay" id="modal-weekPicker">
+        <div class="modal" style="max-width:500px">
+            <div class="modal-header">
+                <h3 class="modal-title">📅 學期日曆</h3>
+                <button class="modal-close" onclick="closeModal('weekPicker')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- 年月選擇 -->
+                <div style="display:flex;gap:10px;margin-bottom:15px">
+                    <select class="form-select" id="picker-year" onchange="updateWeekPickerCalendar()" style="flex:1"></select>
+                    <select class="form-select" id="picker-month" onchange="updateWeekPickerCalendar()" style="flex:1"></select>
+                </div>
+                
+                <!-- 快速跳轉 -->
+                <div style="display:flex;gap:8px;margin-bottom:15px;flex-wrap:wrap">
+                    <button class="btn btn-sm btn-outline" onclick="jumpToCurrentWeek()">📍 本周</button>
+                    <button class="btn btn-sm btn-outline" onclick="jumpToFirstWeek()">⏮️ 第一周</button>
+                    <button class="btn btn-sm btn-outline" onclick="jumpToLastWeek()">⏭️ 最後一周</button>
+                </div>
+                
+                <!-- 周次列表 -->
+                <div style="max-height:350px;overflow-y:auto">
+                    <div id="week-picker-list"></div>
+                </div>
+                
+                <!-- 選中的周次資訊 -->
+                <div id="selected-week-info" class="alert alert-success" style="margin-top:15px;display:none"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal('weekPicker')">關閉</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // === 全域變數 ===
         let API = localStorage.getItem('apiUrl') || '';
@@ -557,53 +586,17 @@
                 sem.start = s;
                 sem.end = e;
                 sem.weeks = weeks;
+                sem.currentWeek = currentWeek;
                 
-                // 更新周次選擇器
-                updateWeekSelector(weeks, currentWeek, startDate);
-                // 更新月份選擇器
-                updateMonthSelector(startDate, endDate);
+                // 顯示日曆按鈕
+                const container = document.getElementById('week-selector-container');
+                if (container) container.style.display = weeks > 0 ? 'block' : 'none';
+                
                 // 更新學期結束周次選擇器
                 updateSemesterEndWeekSelector(weeks);
             }
         }
-        function updateWeekSelector(weeks, currentWeek, startDate) {
-            const selector = document.getElementById('week-selector');
-            const container = document.getElementById('week-selector-container');
-            if (!selector || weeks <= 0) {
-                if (container) container.style.display = 'none';
-                return;
-            }
-            container.style.display = 'block';
-            
-            let opts = '<option value="">選擇周次</option>';
-            for (let i = 1; i <= weeks; i++) {
-                const weekStart = new Date(startDate);
-                weekStart.setDate(weekStart.getDate() + (i - 1) * 7);
-                const weekEnd = new Date(weekStart);
-                weekEnd.setDate(weekEnd.getDate() + 6);
-                const label = `第 ${i} 周 (${weekStart.getMonth()+1}/${weekStart.getDate()}-${weekEnd.getMonth()+1}/${weekEnd.getDate()})`;
-                const selected = i === currentWeek ? ' selected' : '';
-                opts += `<option value="${i}"${selected}>${label}</option>`;
-            }
-            selector.innerHTML = opts;
-        }
-        function updateMonthSelector(startDate, endDate) {
-            const selector = document.getElementById('month-selector');
-            if (!selector) return;
-            
-            let opts = '<option value="">選擇月份</option>';
-            const months = [];
-            const d = new Date(startDate);
-            while (d <= endDate) {
-                const m = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-                if (!months.includes(m)) {
-                    months.push(m);
-                    opts += `<option value="${m}">${d.getFullYear()}年${d.getMonth()+1}月</option>`;
-                }
-                d.setMonth(d.getMonth() + 1);
-            }
-            selector.innerHTML = opts;
-        }
+        
         function updateSemesterEndWeekSelector(weeks) {
             const selector = document.getElementById('semester-end-week');
             if (!selector || weeks <= 0) return;
@@ -613,9 +606,9 @@
                 opts += `<option value="${i}">第 ${i} 周</option>`;
             }
             selector.innerHTML = opts;
-            // 預設選擇最後一周
             selector.value = weeks;
         }
+        
         function toggleSemesterEndWeek() {
             const mode = document.getElementById('semester-end-mode').value;
             const weekGroup = document.getElementById('semester-end-week-group');
@@ -623,25 +616,227 @@
                 weekGroup.style.display = mode === 'specific_week' ? 'block' : 'none';
             }
         }
-        function jumpToWeek(week) {
-            if (!week || !sem.start) return;
+        
+        // === 學期日曆選擇器 ===
+        function openWeekPicker() {
+            if (!sem.start || !sem.end) {
+                toast('請先設定學期起迄日期', 'warning');
+                return;
+            }
+            
             const startDate = new Date(sem.start);
-            const targetDate = new Date(startDate);
-            targetDate.setDate(targetDate.getDate() + (parseInt(week) - 1) * 7);
+            const endDate = new Date(sem.end);
             
-            // 顯示該周資訊
-            const weekEnd = new Date(targetDate);
-            weekEnd.setDate(weekEnd.getDate() + 6);
-            toast(`第 ${week} 周：${targetDate.getMonth()+1}/${targetDate.getDate()} - ${weekEnd.getMonth()+1}/${weekEnd.getDate()}`);
+            // 初始化年份選擇器
+            const yearSelector = document.getElementById('picker-year');
+            const startYear = startDate.getFullYear();
+            const endYear = endDate.getFullYear();
+            let yearOpts = '';
+            for (let y = startYear; y <= endYear; y++) {
+                yearOpts += `<option value="${y}">${y} 年</option>`;
+            }
+            yearSelector.innerHTML = yearOpts;
             
-            // 可以在這裡加入跳轉到課表該周的邏輯
+            // 設定當前年份
+            const now = new Date();
+            if (now >= startDate && now <= endDate) {
+                yearSelector.value = now.getFullYear();
+            } else {
+                yearSelector.value = startYear;
+            }
+            
+            // 初始化月份選擇器
+            updateMonthPickerOptions();
+            
+            // 更新日曆
+            updateWeekPickerCalendar();
+            
+            openModal('weekPicker');
         }
-        function jumpToMonth(month) {
-            if (!month) return;
-            const [year, m] = month.split('-');
-            toast(`已選擇 ${year}年${parseInt(m)}月`);
+        
+        function updateMonthPickerOptions() {
+            const yearSelector = document.getElementById('picker-year');
+            const monthSelector = document.getElementById('picker-month');
+            const selectedYear = parseInt(yearSelector.value);
             
-            // 可以在這裡加入跳轉到該月課表的邏輯
+            const startDate = new Date(sem.start);
+            const endDate = new Date(sem.end);
+            
+            let monthOpts = '';
+            for (let m = 1; m <= 12; m++) {
+                const checkDate = new Date(selectedYear, m - 1, 15);
+                // 只顯示在學期範圍內的月份
+                const monthStart = new Date(selectedYear, m - 1, 1);
+                const monthEnd = new Date(selectedYear, m, 0);
+                
+                if (monthEnd >= startDate && monthStart <= endDate) {
+                    monthOpts += `<option value="${m}">${m} 月</option>`;
+                }
+            }
+            monthSelector.innerHTML = monthOpts;
+            
+            // 設定當前月份
+            const now = new Date();
+            if (now.getFullYear() === selectedYear) {
+                const currentMonth = now.getMonth() + 1;
+                if (monthSelector.querySelector(`option[value="${currentMonth}"]`)) {
+                    monthSelector.value = currentMonth;
+                }
+            }
+        }
+        
+        function updateWeekPickerCalendar() {
+            updateMonthPickerOptions();
+            
+            const yearSelector = document.getElementById('picker-year');
+            const monthSelector = document.getElementById('picker-month');
+            const listContainer = document.getElementById('week-picker-list');
+            
+            const selectedYear = parseInt(yearSelector.value);
+            const selectedMonth = parseInt(monthSelector.value);
+            
+            if (!selectedYear || !selectedMonth) {
+                listContainer.innerHTML = '<div class="empty"><div class="icon">📅</div>請選擇年月</div>';
+                return;
+            }
+            
+            const startDate = new Date(sem.start);
+            const endDate = new Date(sem.end);
+            const now = new Date();
+            const totalWeeks = sem.weeks || 0;
+            
+            // 找出該月份包含的所有周次
+            const monthStart = new Date(selectedYear, selectedMonth - 1, 1);
+            const monthEnd = new Date(selectedYear, selectedMonth, 0);
+            
+            let html = `<div style="margin-bottom:10px;font-weight:600;color:var(--primary)">${selectedYear}年${selectedMonth}月 周次列表</div>`;
+            html += '<div style="display:flex;flex-direction:column;gap:8px">';
+            
+            let foundWeeks = 0;
+            for (let w = 1; w <= totalWeeks; w++) {
+                const weekStart = new Date(startDate);
+                weekStart.setDate(weekStart.getDate() + (w - 1) * 7);
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekEnd.getDate() + 6);
+                
+                // 檢查這周是否與選定月份重疊
+                if (weekEnd >= monthStart && weekStart <= monthEnd) {
+                    foundWeeks++;
+                    const isCurrentWeek = now >= weekStart && now <= weekEnd;
+                    const isPast = weekEnd < now;
+                    
+                    const weekDays = [];
+                    for (let d = 0; d < 7; d++) {
+                        const day = new Date(weekStart);
+                        day.setDate(day.getDate() + d);
+                        weekDays.push({
+                            date: day.getDate(),
+                            month: day.getMonth() + 1,
+                            isCurrentMonth: day.getMonth() + 1 === selectedMonth,
+                            isToday: day.toDateString() === now.toDateString()
+                        });
+                    }
+                    
+                    html += `
+                        <div class="week-picker-item" onclick="selectWeek(${w})" style="
+                            padding:12px;
+                            border:2px solid ${isCurrentWeek ? 'var(--primary)' : 'var(--border)'};
+                            border-radius:10px;
+                            cursor:pointer;
+                            background:${isCurrentWeek ? 'rgba(79,70,229,0.1)' : isPast ? '#f8f8f8' : '#fff'};
+                            transition:all 0.2s;
+                        " onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='${isCurrentWeek ? 'var(--primary)' : 'var(--border)'}'"
+                        >
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                                <span style="font-weight:600;color:${isCurrentWeek ? 'var(--primary)' : 'var(--text)'}">
+                                    第 ${w} 周 ${isCurrentWeek ? '📍' : ''} ${isPast ? '✓' : ''}
+                                </span>
+                                <span style="font-size:12px;color:var(--text-light)">
+                                    ${weekStart.getMonth()+1}/${weekStart.getDate()} - ${weekEnd.getMonth()+1}/${weekEnd.getDate()}
+                                </span>
+                            </div>
+                            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center">
+                                ${['日','一','二','三','四','五','六'].map((d, i) => `
+                                    <div style="font-size:10px;color:var(--text-light)">${d}</div>
+                                `).join('')}
+                                ${weekDays.map(d => `
+                                    <div style="
+                                        font-size:12px;
+                                        padding:4px;
+                                        border-radius:4px;
+                                        color:${d.isCurrentMonth ? (d.isToday ? '#fff' : 'var(--text)') : '#ccc'};
+                                        background:${d.isToday ? 'var(--primary)' : 'transparent'};
+                                        font-weight:${d.isToday ? '600' : '400'}
+                                    ">${d.date}</div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            
+            html += '</div>';
+            
+            if (foundWeeks === 0) {
+                html = '<div class="empty"><div class="icon">📅</div>此月份無課程周次</div>';
+            }
+            
+            listContainer.innerHTML = html;
+        }
+        
+        function selectWeek(week) {
+            const startDate = new Date(sem.start);
+            const weekStart = new Date(startDate);
+            weekStart.setDate(weekStart.getDate() + (week - 1) * 7);
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekEnd.getDate() + 6);
+            
+            const infoEl = document.getElementById('selected-week-info');
+            infoEl.style.display = 'block';
+            infoEl.innerHTML = `
+                <strong>✅ 已選擇第 ${week} 周</strong><br>
+                📅 ${weekStart.getFullYear()}/${weekStart.getMonth()+1}/${weekStart.getDate()} (${DAY_NAMES[weekStart.getDay()]}) 
+                ~ ${weekEnd.getFullYear()}/${weekEnd.getMonth()+1}/${weekEnd.getDate()} (${DAY_NAMES[weekEnd.getDay()]})
+            `;
+            
+            toast(`已選擇第 ${week} 周`);
+        }
+        
+        function jumpToCurrentWeek() {
+            if (!sem.start || !sem.currentWeek || sem.currentWeek <= 0) {
+                toast('目前不在學期期間內', 'warning');
+                return;
+            }
+            
+            const now = new Date();
+            document.getElementById('picker-year').value = now.getFullYear();
+            updateMonthPickerOptions();
+            document.getElementById('picker-month').value = now.getMonth() + 1;
+            updateWeekPickerCalendar();
+            
+            setTimeout(() => selectWeek(sem.currentWeek), 100);
+        }
+        
+        function jumpToFirstWeek() {
+            if (!sem.start) return;
+            const startDate = new Date(sem.start);
+            document.getElementById('picker-year').value = startDate.getFullYear();
+            updateMonthPickerOptions();
+            document.getElementById('picker-month').value = startDate.getMonth() + 1;
+            updateWeekPickerCalendar();
+            
+            setTimeout(() => selectWeek(1), 100);
+        }
+        
+        function jumpToLastWeek() {
+            if (!sem.end || !sem.weeks) return;
+            const endDate = new Date(sem.end);
+            document.getElementById('picker-year').value = endDate.getFullYear();
+            updateMonthPickerOptions();
+            document.getElementById('picker-month').value = endDate.getMonth() + 1;
+            updateWeekPickerCalendar();
+            
+            setTimeout(() => selectWeek(sem.weeks), 100);
         }
         async function saveSemester() {
             calcWeeks();
