@@ -1464,7 +1464,8 @@
             else if (leaveFilter === 'rejected') filtered = leaves.filter(l => l.status === '已駁回');
             document.getElementById('leaves-list').innerHTML = filtered.length ? filtered.map(l => {
                 const badge = l.status === '待審核' ? 'warning' : l.status === '已核准' ? 'success' : 'danger';
-                return '<div class="leave-item ' + l.status.replace('已', '').toLowerCase() + '"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><b>' + l.name + ' (' + l.studentId + ')</b><span class="badge ' + badge + '">' + l.status + '</span></div><div style="font-size:14px;color:var(--text-light);margin-bottom:10px">📅 ' + l.date + ' · 第' + l.periods + '節<br>📝 ' + l.type + '：' + (l.reason || '無說明') + '</div>' + (l.status === '待審核' ? '<button class="btn btn-sm btn-success" onclick="openReviewLeave(\'' + l.id + '\')">審核</button>' : '') + '</div>';
+                const bgColor = l.status === '已核准' ? '#d4edda' : l.status === '已駁回' ? '#f8d7da' : '#fff3cd';
+                return '<div class="leave-item" style="background-color:' + bgColor + ';border-radius:10px;padding:15px;margin-bottom:10px"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><b>' + l.name + ' (' + l.studentId + ')</b><span class="badge ' + badge + '">' + l.status + '</span></div><div style="font-size:14px;color:#666;margin-bottom:10px">📅 ' + l.date + ' · 第' + l.periods + '節<br>📝 ' + l.type + '：' + (l.reason || '無說明') + '</div>' + (l.status === '待審核' ? '<button class="btn btn-sm btn-success" onclick="openReviewLeave(\'' + l.id + '\')">審核</button>' : '') + '</div>';
             }).join('') : '<div class="empty">無請假紀錄</div>';
         }
         function openReviewLeave(id) {
@@ -1516,7 +1517,8 @@
             const data = await api('/api/records');
             document.getElementById('records-table').innerHTML = data?.length ? data.slice(-50).reverse().map(r => {
                 const badge = r.status === '已報到' ? 'success' : r.status === '遲到' ? 'warning' : 'danger';
-                return '<tr><td>' + (r.date || '-') + '</td><td>' + r.studentId + '</td><td>' + (r.studentName || '-') + '</td><td><span class="badge ' + badge + '">' + r.status + '</span></td></tr>';
+                const rowBg = r.status === '已報到' ? '#d4edda' : r.status === '遲到' ? '#fff3cd' : '#f8d7da';
+                return '<tr style="background-color:' + rowBg + '"><td>' + (r.date || '-') + '</td><td>' + r.studentId + '</td><td>' + (r.studentName || '-') + '</td><td><span class="badge ' + badge + '">' + r.status + '</span></td></tr>';
             }).join('') : '<tr><td colspan="4" class="empty">尚無紀錄</td></tr>';
         }
         async function addRecord() {
@@ -1541,7 +1543,12 @@
                 const offset = 327 - 327 * (data.overall / 100);
                 document.getElementById('progress-circle').style.strokeDashoffset = offset;
                 const low = data.lowAttendance || [];
-                document.getElementById('low-attendance-list').innerHTML = low.length ? low.slice(0, 10).map(s => '<div class="student-alert ' + (s.rate < 60 ? 'critical' : 'warning') + '"><div class="avatar">' + s.name.charAt(0) + '</div><div class="info"><h5>' + s.name + ' (' + s.studentId + ')</h5><span>' + s.classCode + ' · 出席率 ' + s.rate + '%</span></div></div>').join('') : '<div class="empty">所有學生出席率良好 👍</div>';
+                document.getElementById('low-attendance-list').innerHTML = low.length ? low.slice(0, 10).map(s => {
+                    let bgColor = '#fff3cd'; // 預設淡黃色 (0.01%~59.99%)
+                    if (s.rate === 0) bgColor = '#f8d7da'; // 0% 淡紅色
+                    else if (s.rate >= 100) bgColor = '#d4edda'; // 100% 淡綠色
+                    return '<div class="student-alert" style="background-color:' + bgColor + ';border-radius:10px;padding:12px;margin-bottom:8px"><div class="avatar">' + s.name.charAt(0) + '</div><div class="info"><h5>' + s.name + ' (' + s.studentId + ')</h5><span>' + s.classCode + ' · 出席率 ' + s.rate + '%</span></div></div>';
+                }).join('') : '<div class="empty">所有學生出席率良好 👍</div>';
             }
         }
 
