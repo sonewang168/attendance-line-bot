@@ -1366,7 +1366,7 @@ async function checkAbsences() {
                 if (course) {
                     const className = course.get('班級');
                     const students = await studentSheet.getRows();
-                    const classStudents = students.filter(s => s.get('班級') === className);
+                    const classStudents = students.filter(s => (s.get('班級') || '').split(',').map(c => c.trim()).includes(className));
                     
                     const records = recordSheet ? await recordSheet.getRows() : [];
                     
@@ -1618,7 +1618,7 @@ async function autoClassReminder() {
                 const studentSheet = doc.sheetsByTitle['學生名單'];
                 if (studentSheet) {
                     const students = await studentSheet.getRows();
-                    const classStudents = students.filter(s => s.get('班級') === classCode && s.get('LINE_ID'));
+                    const classStudents = students.filter(s => (s.get('班級') || '').split(',').map(c => c.trim()).includes(classCode) && s.get('LINE_ID'));
                     
                     const botId = process.env.LINE_BOT_ID;
                     // 學生連結使用 GPS 簽到
@@ -1794,7 +1794,7 @@ app.get('/api/classes/:code/students', async (req, res) => {
         const sheet = doc.sheetsByTitle['學生名單'];
         if (!sheet) return res.json([]);
         const rows = await sheet.getRows();
-        const students = rows.filter(r => r.get('班級') === code);
+        const students = rows.filter(r => (r.get('班級') || '').split(',').map(c => c.trim()).includes(code));
         res.json(students.map(s => ({
             studentId: s.get('學號'),
             name: s.get('姓名'),
@@ -2260,7 +2260,7 @@ app.post('/api/notify/remind', async (req, res) => {
         
         const classCode = course.get('班級');
         const students = await studentSheet.getRows();
-        const classStudents = students.filter(s => s.get('班級') === classCode && s.get('LINE_ID'));
+        const classStudents = students.filter(s => (s.get('班級') || '').split(',').map(c => c.trim()).includes(classCode) && s.get('LINE_ID'));
         
         // 建立簽到連結（學生使用 GPS 簽到）
         const botId = process.env.LINE_BOT_ID;
@@ -2540,7 +2540,7 @@ app.post('/api/sessions/:id/complete', async (req, res) => {
         
         const classCode = course.get('班級');
         const students = await studentSheet.getRows();
-        const classStudents = students.filter(s => s.get('班級') === classCode);
+        const classStudents = students.filter(s => (s.get('班級') || '').split(',').map(c => c.trim()).includes(classCode));
         
         const records = await recordSheet.getRows();
         const sessionRecords = records.filter(r => r.get('活動ID') === id);
@@ -2812,7 +2812,7 @@ app.get('/api/reports/weekly', async (req, res) => {
         const classSummary = [];
         for (const cls of classes) {
             const code = cls.get('班級代碼');
-            const classStudents = students.filter(s => s.get('班級') === code).map(s => s.get('學號'));
+            const classStudents = students.filter(s => (s.get('班級') || '').split(',').map(c => c.trim()).includes(code)).map(s => s.get('學號'));
             const classRecords = weekRecords.filter(r => classStudents.includes(r.get('學號')));
             const cTotal = classRecords.length;
             const cAttended = classRecords.filter(r => r.get('狀態') === '已報到').length;
@@ -2892,7 +2892,7 @@ app.get('/api/export/attendance', async (req, res) => {
         if (startDate) filtered = filtered.filter(r => r.get('簽到時間')?.split(' ')[0] >= startDate);
         if (endDate) filtered = filtered.filter(r => r.get('簽到時間')?.split(' ')[0] <= endDate);
         if (classCode) {
-            const classStudentIds = students.filter(s => s.get('班級') === classCode).map(s => s.get('學號'));
+            const classStudentIds = students.filter(s => (s.get('班級') || '').split(',').map(c => c.trim()).includes(classCode)).map(s => s.get('學號'));
             filtered = filtered.filter(r => classStudentIds.includes(r.get('學號')));
         }
         
@@ -3231,7 +3231,7 @@ app.post('/api/reminders/send-now', async (req, res) => {
         
         const classCode = course.get('班級');
         const students = await studentSheet.getRows();
-        const classStudents = students.filter(s => s.get('班級') === classCode && s.get('LINE_ID'));
+        const classStudents = students.filter(s => (s.get('班級') || '').split(',').map(c => c.trim()).includes(classCode) && s.get('LINE_ID'));
         
         let sent = 0;
         for (const student of classStudents) {
@@ -3507,7 +3507,7 @@ app.post('/api/test/semester-end', async (req, res) => {
         if (!studentSheet) return res.json({ success: false, message: '學生名單不存在' });
         
         const students = await studentSheet.getRows();
-        const classStudents = students.filter(s => s.get('班級') === classCode && s.get('LINE_ID'));
+        const classStudents = students.filter(s => (s.get('班級') || '').split(',').map(c => c.trim()).includes(classCode) && s.get('LINE_ID'));
         
         let count = 0;
         for (const student of classStudents) {
@@ -3538,7 +3538,7 @@ app.post('/api/test/checkin-notify', async (req, res) => {
         if (!studentSheet) return res.json({ success: false, message: '學生名單不存在' });
         
         const students = await studentSheet.getRows();
-        const classStudents = students.filter(s => s.get('班級') === classCode && s.get('LINE_ID'));
+        const classStudents = students.filter(s => (s.get('班級') || '').split(',').map(c => c.trim()).includes(classCode) && s.get('LINE_ID'));
         
         const today = getTodayString();
         let notifyText = '';
@@ -3580,7 +3580,7 @@ app.post('/api/test/reminder', async (req, res) => {
         if (!studentSheet) return res.json({ success: false, message: '學生名單不存在' });
         
         const students = await studentSheet.getRows();
-        const classStudents = students.filter(s => s.get('班級') === classCode && s.get('LINE_ID'));
+        const classStudents = students.filter(s => (s.get('班級') || '').split(',').map(c => c.trim()).includes(classCode) && s.get('LINE_ID'));
         
         // 建立測試簽到連結
         const botId = process.env.LINE_BOT_ID;
