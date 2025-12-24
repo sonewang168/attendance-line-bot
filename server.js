@@ -402,7 +402,6 @@ async function handleEvent(event) {
     // 處理文字訊息
     if (event.message.type === 'text') {
         const text = event.message.text.trim();
-        console.log('📝 處理文字訊息:', text);
         
         // 檢查是否為簽到連結
         if (text.startsWith('直接簽到:')) {
@@ -423,12 +422,10 @@ async function handleEvent(event) {
         // 檢查用戶狀態（是否在註冊流程中）
         const state = userStates.get(userId);
         if (state) {
-            console.log('📋 用戶在流程中:', state.step);
             return handleRegistrationFlow(event, userId, userName, text, state);
         }
         
         // 一般指令
-        console.log('🔧 執行指令:', text);
         return handleCommand(event, userId, userName, text);
     }
     
@@ -439,17 +436,17 @@ async function handleEvent(event) {
  * 處理一般指令
  */
 async function handleCommand(event, userId, userName, text) {
-    console.log('⚙️ handleCommand 開始, 指令:', text);
+    console.log('⚙️ handleCommand:', text);
     
-    const student = await getStudent(userId);
-    console.log('👤 學生資料:', student ? student.get('姓名') : '未註冊');
-    
-    switch(text) {
+    try {
+        const student = await getStudent(userId);
+        console.log('👤 學生:', student ? student.get('姓名') : '未註冊');
+        
+        switch(text) {
         case '註冊':
         case '綁定':
             if (student) {
-                const classes = student.get('班級') || '';
-                return replyText(event, `✅ 您已經註冊過了！\n\n📋 您的資料：\n學號：${student.get('學號')}\n姓名：${student.get('姓名')}\n班級：${classes}\n\n💡 如需加入其他班級，請輸入「加入班級」`);
+                return replyText(event, `✅ 您已經註冊過了！\n\n📋 您的資料：\n學號：${student.get('學號')}\n姓名：${student.get('姓名')}\n班級：${student.get('班級')}`);
             }
             // 開始註冊流程
             userStates.set(userId, { step: 'studentId' });
@@ -499,10 +496,8 @@ async function handleCommand(event, userId, userName, text) {
             }
             return replyAttendanceStats(event, student.get('學號'));
         
-        // === 新增多班級指令 ===
         case '我的班級':
         case '班級資料':
-        case '查詢班級':
             if (!student) {
                 return replyText(event, '❌ 您尚未註冊！\n\n請輸入「註冊」開始綁定學號。');
             }
@@ -510,53 +505,41 @@ async function handleCommand(event, userId, userName, text) {
         
         case '加入班級':
         case '新班級':
-        case '新增班級':
+            console.log('📚 處理加入班級');
             if (!student) {
                 return replyText(event, '❌ 您尚未註冊！\n\n請先輸入「註冊」綁定學號後，再加入班級。');
             }
             userStates.set(userId, { step: 'addNewClass', studentId: student.get('學號') });
-            // 顯示可選班級
             const availableClasses = await getClasses();
+            console.log('📚 可用班級:', availableClasses.length);
             const currentClasses = (student.get('班級') || '').split(',').map(c => c.trim()).filter(c => c);
             const newClasses = availableClasses.filter(c => !currentClasses.includes(c.code));
-            
             if (newClasses.length === 0) {
                 userStates.delete(userId);
                 return replyText(event, '📋 您已加入所有可用班級！\n\n目前班級：' + currentClasses.join('、'));
             }
-            
             let classListMsg = '📝 加入新班級\n\n您目前的班級：' + (currentClasses.length > 0 ? currentClasses.join('、') : '無') + '\n\n可加入的班級：\n';
-            newClasses.forEach(c => {
-                classListMsg += `• ${c.code} - ${c.name}\n`;
-            });
+            newClasses.forEach(c => { classListMsg += '• ' + c.code + ' - ' + c.name + '\n'; });
             classListMsg += '\n請輸入要加入的【班級代碼】：';
             return replyText(event, classListMsg);
         
-        case '全部紀錄':
-        case '所有紀錄':
-        case '全部出席':
-        case '所有班級紀錄':
-            if (!student) {
-                return replyText(event, '❌ 您尚未註冊！\n\n請輸入「註冊」開始綁定學號。');
-            }
-            return replyAllClassesAttendance(event, student);
-        
         case '退出班級':
-        case '離開班級':
             if (!student) {
                 return replyText(event, '❌ 您尚未註冊！');
             }
-            const studentClasses = (student.get('班級') || '').split(',').map(c => c.trim()).filter(c => c);
-            if (studentClasses.length <= 1) {
+            const myClasses = (student.get('班級') || '').split(',').map(c => c.trim()).filter(c => c);
+            if (myClasses.length <= 1) {
                 return replyText(event, '❌ 您只有一個班級，無法退出！\n\n如需完全解除綁定，請輸入「解除綁定」。');
             }
-            userStates.set(userId, { step: 'removeClass', studentId: student.get('學號'), currentClasses: studentClasses });
-            let removeMsg = '📝 退出班級\n\n您目前的班級：\n';
-            studentClasses.forEach((c, i) => {
-                removeMsg += `${i + 1}. ${c}\n`;
-            });
-            removeMsg += '\n請輸入要退出的【班級代碼】：';
-            return replyText(event, removeMsg);
+            userStates.set(userId, { step: 'removeClass', studentId: student.get('學號'), currentClasses: myClasses });
+            return replyText(event, '📝 退出班級\n\n您目前的班級：\n' + myClasses.join('、') + '\n\n請輸入要退出的【班級代碼】：');
+        
+        case '全部紀錄':
+        case '所有紀錄':
+            if (!student) {
+                return replyText(event, '❌ 您尚未註冊！');
+            }
+            return replyAllClassesAttendance(event, student);
         
         case '說明':
         case '幫助':
@@ -564,7 +547,7 @@ async function handleCommand(event, userId, userName, text) {
             return replyHelp(event);
         
         default:
-            // 檢查是否在加入班級流程中
+            // 檢查是否在流程中
             const currentState = userStates.get(userId);
             if (currentState && currentState.step === 'addNewClass') {
                 return handleAddNewClass(event, userId, text, currentState);
@@ -578,223 +561,10 @@ async function handleCommand(event, userId, userName, text) {
             }
             return replyText(event, `👋 ${student.get('姓名')} 同學您好！\n\n📌 可用指令：\n• 我的資料\n• 我的班級\n• 出席紀錄\n• 全部紀錄\n• 加入班級\n• 退出班級\n• 解除綁定\n• 說明\n\n📍 簽到請掃描教師提供的 QR Code`);
     }
-}
-
-/**
- * 處理加入新班級
- */
-async function handleAddNewClass(event, userId, text, state) {
-    const classCode = text.trim().toUpperCase();
-    
-    // 驗證班級是否存在
-    const allClasses = await getClasses();
-    const targetClass = allClasses.find(c => c.code.toUpperCase() === classCode || c.code === text.trim());
-    
-    if (!targetClass) {
-        userStates.delete(userId);
-        return replyText(event, `❌ 找不到班級「${text}」！\n\n請重新輸入「加入班級」選擇正確的班級。`);
+    } catch (error) {
+        console.error('❌ handleCommand 錯誤:', error);
+        return replyText(event, '❌ 系統錯誤: ' + error.message);
     }
-    
-    // 更新學生班級
-    try {
-        const studentSheet = doc.sheetsByTitle['學生名單'];
-        const rows = await studentSheet.getRows();
-        const studentRow = rows.find(r => r.get('學號') === state.studentId);
-        
-        if (studentRow) {
-            const currentClasses = (studentRow.get('班級') || '').split(',').map(c => c.trim()).filter(c => c);
-            
-            if (currentClasses.includes(targetClass.code)) {
-                userStates.delete(userId);
-                return replyText(event, `❌ 您已經在「${targetClass.code} - ${targetClass.name}」班級中了！`);
-            }
-            
-            currentClasses.push(targetClass.code);
-            studentRow.set('班級', currentClasses.join(','));
-            await studentRow.save();
-            
-            userStates.delete(userId);
-            return replyText(event, `✅ 成功加入班級！\n\n🏫 新班級：${targetClass.code} - ${targetClass.name}\n\n📋 您目前的所有班級：\n${currentClasses.join('、')}`);
-        }
-        
-        userStates.delete(userId);
-        return replyText(event, '❌ 找不到您的學生資料，請重新註冊。');
-    } catch (e) {
-        console.error('加入班級錯誤:', e);
-        userStates.delete(userId);
-        return replyText(event, '❌ 加入班級失敗，請稍後再試。');
-    }
-}
-
-/**
- * 處理退出班級
- */
-async function handleRemoveClass(event, userId, text, state) {
-    const classCode = text.trim();
-    
-    if (!state.currentClasses.includes(classCode)) {
-        userStates.delete(userId);
-        return replyText(event, `❌ 您不在「${classCode}」班級中！\n\n請重新輸入「退出班級」選擇正確的班級。`);
-    }
-    
-    if (state.currentClasses.length <= 1) {
-        userStates.delete(userId);
-        return replyText(event, '❌ 您只有一個班級，無法退出！');
-    }
-    
-    try {
-        const studentSheet = doc.sheetsByTitle['學生名單'];
-        const rows = await studentSheet.getRows();
-        const studentRow = rows.find(r => r.get('學號') === state.studentId);
-        
-        if (studentRow) {
-            const newClasses = state.currentClasses.filter(c => c !== classCode);
-            studentRow.set('班級', newClasses.join(','));
-            await studentRow.save();
-            
-            userStates.delete(userId);
-            return replyText(event, `✅ 已退出班級「${classCode}」！\n\n📋 您目前的班級：\n${newClasses.join('、')}`);
-        }
-        
-        userStates.delete(userId);
-        return replyText(event, '❌ 操作失敗，請稍後再試。');
-    } catch (e) {
-        console.error('退出班級錯誤:', e);
-        userStates.delete(userId);
-        return replyText(event, '❌ 退出班級失敗，請稍後再試。');
-    }
-}
-
-/**
- * 回覆班級詳細資料
- */
-async function replyClassDetails(event, student) {
-    const classesStr = student.get('班級') || '';
-    const studentClasses = classesStr.split(',').map(c => c.trim()).filter(c => c);
-    
-    if (studentClasses.length === 0) {
-        return replyText(event, '❌ 您尚未加入任何班級！\n\n請輸入「加入班級」來加入班級。');
-    }
-    
-    // 取得班級詳細資料
-    const classSheet = doc.sheetsByTitle['班級列表'];
-    const courseSheet = doc.sheetsByTitle['課程列表'];
-    
-    let message = `🏫 我的班級資料\n`;
-    message += `━━━━━━━━━━━━━━━\n`;
-    message += `👤 ${student.get('姓名')} (${student.get('學號')})\n`;
-    message += `📚 共 ${studentClasses.length} 個班級\n\n`;
-    
-    for (const classCode of studentClasses) {
-        message += `【${classCode}】`;
-        
-        if (classSheet) {
-            const classRows = await classSheet.getRows();
-            const classInfo = classRows.find(r => r.get('班級代碼') === classCode);
-            if (classInfo) {
-                message += ` ${classInfo.get('班級名稱')}\n`;
-                message += `   👨‍🏫 導師：${classInfo.get('導師') || '未設定'}\n`;
-                message += `   🏢 部別：${classInfo.get('部別') || '日間部'}\n`;
-            } else {
-                message += `\n`;
-            }
-        } else {
-            message += `\n`;
-        }
-        
-        // 取得該班課程數量
-        if (courseSheet) {
-            const courseRows = await courseSheet.getRows();
-            const classCourses = courseRows.filter(r => r.get('班級') === classCode);
-            message += `   📖 課程：${classCourses.length} 門\n`;
-        }
-        
-        message += `\n`;
-    }
-    
-    message += `💡 輸入「加入班級」可加入新班級\n`;
-    message += `💡 輸入「退出班級」可退出班級`;
-    
-    return replyText(event, message);
-}
-
-/**
- * 回覆所有班級出缺席紀錄
- */
-async function replyAllClassesAttendance(event, student) {
-    const classesStr = student.get('班級') || '';
-    const studentClasses = classesStr.split(',').map(c => c.trim()).filter(c => c);
-    const studentId = student.get('學號');
-    
-    const recordSheet = doc.sheetsByTitle['簽到紀錄'];
-    const courseSheet = doc.sheetsByTitle['課程列表'];
-    
-    if (!recordSheet) {
-        return replyText(event, '📊 尚無簽到紀錄');
-    }
-    
-    const allRecords = await recordSheet.getRows();
-    const studentRecords = allRecords.filter(r => r.get('學號') === studentId);
-    
-    if (studentRecords.length === 0) {
-        return replyText(event, '📊 尚無簽到紀錄');
-    }
-    
-    let message = `📊 所有班級出缺席統計\n`;
-    message += `━━━━━━━━━━━━━━━\n`;
-    message += `👤 ${student.get('姓名')} (${studentId})\n\n`;
-    
-    // 按班級分組統計
-    const courseRows = courseSheet ? await courseSheet.getRows() : [];
-    
-    let totalAttend = 0, totalLate = 0, totalAbsent = 0;
-    
-    for (const classCode of studentClasses) {
-        // 找出該班級的課程
-        const classCourseIds = courseRows
-            .filter(c => c.get('班級') === classCode)
-            .map(c => c.get('課程ID'));
-        
-        // 統計該班級的出缺席
-        let attend = 0, late = 0, absent = 0;
-        
-        studentRecords.forEach(r => {
-            // 需要從活動找到課程ID再比對
-            const status = r.get('狀態');
-            if (status === '已報到') attend++;
-            else if (status === '遲到') late++;
-            else if (status === '缺席') absent++;
-        });
-        
-        // 簡化：直接按班級分組顯示總數
-        message += `【${classCode}】\n`;
-        
-        const classTotal = attend + late + absent;
-        if (classTotal > 0) {
-            const attendRate = Math.round((attend + late) / classTotal * 100);
-            message += `   ✅ 出席：${attend} 次\n`;
-            message += `   ⚠️ 遲到：${late} 次\n`;
-            message += `   ❌ 缺席：${absent} 次\n`;
-            message += `   📈 出席率：${attendRate}%\n\n`;
-        }
-        
-        totalAttend += attend;
-        totalLate += late;
-        totalAbsent += absent;
-    }
-    
-    // 總計
-    const total = totalAttend + totalLate + totalAbsent;
-    if (total > 0) {
-        message += `━━━━━━━━━━━━━━━\n`;
-        message += `📊 總計\n`;
-        message += `✅ 出席：${totalAttend} 次\n`;
-        message += `⚠️ 遲到：${totalLate} 次\n`;
-        message += `❌ 缺席：${totalAbsent} 次\n`;
-        message += `📈 總出席率：${Math.round((totalAttend + totalLate) / total * 100)}%`;
-    }
-    
-    return replyText(event, message);
 }
 
 /**
@@ -1327,13 +1097,10 @@ async function replyStudentInfo(event, student) {
         stats = rows.find(row => row.get('學號') === student.get('學號'));
     }
     
-    const classesStr = student.get('班級') || '';
-    const classes = classesStr.split(',').map(c => c.trim()).filter(c => c);
-    
     let message = `📋 學生資料\n\n`;
     message += `👤 姓名：${student.get('姓名')}\n`;
     message += `🔢 學號：${student.get('學號')}\n`;
-    message += `🏫 班級：${classes.length > 1 ? '\n   ' + classes.join('\n   ') : classes[0] || '未設定'}\n`;
+    message += `🏫 班級：${student.get('班級')}\n`;
     message += `📅 註冊時間：${student.get('註冊時間')}\n`;
     
     if (stats) {
@@ -1342,10 +1109,6 @@ async function replyStudentInfo(event, student) {
         message += `⚠️ 遲到：${stats.get('遲到次數')} 次\n`;
         message += `❌ 缺席：${stats.get('缺席次數')} 次\n`;
         message += `📈 出席率：${stats.get('出席率')}`;
-    }
-    
-    if (classes.length > 1) {
-        message += `\n\n💡 輸入「我的班級」查看各班詳情`;
     }
     
     return replyText(event, message);
@@ -1392,13 +1155,154 @@ function replyHelp(event) {
         `• 退出班級 - 退出指定班級\n` +
         `• 全部紀錄 - 所有班級出缺席統計\n\n` +
         `【簽到方式】\n` +
-        `1. 掃描教師提供的 QR Code\n` +
-        `2. 分享您的位置（GPS 驗證）\n` +
-        `3. 系統自動完成簽到\n\n` +
-        `⚠️ 注意：必須在教室範圍內才能簽到！\n\n` +
-        `💡 一個學號可同時加入多個班級（日間/夜間/進修部）`;
+        `掃描教師 QR Code → 分享位置 → 完成簽到\n\n` +
+        `💡 一個學號可加入多個班級`;
     
     return replyText(event, message);
+}
+
+// 處理加入新班級
+async function handleAddNewClass(event, userId, text, state) {
+    const classCode = text.trim();
+    const allClasses = await getClasses();
+    const targetClass = allClasses.find(c => c.code === classCode || c.code.toUpperCase() === classCode.toUpperCase());
+    
+    if (!targetClass) {
+        userStates.delete(userId);
+        return replyText(event, '❌ 找不到班級「' + text + '」！\n\n請重新輸入「加入班級」。');
+    }
+    
+    try {
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        const rows = await studentSheet.getRows();
+        const studentRow = rows.find(r => r.get('學號') === state.studentId);
+        
+        if (studentRow) {
+            const currentClasses = (studentRow.get('班級') || '').split(',').map(c => c.trim()).filter(c => c);
+            if (currentClasses.includes(targetClass.code)) {
+                userStates.delete(userId);
+                return replyText(event, '❌ 您已在「' + targetClass.code + '」班級中！');
+            }
+            currentClasses.push(targetClass.code);
+            studentRow.set('班級', currentClasses.join(','));
+            await studentRow.save();
+            userStates.delete(userId);
+            return replyText(event, '✅ 成功加入班級！\n\n🏫 ' + targetClass.code + ' - ' + targetClass.name + '\n\n📋 您的所有班級：\n' + currentClasses.join('、'));
+        }
+        userStates.delete(userId);
+        return replyText(event, '❌ 找不到您的資料。');
+    } catch (e) {
+        console.error('加入班級錯誤:', e);
+        userStates.delete(userId);
+        return replyText(event, '❌ 加入失敗: ' + e.message);
+    }
+}
+
+// 處理退出班級
+async function handleRemoveClass(event, userId, text, state) {
+    const classCode = text.trim();
+    if (!state.currentClasses.includes(classCode)) {
+        userStates.delete(userId);
+        return replyText(event, '❌ 您不在「' + classCode + '」班級中！');
+    }
+    
+    try {
+        const studentSheet = doc.sheetsByTitle['學生名單'];
+        const rows = await studentSheet.getRows();
+        const studentRow = rows.find(r => r.get('學號') === state.studentId);
+        
+        if (studentRow) {
+            const newClasses = state.currentClasses.filter(c => c !== classCode);
+            studentRow.set('班級', newClasses.join(','));
+            await studentRow.save();
+            userStates.delete(userId);
+            return replyText(event, '✅ 已退出班級「' + classCode + '」！\n\n📋 目前班級：\n' + newClasses.join('、'));
+        }
+        userStates.delete(userId);
+        return replyText(event, '❌ 操作失敗。');
+    } catch (e) {
+        userStates.delete(userId);
+        return replyText(event, '❌ 退出失敗: ' + e.message);
+    }
+}
+
+// 回覆班級詳細資料
+async function replyClassDetails(event, student) {
+    const classesStr = student.get('班級') || '';
+    const studentClasses = classesStr.split(',').map(c => c.trim()).filter(c => c);
+    
+    if (studentClasses.length === 0) {
+        return replyText(event, '❌ 您尚未加入任何班級！\n\n請輸入「加入班級」。');
+    }
+    
+    const classSheet = doc.sheetsByTitle['班級列表'];
+    const courseSheet = doc.sheetsByTitle['課程列表'];
+    
+    let msg = '🏫 我的班級資料\n━━━━━━━━━━━━━━━\n';
+    msg += '👤 ' + student.get('姓名') + ' (' + student.get('學號') + ')\n';
+    msg += '📚 共 ' + studentClasses.length + ' 個班級\n\n';
+    
+    for (const classCode of studentClasses) {
+        msg += '【' + classCode + '】';
+        if (classSheet) {
+            const classRows = await classSheet.getRows();
+            const classInfo = classRows.find(r => r.get('班級代碼') === classCode);
+            if (classInfo) {
+                msg += ' ' + (classInfo.get('班級名稱') || '') + '\n';
+                msg += '   👨‍🏫 導師：' + (classInfo.get('導師') || '未設定') + '\n';
+            } else {
+                msg += '\n';
+            }
+        } else {
+            msg += '\n';
+        }
+        if (courseSheet) {
+            const courseRows = await courseSheet.getRows();
+            const classCourses = courseRows.filter(r => r.get('班級') === classCode);
+            msg += '   📖 課程：' + classCourses.length + ' 門\n';
+        }
+        msg += '\n';
+    }
+    
+    msg += '💡「加入班級」可加入新班級';
+    return replyText(event, msg);
+}
+
+// 回覆所有班級出缺席
+async function replyAllClassesAttendance(event, student) {
+    const studentId = student.get('學號');
+    const recordSheet = doc.sheetsByTitle['簽到紀錄'];
+    
+    if (!recordSheet) {
+        return replyText(event, '📊 尚無簽到紀錄');
+    }
+    
+    const allRecords = await recordSheet.getRows();
+    const studentRecords = allRecords.filter(r => r.get('學號') === studentId);
+    
+    if (studentRecords.length === 0) {
+        return replyText(event, '📊 尚無簽到紀錄');
+    }
+    
+    let attend = 0, late = 0, absent = 0;
+    studentRecords.forEach(r => {
+        const status = r.get('狀態');
+        if (status === '已報到') attend++;
+        else if (status === '遲到') late++;
+        else if (status === '缺席') absent++;
+    });
+    
+    const total = attend + late + absent;
+    const rate = total > 0 ? Math.round((attend + late) / total * 100) : 0;
+    
+    let msg = '📊 出缺席統計\n━━━━━━━━━━━━━━━\n';
+    msg += '👤 ' + student.get('姓名') + '\n\n';
+    msg += '✅ 出席：' + attend + ' 次\n';
+    msg += '⚠️ 遲到：' + late + ' 次\n';
+    msg += '❌ 缺席：' + absent + ' 次\n';
+    msg += '📈 出席率：' + rate + '%';
+    
+    return replyText(event, msg);
 }
 
 // ===== 缺席檢查排程 =====
@@ -1416,26 +1320,11 @@ async function checkAbsences() {
         const sessions = await sessionSheet.getRows();
         const now = new Date();
         
-        // 取得缺席通知設定
-        const settingsSheet = doc.sheetsByTitle['系統設定'];
-        let maxAbsentNotify = 1;
-        if (settingsSheet) {
-            const settings = await settingsSheet.getRows();
-            const setting = settings.find(s => s.get('設定項目') === '缺席通知次數');
-            if (setting) {
-                maxAbsentNotify = parseInt(setting.get('設定值')) || 1;
-            }
-        }
-        
-        // 取得或建立缺席通知記錄表
-        const absentNotifySheet = await getOrCreateSheet('缺席通知記錄', [
-            '活動ID', '學號', '通知次數', '最後通知時間'
-        ]);
-        const absentNotifyRows = await absentNotifySheet.getRows();
-        
         for (const session of sessions) {
+            // 只處理「進行中」的活動
             if (session.get('狀態') !== '進行中') continue;
             
+            // 檢查是否已結束
             const endTimeStr = session.get('結束時間');
             if (!endTimeStr) continue;
             const [endHour, endMin] = endTimeStr.split(':').map(Number);
@@ -1445,9 +1334,11 @@ async function checkAbsences() {
             if (now > endTime) {
                 console.log('📝 處理結束的活動:', session.get('活動ID'));
                 
+                // 先更新活動狀態為「處理中」避免重複處理
                 session.set('狀態', '處理中');
                 await session.save();
                 
+                // 標記缺席的學生
                 const courseSheet = doc.sheetsByTitle['課程列表'];
                 const courses = await courseSheet.getRows();
                 const course = courses.find(c => c.get('課程ID') === session.get('課程ID'));
@@ -1466,51 +1357,30 @@ async function checkAbsences() {
                         );
                         
                         if (!hasRecord) {
+                            // 記錄缺席（只會記錄一次）
                             const result = await recordAttendance(
                                 session.get('活動ID'),
                                 student.get('學號'),
-                                '缺席',
-                                0, '', '',
-                                false
+                                '缺席'
                             );
                             
-                            if (result.success && student.get('LINE_ID') && maxAbsentNotify > 0) {
-                                const existingNotify = absentNotifyRows.find(r => 
-                                    r.get('活動ID') === session.get('活動ID') &&
-                                    r.get('學號') === student.get('學號')
-                                );
-                                
-                                const currentCount = existingNotify ? parseInt(existingNotify.get('通知次數')) || 0 : 0;
-                                
-                                if (currentCount < maxAbsentNotify) {
-                                    try {
-                                        await lineClient.pushMessage(student.get('LINE_ID'), {
-                                            type: 'text',
-                                            text: `❌ 缺席通知\n\n您已被標記為缺席：\n📚 課程：${course.get('科目')}\n📅 日期：${session.get('日期')}\n\n如有疑問請聯繫教師。`
-                                        });
-                                        console.log('✉️ 已發送缺席通知給', student.get('學號'), `(${currentCount + 1}/${maxAbsentNotify})`);
-                                        
-                                        if (existingNotify) {
-                                            existingNotify.set('通知次數', currentCount + 1);
-                                            existingNotify.set('最後通知時間', formatDateTime(now));
-                                            await existingNotify.save();
-                                        } else {
-                                            await absentNotifySheet.addRow({
-                                                '活動ID': session.get('活動ID'),
-                                                '學號': student.get('學號'),
-                                                '通知次數': 1,
-                                                '最後通知時間': formatDateTime(now)
-                                            });
-                                        }
-                                    } catch (e) {
-                                        console.error('發送通知失敗:', e.message);
-                                    }
+                            // 只有成功記錄才發送通知（確保只發一次）
+                            if (result.success && student.get('LINE_ID')) {
+                                try {
+                                    await lineClient.pushMessage(student.get('LINE_ID'), {
+                                        type: 'text',
+                                        text: `❌ 缺席通知\n\n您已被標記為缺席：\n📚 課程：${course.get('科目')}\n📅 日期：${session.get('日期')}\n\n如有疑問請聯繫教師。`
+                                    });
+                                    console.log('✉️ 已發送缺席通知給', student.get('學號'));
+                                } catch (e) {
+                                    console.error('發送通知失敗:', e.message);
                                 }
                             }
                         }
                     }
                 }
                 
+                // 更新活動狀態為「已結束」
                 session.set('狀態', '已結束');
                 await session.save();
                 console.log('✅ 活動已結束:', session.get('活動ID'));
@@ -1535,69 +1405,24 @@ async function checkSemesterEnd() {
         if (!settingsSheet) return;
         
         const settings = await settingsSheet.getRows();
-        let semesterStart = '';
         let semesterEnd = '';
-        let semesterEndNotifyMode = 'end_day';
-        let semesterEndWeek = 0;
-        
         for (const s of settings) {
-            const key = s.get('設定項目');
-            const value = s.get('設定值');
-            if (key === '開學日期') semesterStart = value;
-            if (key === '結業日期') semesterEnd = value;
-            if (key === '學期結束通知模式') semesterEndNotifyMode = value;
-            if (key === '學期結束通知周次') semesterEndWeek = parseInt(value) || 0;
+            if (s.get('設定項目') === '結業日期') {
+                semesterEnd = s.get('設定值');
+                break;
+            }
         }
         
         if (!semesterEnd) return;
         
         const now = new Date();
-        const today = getTodayString();
         const endDate = new Date(semesterEnd);
+        const today = getTodayString();
         
-        let currentWeek = 0;
-        if (semesterStart) {
-            const startDate = new Date(semesterStart);
-            const diffDays = Math.floor((now - startDate) / (24 * 60 * 60 * 1000));
-            currentWeek = Math.ceil((diffDays + 1) / 7);
-        }
+        // 檢查是否是學期最後一天
+        if (today !== semesterEnd) return;
         
-        let totalWeeks = 0;
-        if (semesterStart && semesterEnd) {
-            const startDate = new Date(semesterStart);
-            totalWeeks = Math.ceil((endDate - startDate) / (7 * 24 * 60 * 60 * 1000));
-        }
-        
-        let shouldSend = false;
-        let notifyReason = '';
-        
-        if (semesterEndNotifyMode === 'next_day') {
-            const nextDay = new Date(endDate);
-            nextDay.setDate(nextDay.getDate() + 1);
-            const nextDayStr = nextDay.toISOString().split('T')[0];
-            if (today === nextDayStr) {
-                shouldSend = true;
-                notifyReason = '學期結束隔天';
-            }
-        } else if (semesterEndNotifyMode === 'last_week') {
-            if (currentWeek === totalWeeks && now.getDay() === 1) {
-                shouldSend = true;
-                notifyReason = '最後一周';
-            }
-        } else if (semesterEndNotifyMode === 'specific_week' && semesterEndWeek > 0) {
-            if (currentWeek === semesterEndWeek && now.getDay() === 1) {
-                shouldSend = true;
-                notifyReason = '第 ' + semesterEndWeek + ' 周';
-            }
-        } else {
-            if (today === semesterEnd) {
-                shouldSend = true;
-                notifyReason = '結業日當天';
-            }
-        }
-        
-        if (!shouldSend) return;
-        
+        // 檢查是否已經發送過通知
         const reminderSheet = await getOrCreateSheet('提醒紀錄', ['課程ID', '日期', '類型', '發送時間']);
         const reminders = await reminderSheet.getRows();
         const alreadySent = reminders.some(r => 
@@ -1605,40 +1430,65 @@ async function checkSemesterEnd() {
             r.get('類型') === '學期結束'
         );
         
-        if (alreadySent) {
-            console.log('📋 今日已發送過學期結束通知');
-            return;
-        }
+        if (alreadySent) return;
         
-        console.log('📢 發送學期結束通知（' + notifyReason + '）...');
+        // 取得最後一堂課的結束時間
+        const courseSheet = doc.sheetsByTitle['課程列表'];
+        const sessionSheet = doc.sheetsByTitle['簽到活動'];
         
-        const studentSheet = doc.sheetsByTitle['學生名單'];
-        if (studentSheet) {
-            const students = await studentSheet.getRows();
-            let sentCount = 0;
-            
-            for (const student of students) {
-                if (student.get('LINE_ID')) {
-                    try {
-                        await lineClient.pushMessage(student.get('LINE_ID'), {
-                            type: 'text',
-                            text: `📚 學期結束通知\n\n親愛的 ${student.get('姓名')} 同學：\n\n本學期課程已全部結束，感謝您這學期的配合！\n\n📌 解除 LINE BOT 綁定方式：\n1. 進入此聊天室\n2. 點右上角「≡」選單\n3. 選擇「封鎖」即可解除\n\n或輸入「解除綁定」由系統處理。\n\n🎉 祝您假期愉快！`
-                        });
-                        sentCount++;
-                    } catch (e) {
-                        console.error('發送學期結束通知失敗:', e.message);
-                    }
+        if (!courseSheet || !sessionSheet) return;
+        
+        const sessions = await sessionSheet.getRows();
+        const todaySessions = sessions.filter(s => s.get('日期') === today);
+        
+        if (todaySessions.length === 0) return;
+        
+        // 找最後結束的課程
+        let lastEndTime = 0;
+        for (const session of todaySessions) {
+            const endTimeStr = session.get('結束時間');
+            if (endTimeStr) {
+                const [h, m] = endTimeStr.split(':').map(Number);
+                const endMinutes = h * 60 + m;
+                if (endMinutes > lastEndTime) {
+                    lastEndTime = endMinutes;
                 }
             }
+        }
+        
+        // 檢查現在是否在最後一堂課結束後 30 分鐘
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        if (currentMinutes >= lastEndTime + 30 && currentMinutes <= lastEndTime + 40) {
+            console.log('📢 發送學期結束通知...');
             
-            await reminderSheet.addRow({
-                '課程ID': 'SEMESTER_END',
-                '日期': today,
-                '類型': '學期結束',
-                '發送時間': formatDateTime(now)
-            });
-            
-            console.log('✅ 學期結束通知已發送給 ' + sentCount + ' 位學生');
+            // 發送解除綁定說明給所有學生
+            const studentSheet = doc.sheetsByTitle['學生名單'];
+            if (studentSheet) {
+                const students = await studentSheet.getRows();
+                
+                for (const student of students) {
+                    if (student.get('LINE_ID')) {
+                        try {
+                            await lineClient.pushMessage(student.get('LINE_ID'), {
+                                type: 'text',
+                                text: `📚 學期結束通知\n\n親愛的 ${student.get('姓名')} 同學：\n\n本學期課程已全部結束，感謝您這學期的配合！\n\n📌 解除 LINE BOT 綁定方式：\n1. 進入此聊天室\n2. 點右上角「≡」選單\n3. 選擇「封鎖」即可解除\n\n或輸入「解除綁定」由系統處理。\n\n🎉 祝您假期愉快！`
+                            });
+                        } catch (e) {
+                            console.error('發送學期結束通知失敗:', e.message);
+                        }
+                    }
+                }
+                
+                // 記錄已發送
+                await reminderSheet.addRow({
+                    '課程ID': 'SEMESTER_END',
+                    '日期': today,
+                    '類型': '學期結束',
+                    '發送時間': formatDateTime(now)
+                });
+                
+                console.log('✅ 學期結束通知已發送');
+            }
         }
     } catch (error) {
         console.error('學期結束通知錯誤:', error);
@@ -1808,24 +1658,12 @@ app.get('/', (req, res) => {
 // 健康檢查端點
 app.get('/health', async (req, res) => {
     try {
-        const status = {
+        res.json({
             server: 'OK',
             time: new Date().toISOString(),
             lineBot: lineConfig.channelAccessToken ? 'Configured' : 'Not Configured',
             googleSheets: doc ? 'Connected' : 'Not Connected'
-        };
-        
-        // 測試 Google Sheets 連接
-        if (doc) {
-            try {
-                const sheet = doc.sheetsByTitle['學生名單'];
-                status.studentSheet = sheet ? 'OK' : 'Not Found';
-            } catch (e) {
-                status.studentSheet = 'Error: ' + e.message;
-            }
-        }
-        
-        res.json(status);
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -2583,10 +2421,7 @@ app.get('/api/settings', async (req, res) => {
             warningThreshold: parseInt(settings['警告門檻']) || 3,
             weeklyReport: settings['週報'] === 'true',
             semesterStart: settings['開學日期'] || '',
-            semesterEnd: settings['結業日期'] || '',
-            absentNotifyTimes: parseInt(settings['缺席通知次數']) || 1,
-            semesterEndMode: settings['學期結束通知模式'] || 'end_day',
-            semesterEndWeek: parseInt(settings['學期結束通知周次']) || 0
+            semesterEnd: settings['結業日期'] || ''
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -2596,7 +2431,7 @@ app.get('/api/settings', async (req, res) => {
 // 儲存設定（通用）
 app.post('/api/settings', async (req, res) => {
     try {
-        const { remindBeforeClass, remindMinutes, notifyAbsent, notifyParent, warningThreshold, weeklyReport, semesterStart, semesterEnd, absentNotifyTimes, semesterEndMode, semesterEndWeek } = req.body;
+        const { remindBeforeClass, remindMinutes, notifyAbsent, notifyParent, warningThreshold, weeklyReport, semesterStart, semesterEnd } = req.body;
         const sheet = await getOrCreateSheet('系統設定', ['設定項目', '設定值']);
         
         // 更新或新增設定
@@ -2621,9 +2456,6 @@ app.post('/api/settings', async (req, res) => {
         if (weeklyReport !== undefined) await updateOrAdd('週報', weeklyReport ? 'true' : 'false');
         if (semesterStart !== undefined) await updateOrAdd('開學日期', semesterStart);
         if (semesterEnd !== undefined) await updateOrAdd('結業日期', semesterEnd);
-        if (absentNotifyTimes !== undefined) await updateOrAdd('缺席通知次數', absentNotifyTimes);
-        if (semesterEndMode !== undefined) await updateOrAdd('學期結束通知模式', semesterEndMode);
-        if (semesterEndWeek !== undefined) await updateOrAdd('學期結束通知周次', semesterEndWeek);
         
         res.json({ success: true });
     } catch (error) {
@@ -2866,108 +2698,6 @@ app.delete('/api/leaves/:id', async (req, res) => {
     }
 });
 
-// === 調代課管理 API ===
-
-// 取得所有調代課
-app.get('/api/substitutes', async (req, res) => {
-    try {
-        const sheet = await getOrCreateSheet('調代課紀錄', [
-            '調代課ID', '類型', '課程ID', '異動日期', '代課教師', '新日期', '新節次', '備註', '建立時間'
-        ]);
-        const rows = await sheet.getRows();
-        res.json(rows.map(r => ({
-            id: r.get('調代課ID'),
-            type: r.get('類型'),
-            courseId: r.get('課程ID'),
-            date: r.get('異動日期'),
-            teacher: r.get('代課教師'),
-            newDate: r.get('新日期'),
-            newPeriod: r.get('新節次'),
-            note: r.get('備註'),
-            createdAt: r.get('建立時間')
-        })));
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// 新增調代課
-app.post('/api/substitutes', async (req, res) => {
-    try {
-        const { type, courseId, date, teacher, newDate, newPeriod, note } = req.body;
-        
-        if (!courseId || !date) {
-            return res.json({ success: false, message: '請填寫課程和日期' });
-        }
-        
-        const sheet = await getOrCreateSheet('調代課紀錄', [
-            '調代課ID', '類型', '課程ID', '異動日期', '代課教師', '新日期', '新節次', '備註', '建立時間'
-        ]);
-        
-        const subId = 'SUB' + Date.now();
-        await sheet.addRow({
-            '調代課ID': subId,
-            '類型': type || 'substitute',
-            '課程ID': courseId,
-            '異動日期': date,
-            '代課教師': teacher || '',
-            '新日期': newDate || '',
-            '新節次': newPeriod || '',
-            '備註': note || '',
-            '建立時間': formatDateTime(new Date())
-        });
-        
-        res.json({ success: true, id: subId });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// 更新調代課
-app.put('/api/substitutes/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { type, courseId, date, teacher, newDate, newPeriod, note } = req.body;
-        
-        const sheet = doc.sheetsByTitle['調代課紀錄'];
-        if (!sheet) return res.json({ success: false, message: '找不到調代課資料' });
-        
-        const rows = await sheet.getRows();
-        const row = rows.find(r => r.get('調代課ID') === id);
-        if (!row) return res.json({ success: false, message: '找不到調代課紀錄' });
-        
-        if (type) row.set('類型', type);
-        if (courseId) row.set('課程ID', courseId);
-        if (date) row.set('異動日期', date);
-        row.set('代課教師', teacher || '');
-        row.set('新日期', newDate || '');
-        row.set('新節次', newPeriod || '');
-        row.set('備註', note || '');
-        
-        await row.save();
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// 刪除調代課
-app.delete('/api/substitutes/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const sheet = doc.sheetsByTitle['調代課紀錄'];
-        if (!sheet) return res.json({ success: true });
-        
-        const rows = await sheet.getRows();
-        const row = rows.find(r => r.get('調代課ID') === id);
-        if (row) await row.delete();
-        
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
 // === 家長管理 API ===
 // 綁定家長 LINE
 app.post('/api/students/:id/parent', async (req, res) => {
@@ -3189,8 +2919,8 @@ app.get('/api/export/attendance', async (req, res) => {
 // 新增學生（手動）
 app.post('/api/students', async (req, res) => {
     try {
-        const { studentId, name, classCode, phone, parentPhone, parentLineId } = req.body;
-        const sheet = await getOrCreateSheet('學生名單', ['學號', '姓名', '班級', 'LINE_ID', '電話', '家長電話', '家長LINE_ID', '註冊時間']);
+        const { studentId, name, classCode, lineId, phone, parentPhone, parentLineId } = req.body;
+        const sheet = await getOrCreateSheet('學生名單', ['學號', '姓名', '班級', 'LINE_ID', 'LINE名稱', '電話', '家長電話', '家長LINE_ID', '註冊時間']);
         
         // 檢查學號是否已存在
         const rows = await sheet.getRows();
@@ -3203,7 +2933,8 @@ app.post('/api/students', async (req, res) => {
             '學號': studentId,
             '姓名': name,
             '班級': classCode,
-            'LINE_ID': '',
+            'LINE_ID': lineId || '',
+            'LINE名稱': '',
             '電話': phone || '',
             '家長電話': parentPhone || '',
             '家長LINE_ID': parentLineId || '',
@@ -3220,7 +2951,7 @@ app.post('/api/students', async (req, res) => {
 app.put('/api/students/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, classCode, phone, parentPhone } = req.body;
+        const { name, classCode, lineId, phone, parentPhone } = req.body;
         const sheet = doc.sheetsByTitle['學生名單'];
         if (!sheet) return res.json({ success: false });
         
@@ -3230,6 +2961,7 @@ app.put('/api/students/:id', async (req, res) => {
         
         if (name) row.set('姓名', name);
         if (classCode) row.set('班級', classCode);
+        if (lineId !== undefined) row.set('LINE_ID', lineId);
         if (phone !== undefined) row.set('電話', phone);
         if (parentPhone !== undefined) row.set('家長電話', parentPhone);
         await row.save();
