@@ -31,7 +31,10 @@ function setupAllConditionalFormatting() {
   // 3. 出席統計
   setupAttendanceStatsFormatting(ss);
   
-  SpreadsheetApp.getUi().alert('✅ 條件式格式設定完成！\n\n已設定：\n• 簽到紀錄\n• 請假紀錄\n• 出席統計');
+  // 4. 調代課紀錄
+  setupSubstituteFormatting(ss);
+  
+  SpreadsheetApp.getUi().alert('✅ 條件式格式設定完成！\n\n已設定：\n• 簽到紀錄\n• 請假紀錄\n• 出席統計\n• 調代課紀錄');
 }
 
 /**
@@ -233,6 +236,7 @@ function onOpen() {
     .addItem('只設定簽到紀錄', 'setupCheckinOnly')
     .addItem('只設定請假紀錄', 'setupLeaveOnly')
     .addItem('只設定出席統計', 'setupStatsOnly')
+    .addItem('只設定調代課紀錄', 'setupSubstituteOnly')
     .addToUi();
 }
 
@@ -249,4 +253,49 @@ function setupLeaveOnly() {
 function setupStatsOnly() {
   setupAttendanceStatsFormatting(SpreadsheetApp.getActiveSpreadsheet());
   SpreadsheetApp.getUi().alert('✅ 出席統計格式設定完成！');
+}
+
+function setupSubstituteOnly() {
+  setupSubstituteFormatting(SpreadsheetApp.getActiveSpreadsheet());
+  SpreadsheetApp.getUi().alert('✅ 調代課紀錄格式設定完成！');
+}
+
+/**
+ * 調代課紀錄 - 條件式格式
+ * 類型欄位：調課(淡藍色)、代課(淡橘色)
+ */
+function setupSubstituteFormatting(ss) {
+  const sheet = ss.getSheetByName('調代課紀錄');
+  if (!sheet) {
+    Logger.log('找不到「調代課紀錄」工作表');
+    return;
+  }
+  
+  // 清除現有條件式格式
+  sheet.clearConditionalFormatRules();
+  
+  // 類型在 B 欄
+  const col = 'B';
+  
+  // 設定範圍
+  const range = sheet.getRange('A2:K500');
+  
+  const rules = [];
+  
+  // 調課 - 淡藍色
+  rules.push(SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=$' + col + '2="調課"')
+    .setBackground('#e3f2fd')
+    .setRanges([range])
+    .build());
+  
+  // 代課 - 淡橘色
+  rules.push(SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=$' + col + '2="代課"')
+    .setBackground('#fff3e0')
+    .setRanges([range])
+    .build());
+  
+  sheet.setConditionalFormatRules(rules);
+  Logger.log('✅ 調代課紀錄格式設定完成');
 }
