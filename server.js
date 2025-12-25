@@ -2983,6 +2983,89 @@ app.delete('/api/leaves/:id', async (req, res) => {
     }
 });
 
+// === 調代課系統 API ===
+// 取得調代課列表
+app.get('/api/substitutes', async (req, res) => {
+    try {
+        const sheet = await getOrCreateSheet('調代課紀錄', [
+            '紀錄ID', '類型', '課程ID', '課程名稱', '原日期', '原節次', '新日期', '新節次', '代課教師', '原因', '建立時間'
+        ]);
+        const rows = await sheet.getRows();
+        res.json(rows.map(r => ({
+            id: r.get('紀錄ID'),
+            type: r.get('類型'),
+            courseId: r.get('課程ID'),
+            courseName: r.get('課程名稱'),
+            origDate: r.get('原日期'),
+            origPeriod: r.get('原節次'),
+            newDate: r.get('新日期'),
+            newPeriod: r.get('新節次'),
+            subTeacher: r.get('代課教師'),
+            reason: r.get('原因'),
+            createdAt: r.get('建立時間')
+        })));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 新增調代課
+app.post('/api/substitutes', async (req, res) => {
+    try {
+        const { type, courseId, origDate, origPeriod, newDate, newPeriod, subTeacher, reason } = req.body;
+        const sheet = await getOrCreateSheet('調代課紀錄', [
+            '紀錄ID', '類型', '課程ID', '課程名稱', '原日期', '原節次', '新日期', '新節次', '代課教師', '原因', '建立時間'
+        ]);
+        
+        // 取得課程名稱
+        let courseName = courseId;
+        const courseSheet = doc.sheetsByTitle['課程列表'];
+        if (courseSheet) {
+            const courseRows = await courseSheet.getRows();
+            const course = courseRows.find(c => c.get('課程ID') === courseId);
+            if (course) {
+                courseName = course.get('科目') + ' (' + course.get('班級') + ')';
+            }
+        }
+        
+        const recordId = 'SUB' + Date.now();
+        await sheet.addRow({
+            '紀錄ID': recordId,
+            '類型': type,
+            '課程ID': courseId,
+            '課程名稱': courseName,
+            '原日期': origDate,
+            '原節次': origPeriod || '',
+            '新日期': newDate || '',
+            '新節次': newPeriod || '',
+            '代課教師': subTeacher || '',
+            '原因': reason || '',
+            '建立時間': new Date().toLocaleString('zh-TW')
+        });
+        
+        res.json({ success: true, recordId });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 刪除調代課
+app.delete('/api/substitutes/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const sheet = doc.sheetsByTitle['調代課紀錄'];
+        if (!sheet) return res.json({ success: true });
+        
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('紀錄ID') === id);
+        if (row) await row.delete();
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // === 家長管理 API ===
 // 綁定家長 LINE
 app.post('/api/students/:id/parent', async (req, res) => {
