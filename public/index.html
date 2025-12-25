@@ -683,6 +683,31 @@
             // 更新週次標題
             updateWeekTitle(weekDates);
             
+            // 檢查是否在學期範圍內
+            if (!sem.start || !sem.end) {
+                document.getElementById('schedule-grid').innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="icon">📅</div><h3>尚未設定學期</h3><p>請先到「學期設定」設定開學與結業日期</p></div>';
+                document.getElementById('schedule-grid').style.gridTemplateColumns = '1fr';
+                return;
+            }
+            
+            const endDate = new Date(sem.end);
+            endDate.setHours(23, 59, 59); // 結業當天算在內
+            
+            // 如果該週的起始日期超過學期結束日期
+            if (weekDates.start && weekDates.start > endDate) {
+                document.getElementById('schedule-grid').innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="icon">🎉</div><h3>已結業 / 放假中</h3><p>學期已於 ' + formatDateFull(endDate) + ' 結束</p><button class="btn btn-primary" style="margin-top:15px" onclick="goToCurrentWeek()">回到本周</button></div>';
+                document.getElementById('schedule-grid').style.gridTemplateColumns = '1fr';
+                return;
+            }
+            
+            const startDate = new Date(sem.start);
+            // 如果該週的結束日期早於學期開始日期
+            if (weekDates.end && weekDates.end < startDate) {
+                document.getElementById('schedule-grid').innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="icon">⏳</div><h3>尚未開學</h3><p>學期將於 ' + formatDateFull(startDate) + ' 開始</p><button class="btn btn-primary" style="margin-top:15px" onclick="goToCurrentWeek()">回到本周</button></div>';
+                document.getElementById('schedule-grid').style.gridTemplateColumns = '1fr';
+                return;
+            }
+            
             // 生成表頭（包含日期）
             let html = '<div class="schedule-header">節次</div>';
             for (let i = 1; i < days.length; i++) {
