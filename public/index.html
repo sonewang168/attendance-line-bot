@@ -45,7 +45,7 @@
         .session-item{padding:15px;border:1px solid var(--border);border-radius:12px;margin-bottom:12px}.session-item.completed{background:#f8fafc;opacity:.7}
         .session-header{display:flex;align-items:center;gap:12px;margin-bottom:10px}.session-icon{width:44px;height:44px;background:linear-gradient(135deg,#818cf8,var(--primary));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff}
         .session-info{flex:1}.session-info h4{font-size:15px;margin-bottom:3px}.session-info span{font-size:13px;color:var(--text-light)}.session-actions{display:flex;gap:8px}.session-actions .btn{flex:1}
-        .schedule-grid{display:grid;gap:2px;font-size:11px}.schedule-header{padding:8px 4px;text-align:center;background:var(--primary);color:#fff;font-weight:600;border-radius:6px 6px 0 0}.schedule-time{padding:8px 4px;text-align:center;background:var(--bg);font-weight:500;display:flex;align-items:center;justify-content:center}
+        .schedule-grid{display:grid;gap:2px;font-size:11px}.schedule-header{padding:8px 4px;text-align:center;background:var(--primary);color:#fff;font-weight:600;border-radius:6px 6px 0 0}.schedule-header.today{background:#e53935;box-shadow:0 2px 8px rgba(229,57,53,0.4)}.schedule-time{padding:8px 4px;text-align:center;background:var(--bg);font-weight:500;display:flex;align-items:center;justify-content:center}
         .schedule-cell{min-height:50px;padding:4px;background:#fff;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s}.schedule-cell:hover{background:var(--bg)}.schedule-cell.has-class{background:rgba(79,70,229,.15)}.schedule-cell .class-tag{font-size:10px;padding:4px 6px;background:var(--primary);color:#fff;border-radius:4px;text-align:center;width:100%}
         .empty{text-align:center;padding:40px 20px;color:var(--text-light)}.empty .icon{font-size:48px;margin-bottom:12px;opacity:.5}
         .toast-container{position:fixed;top:70px;left:15px;right:15px;z-index:3000}.toast{background:var(--text);color:#fff;padding:14px 18px;border-radius:12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;animation:slideDown .3s}.toast.success{background:var(--success)}.toast.warning{background:var(--warning)}.toast.danger{background:var(--danger)}@keyframes slideDown{from{transform:translateY(-20px);opacity:0}to{transform:translateY(0);opacity:1}}
@@ -87,6 +87,7 @@
             <li><a href="#" class="nav-link" data-page="classes"><span>🏫</span> 班級管理</a></li>
             <li><a href="#" class="nav-link" data-page="students"><span>👨‍🎓</span> 學生名單</a></li>
             <li><a href="#" class="nav-link" data-page="leaves"><span>📋</span> 請假管理<span class="nav-badge" id="leave-badge" style="display:none">0</span></a></li>
+            <li><a href="#" class="nav-link" data-page="substitute"><span>🔄</span> 調代課</a></li>
             <li><a href="#" class="nav-link" data-page="records"><span>📜</span> 出缺紀錄</a></li>
             <li class="nav-section">統計分析</li>
             <li><a href="#" class="nav-link" data-page="stats"><span>📈</span> 出席統計</a></li>
@@ -139,6 +140,19 @@
         <!-- Schedule -->
         <div class="page" id="page-schedule">
             <div class="header"><h1 class="page-title">課表管理</h1><p class="page-subtitle">管理課程資料</p></div>
+            <div class="card" style="margin-bottom:15px">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+                    <button class="btn btn-outline btn-sm" onclick="changeWeek(-1)">◀ 上一周</button>
+                    <div style="text-align:center">
+                        <div style="font-size:18px;font-weight:700" id="schedule-week-title">第 1 周</div>
+                        <div style="font-size:13px;color:#666" id="schedule-week-range">--</div>
+                    </div>
+                    <button class="btn btn-outline btn-sm" onclick="changeWeek(1)">下一周 ▶</button>
+                </div>
+                <div style="margin-top:10px;text-align:center">
+                    <button class="btn btn-sm" style="background:#e3f2fd" onclick="goToCurrentWeek()">📅 回到本周</button>
+                </div>
+            </div>
             <div class="card">
                 <div class="tabs"><div class="tab active" onclick="showView('grid')">週課表</div><div class="tab" onclick="showView('list')">課程列表</div></div>
                 <div id="grid-view"><div class="schedule-grid" id="schedule-grid"></div></div>
@@ -172,6 +186,13 @@
             <button class="btn btn-primary btn-block" style="margin-bottom:15px" onclick="openModal('addLeave')">➕ 新增請假</button>
             <div class="tabs"><div class="tab active" onclick="filterLeaves('pending')">待審核</div><div class="tab" onclick="filterLeaves('approved')">已核准</div><div class="tab" onclick="filterLeaves('rejected')">已駁回</div><div class="tab" onclick="filterLeaves('all')">全部</div></div>
             <div id="leaves-list"></div>
+        </div>
+        <!-- Substitute -->
+        <div class="page" id="page-substitute">
+            <div class="header"><h1 class="page-title">調代課管理</h1><button class="btn btn-outline btn-sm" onclick="loadSubstitutes()" style="margin-left:auto">🔄 刷新</button></div>
+            <button class="btn btn-primary btn-block" style="margin-bottom:15px" onclick="openModal('addSubstitute')">➕ 新增調代課</button>
+            <div class="tabs"><div class="tab active" onclick="filterSubstitutes('all')">全部</div><div class="tab" onclick="filterSubstitutes('調課')">調課</div><div class="tab" onclick="filterSubstitutes('代課')">代課</div></div>
+            <div id="substitute-list"></div>
         </div>
         <!-- Records -->
         <div class="page" id="page-records">
@@ -319,6 +340,8 @@
 
     <div class="modal-overlay" id="modal-reviewLeave"><div class="modal"><div class="modal-header"><h3 class="modal-title">審核請假</h3><button class="modal-close" onclick="closeModal('reviewLeave')">&times;</button></div><div class="modal-body"><div id="leave-detail"></div><div class="form-group"><label class="form-label">備註</label><textarea class="form-textarea" id="review-note"></textarea></div></div><div class="modal-footer"><button class="btn btn-danger" onclick="reviewLeave('已駁回')">❌ 駁回</button><button class="btn btn-success" onclick="reviewLeave('已核准')">✅ 核准</button></div></div></div>
 
+    <div class="modal-overlay" id="modal-addSubstitute"><div class="modal"><div class="modal-header"><h3 class="modal-title">新增調代課</h3><button class="modal-close" onclick="closeModal('addSubstitute')">&times;</button></div><div class="modal-body"><div class="form-group"><label class="form-label">類型 *</label><select class="form-select" id="sub-type"><option value="調課">調課（換時間）</option><option value="代課">代課（換老師）</option></select></div><div class="form-group"><label class="form-label">原課程 *</label><select class="form-select" id="sub-course"><option value="">請選擇課程</option></select></div><div class="form-group"><label class="form-label">原日期 *</label><input type="date" class="form-input" id="sub-orig-date"></div><div class="form-group"><label class="form-label">原節次</label><input type="text" class="form-input" id="sub-orig-period" placeholder="例如：1-2"></div><div class="form-group"><label class="form-label">新日期（調課用）</label><input type="date" class="form-input" id="sub-new-date"></div><div class="form-group"><label class="form-label">新節次（調課用）</label><input type="text" class="form-input" id="sub-new-period" placeholder="例如：3-4"></div><div class="form-group"><label class="form-label">代課教師（代課用）</label><input type="text" class="form-input" id="sub-teacher" placeholder="代課教師姓名"></div><div class="form-group"><label class="form-label">原因/備註</label><textarea class="form-textarea" id="sub-reason" placeholder="調代課原因"></textarea></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('addSubstitute')">取消</button><button class="btn btn-primary" onclick="addSubstitute()">新增</button></div></div></div>
+
     <div class="modal-overlay" id="modal-qr"><div class="modal"><div class="modal-header"><h3 class="modal-title">📱 簽到 QR Code</h3><button class="modal-close" onclick="closeModal('qr')">&times;</button></div><div class="modal-body"><div class="qr-container"><div class="qr-code" id="qr-container"></div><div class="qr-info"><strong id="qr-name"></strong><span id="qr-time"></span></div><div class="alert alert-success" style="margin-top:10px;font-size:12px">👆 學生掃此 QR Code → 直接簽到成功</div><div id="qr-link-box" style="margin-top:15px;padding:10px;background:#fff3cd;border-radius:10px"><p style="font-size:12px;color:#856404;margin-bottom:8px">📤 學生自己手機簽到連結（需 GPS 驗證）：</p><input type="text" id="qr-link" readonly style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:11px" onclick="this.select()"><button class="btn btn-outline btn-sm" style="margin-top:8px;width:100%" onclick="copyQRLink()">📋 複製連結分享給學生</button></div></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('qr')">關閉</button><button class="btn btn-success" onclick="sendReminderFromQR()">📢 發送通知</button><button class="btn btn-primary" onclick="downloadQR()">📥 下載</button></div></div></div>
 
     <script>
@@ -330,6 +353,7 @@
         let currentClass = null, currentCourse = null, currentStudent = null, currentLeave = null;
         let leaveFilter = 'pending';
         let currentPage = 'dashboard';
+        let scheduleWeekOffset = 0; // 週次偏移（0=本周，-1=上週，1=下週）
         
         const PERIODS = {
             day: [{n:1,s:'08:00',e:'08:50'},{n:2,s:'09:00',e:'09:50'},{n:3,s:'10:00',e:'10:50'},{n:4,s:'11:00',e:'11:50'},{n:5,s:'13:00',e:'13:50'},{n:6,s:'14:00',e:'14:50'},{n:7,s:'15:00',e:'15:50'},{n:8,s:'16:00',e:'17:00'}],
@@ -652,7 +676,22 @@
             const div = sem.div || 'day';
             const ps = sem.periods && sem.periods.length > 0 ? sem.periods : PERIODS[div];
             const days = div === 'weekend' ? ['', '六', '日'] : ['', '一', '二', '三', '四', '五'];
-            let html = days.map(d => '<div class="schedule-header">' + (d || '節次') + '</div>').join('');
+            
+            // 計算當前顯示週的日期
+            const weekDates = getWeekDates(scheduleWeekOffset);
+            
+            // 更新週次標題
+            updateWeekTitle(weekDates);
+            
+            // 生成表頭（包含日期）
+            let html = '<div class="schedule-header">節次</div>';
+            for (let i = 1; i < days.length; i++) {
+                const dayNum = div === 'weekend' ? (i === 1 ? 6 : 0) : i;
+                const dateStr = weekDates[dayNum] ? formatDateShort(weekDates[dayNum]) : '';
+                const isToday = weekDates[dayNum] && isDateToday(weekDates[dayNum]);
+                html += '<div class="schedule-header' + (isToday ? ' today' : '') + '">' + days[i] + '<br><small style="font-weight:400;color:' + (isToday ? '#fff' : '#666') + '">' + dateStr + '</small></div>';
+            }
+            
             ps.forEach(p => {
                 html += '<div class="schedule-time">' + p.n + '<br><small>' + p.s + '</small></div>';
                 for (let i = 1; i < days.length; i++) {
@@ -668,6 +707,96 @@
             document.getElementById('schedule-grid').innerHTML = html;
             document.getElementById('schedule-grid').style.gridTemplateColumns = '60px repeat(' + (days.length - 1) + ', 1fr)';
         }
+        
+        // 取得指定週的每日日期
+        function getWeekDates(weekOffset) {
+            if (!sem.start) return {};
+            
+            const startDate = new Date(sem.start);
+            const now = new Date();
+            
+            // 計算目前是第幾週
+            const currentWeekNum = Math.ceil((now - startDate) / (7 * 24 * 60 * 60 * 1000));
+            const targetWeekNum = currentWeekNum + weekOffset;
+            
+            // 計算目標週的起始日期（週一）
+            const targetWeekStart = new Date(startDate);
+            targetWeekStart.setDate(startDate.getDate() + (targetWeekNum - 1) * 7);
+            
+            // 調整到週一
+            const dayOfWeek = targetWeekStart.getDay();
+            const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+            targetWeekStart.setDate(targetWeekStart.getDate() + diff);
+            
+            // 生成一週的日期 (0=日, 1=一, ..., 6=六)
+            const dates = {};
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(targetWeekStart);
+                d.setDate(targetWeekStart.getDate() + i);
+                const dayNum = d.getDay(); // 0-6
+                dates[dayNum === 0 ? 0 : dayNum] = d;
+            }
+            dates.weekNum = targetWeekNum;
+            dates.start = new Date(targetWeekStart);
+            dates.end = new Date(targetWeekStart);
+            dates.end.setDate(dates.end.getDate() + 6);
+            
+            return dates;
+        }
+        
+        // 更新週次標題
+        function updateWeekTitle(weekDates) {
+            const weekTitleEl = document.getElementById('schedule-week-title');
+            const weekRangeEl = document.getElementById('schedule-week-range');
+            
+            if (!sem.start || !weekDates.weekNum) {
+                weekTitleEl.textContent = '未設定學期';
+                weekRangeEl.textContent = '請先設定學期日期';
+                return;
+            }
+            
+            const weekNum = weekDates.weekNum;
+            if (weekNum < 1) {
+                weekTitleEl.textContent = '學期前 ' + Math.abs(weekNum - 1) + ' 周';
+            } else {
+                weekTitleEl.textContent = '第 ' + weekNum + ' 周';
+            }
+            
+            if (weekDates.start && weekDates.end) {
+                weekRangeEl.textContent = formatDateFull(weekDates.start) + ' ~ ' + formatDateFull(weekDates.end);
+            }
+        }
+        
+        // 格式化日期（短格式：M/D）
+        function formatDateShort(date) {
+            return (date.getMonth() + 1) + '/' + date.getDate();
+        }
+        
+        // 格式化日期（完整格式：M月D日）
+        function formatDateFull(date) {
+            return (date.getMonth() + 1) + '月' + date.getDate() + '日';
+        }
+        
+        // 判斷是否為今天
+        function isDateToday(date) {
+            const today = new Date();
+            return date.getFullYear() === today.getFullYear() &&
+                   date.getMonth() === today.getMonth() &&
+                   date.getDate() === today.getDate();
+        }
+        
+        // 切換週次
+        function changeWeek(offset) {
+            scheduleWeekOffset += offset;
+            renderScheduleGrid();
+        }
+        
+        // 回到本周
+        function goToCurrentWeek() {
+            scheduleWeekOffset = 0;
+            renderScheduleGrid();
+        }
+        
         function quickAddCourse(day, period) {
             document.getElementById('course-day').value = day;
             document.getElementById('course-period').value = period;
@@ -1512,6 +1641,102 @@
             }
         }
 
+        // === 調代課管理 ===
+        let substitutes = [];
+        let subFilter = 'all';
+        
+        async function loadSubstitutes() {
+            const data = await api('/api/substitutes');
+            if (data) {
+                substitutes = data;
+                renderSubstitutes();
+            }
+            // 載入課程列表到 modal
+            const courseSelect = document.getElementById('sub-course');
+            if (courseSelect && courses.length) {
+                courseSelect.innerHTML = '<option value="">請選擇課程</option>' + courses.map(c => '<option value="' + c.id + '">' + c.name + ' (' + c.classCode + ')</option>').join('');
+            }
+        }
+        
+        function filterSubstitutes(filter) {
+            subFilter = filter;
+            document.querySelectorAll('#page-substitute .tab').forEach((t, i) => {
+                const filters = ['all', '調課', '代課'];
+                t.classList.toggle('active', filters[i] === filter);
+            });
+            renderSubstitutes();
+        }
+        
+        function renderSubstitutes() {
+            let filtered = substitutes;
+            if (subFilter !== 'all') filtered = substitutes.filter(s => s.type === subFilter);
+            
+            document.getElementById('substitute-list').innerHTML = filtered.length ? filtered.map(s => {
+                const typeColor = s.type === '調課' ? '#e3f2fd' : '#fff3e0';
+                const typeIcon = s.type === '調課' ? '📅' : '👨‍🏫';
+                return '<div style="background:' + typeColor + ';border-radius:10px;padding:15px;margin-bottom:10px">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+                    '<b>' + typeIcon + ' ' + s.type + '</b>' +
+                    '<span style="font-size:12px;color:#666">' + (s.createdAt || '') + '</span>' +
+                    '</div>' +
+                    '<div style="font-size:14px;margin-bottom:5px"><b>課程：</b>' + (s.courseName || s.courseId) + '</div>' +
+                    '<div style="font-size:14px;margin-bottom:5px"><b>原時間：</b>' + s.origDate + ' 第' + (s.origPeriod || '-') + '節</div>' +
+                    (s.type === '調課' ? '<div style="font-size:14px;margin-bottom:5px"><b>新時間：</b>' + (s.newDate || '-') + ' 第' + (s.newPeriod || '-') + '節</div>' : '') +
+                    (s.type === '代課' ? '<div style="font-size:14px;margin-bottom:5px"><b>代課教師：</b>' + (s.subTeacher || '-') + '</div>' : '') +
+                    (s.reason ? '<div style="font-size:13px;color:#666">📝 ' + s.reason + '</div>' : '') +
+                    '<button class="btn btn-sm btn-danger" style="margin-top:10px" onclick="deleteSubstitute(\'' + s.id + '\')">🗑️ 刪除</button>' +
+                    '</div>';
+            }).join('') : '<div class="empty">無調代課紀錄</div>';
+        }
+        
+        async function addSubstitute() {
+            const type = document.getElementById('sub-type').value;
+            const courseId = document.getElementById('sub-course').value;
+            const origDate = document.getElementById('sub-orig-date').value;
+            const origPeriod = document.getElementById('sub-orig-period').value;
+            const newDate = document.getElementById('sub-new-date').value;
+            const newPeriod = document.getElementById('sub-new-period').value;
+            const subTeacher = document.getElementById('sub-teacher').value;
+            const reason = document.getElementById('sub-reason').value;
+            
+            if (!courseId || !origDate) {
+                toast('請選擇課程和原日期', 'error');
+                return;
+            }
+            
+            const r = await api('/api/substitutes', {
+                method: 'POST',
+                body: JSON.stringify({ type, courseId, origDate, origPeriod, newDate, newPeriod, subTeacher, reason })
+            });
+            
+            if (r?.success) {
+                toast('調代課新增成功！');
+                closeModal('addSubstitute');
+                // 清空表單
+                document.getElementById('sub-course').value = '';
+                document.getElementById('sub-orig-date').value = '';
+                document.getElementById('sub-orig-period').value = '';
+                document.getElementById('sub-new-date').value = '';
+                document.getElementById('sub-new-period').value = '';
+                document.getElementById('sub-teacher').value = '';
+                document.getElementById('sub-reason').value = '';
+                loadSubstitutes();
+            } else {
+                toast(r?.message || '新增失敗', 'error');
+            }
+        }
+        
+        async function deleteSubstitute(id) {
+            if (!confirm('確定要刪除此調代課紀錄？')) return;
+            const r = await api('/api/substitutes/' + id, { method: 'DELETE' });
+            if (r?.success) {
+                toast('已刪除');
+                loadSubstitutes();
+            } else {
+                toast('刪除失敗', 'error');
+            }
+        }
+
         // === 出缺紀錄 ===
         async function loadRecords() {
             const data = await api('/api/records');
@@ -1544,9 +1769,17 @@
                 document.getElementById('progress-circle').style.strokeDashoffset = offset;
                 const low = data.lowAttendance || [];
                 document.getElementById('low-attendance-list').innerHTML = low.length ? low.slice(0, 10).map(s => {
-                    let bgColor = '#fff3cd'; // 預設淡黃色 (0.01%~59.99%)
-                    if (s.rate === 0) bgColor = '#f8d7da'; // 0% 淡紅色
-                    else if (s.rate >= 100) bgColor = '#d4edda'; // 100% 淡綠色
+                    const rate = parseFloat(s.rate) || 0;
+                    let bgColor;
+                    if (rate >= 100) {
+                        bgColor = '#d4edda'; // 100% 淡綠色
+                    } else if (rate === 0) {
+                        bgColor = '#f8d7da'; // 0% 淡紅色
+                    } else if (rate < 60) {
+                        bgColor = '#fff3cd'; // 0.01%~59.99% 淡黃色
+                    } else {
+                        bgColor = '#ffffff'; // 60%~99.99% 白色（正常）
+                    }
                     return '<div class="student-alert" style="background-color:' + bgColor + ';border-radius:10px;padding:12px;margin-bottom:8px"><div class="avatar">' + s.name.charAt(0) + '</div><div class="info"><h5>' + s.name + ' (' + s.studentId + ')</h5><span>' + s.classCode + ' · 出席率 ' + s.rate + '%</span></div></div>';
                 }).join('') : '<div class="empty">所有學生出席率良好 👍</div>';
             }
@@ -1732,6 +1965,7 @@
             if (page === 'classes') loadClasses();
             if (page === 'students') loadStudents();
             if (page === 'leaves') loadLeaves();
+            if (page === 'substitute') loadSubstitutes();
             if (page === 'records') { document.getElementById('record-date').value = new Date().toISOString().split('T')[0]; loadRecords(); }
             if (page === 'stats') loadStats();
             if (page === 'alerts') loadAlerts();
