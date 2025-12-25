@@ -3672,6 +3672,31 @@ app.delete('/api/locations/:id', async (req, res) => {
     }
 });
 
+// 修改位置
+app.put('/api/locations/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, lat, lon, radius, note } = req.body;
+        const sheet = doc.sheetsByTitle['GPS位置'];
+        if (!sheet) return res.json({ success: false, message: '找不到工作表' });
+        
+        const rows = await sheet.getRows();
+        const row = rows.find(r => r.get('位置ID') === id);
+        if (!row) return res.json({ success: false, message: '找不到位置' });
+        
+        if (name !== undefined) row.set('名稱', name);
+        if (lat !== undefined) row.set('緯度', lat);
+        if (lon !== undefined) row.set('經度', lon);
+        if (radius !== undefined) row.set('半徑', radius);
+        if (note !== undefined) row.set('備註', note);
+        await row.save();
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // === 圖表數據 API ===
 app.get('/api/charts/attendance-trend', async (req, res) => {
     try {
